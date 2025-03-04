@@ -10,6 +10,80 @@
 
   <!-- External CSS -->
   <link rel="stylesheet" href="styles.css">
+  
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 20px;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    header h1 {
+      text-align: center;
+      font-size: 2rem;
+      color: #333;
+    }
+    .search-section {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .search-section input {
+      padding: 8px;
+      font-size: 16px;
+      width: 300px;
+    }
+    .search-section button {
+      padding: 8px 16px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .search-section button:hover {
+      background-color: #45a049;
+    }
+    .watchlist-section {
+      margin-top: 40px;
+      text-align: center;
+    }
+    .watchlist {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .watchlist p {
+      font-size: 1.2rem;
+    }
+
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    .loading {
+      text-align: center;
+      font-size: 1.5rem;
+      color: #888;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -23,8 +97,28 @@
       <button id="search-btn">Search</button>
     </div>
 
-    <!-- Player List Section -->
-    <div class="player-list" id="player-list"></div>
+    <!-- NBA Player Stats Table -->
+    <h2>NBA Player Stats</h2>
+    <div class="loading" id="loadingMessage">Loading player stats...</div>
+    <table id="playerStatsTable">
+      <thead>
+        <tr>
+          <th>Player Name</th>
+          <th>Points</th>
+          <th>Rebounds</th>
+          <th>Assists</th>
+          <th>Blocks</th>
+          <th>Steals</th>
+          <th>Turnovers</th>
+          <th>FG Attempts</th>
+          <th>FG Made</th>
+          <th>FT Made</th>
+          <th>FT Attempts</th>
+          <th>3PM</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
     <!-- Watchlist Section -->
     <section class="watchlist-section">
@@ -35,6 +129,56 @@
     </section>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    // GitHub NBA API endpoint for player stats
+    const apiUrl = 'https://raw.githubusercontent.com/bttmly/nba/master/data/players.json';
+
+    // Fetch player data
+    async function fetchPlayerStats() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        // Remove the loading message
+        document.getElementById("loadingMessage").style.display = "none";
+
+        // Get the table body element
+        const tableBody = document.getElementById("playerStatsTable").getElementsByTagName("tbody")[0];
+
+        // Loop through the players and add their stats to the table
+        data.forEach(player => {
+          const row = tableBody.insertRow();
+
+          // Insert the player data into the table
+          row.innerHTML = `
+            <td>${player.first_name} ${player.last_name}</td>
+            <td>${player.ppg}</td>
+            <td>${player.rpg}</td>
+            <td>${player.apg}</td>
+            <td>${player.bpg}</td>
+            <td>${player.spg}</td>
+            <td>${player.tpg}</td>
+            <td>${player.fga}</td>
+            <td>${player.fgm}</td>
+            <td>${player.ftm}</td>
+            <td>${player.fta}</td>
+            <td>${player.tpm}</td>
+          `;
+        });
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+        document.getElementById("loadingMessage").textContent = "Failed to load data.";
+      }
+    }
+
+    // Call the fetchPlayerStats function when the page loads
+    fetchPlayerStats();
+
+    // Placeholder function for search (can be expanded)
+    document.getElementById('search-btn').addEventListener('click', function() {
+      const playerName = document.getElementById('player-search').value;
+      alert('Search functionality is not implemented yet for ' + playerName);
+    });
+  </script>
 </body>
 </html>
