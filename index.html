@@ -1,48 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fantasy Basketball Watchlist</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Basketball Watchlist</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="container">
     <header>
-        <div class="container">
-            <h1>Fantasy Basketball Watchlist</h1>
-            <p>Track your favorite players and build your fantasy basketball team!</p>
-        </div>
+      <h1>Fantasy Basketball Watchlist</h1>
     </header>
 
-    <main>
-        <section class="player-list">
-            <div class="container">
-                <h2>Available Players</h2>
-                <ul id="playerList">
-                    <li>LeBron James <button class="add-btn">Add to Watchlist</button></li>
-                    <li>Stephen Curry <button class="add-btn">Add to Watchlist</button></li>
-                    <li>Giannis Antetokounmpo <button class="add-btn">Add to Watchlist</button></li>
-                    <li>Kawhi Leonard <button class="add-btn">Add to Watchlist</button></li>
-                </ul>
-            </div>
-        </section>
+    <!-- Search Section -->
+    <div class="search-section">
+      <input type="text" id="player-search" placeholder="Search for a player...">
+      <button id="search-btn">Search</button>
+    </div>
 
-        <section class="watchlist">
-            <div class="container">
-                <h2>Your Watchlist</h2>
-                <ul id="watchlist">
-                    <!-- Watchlist items will appear here -->
-                </ul>
-            </div>
-        </section>
-    </main>
+    <!-- Player List Section -->
+    <div class="player-list" id="player-list"></div>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 Fantasy Basketball Watchlist | Designed by You</p>
-        </div>
-    </footer>
+    <!-- Watchlist Section -->
+    <section class="watchlist-section">
+      <h2>Your Watchlist</h2>
+      <div class="watchlist" id="watchlist">
+        <p>Your watchlist is empty!</p>
+      </div>
+    </section>
+  </div>
 
-    <script src="app.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
