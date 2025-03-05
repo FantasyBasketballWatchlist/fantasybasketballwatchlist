@@ -78,11 +78,10 @@
     tr:nth-child(even) {
       background-color: #f2f2f2;
     }
-
-    /* Loading Spinner */
-    #spinner {
-      display: none;
+    .loading {
       text-align: center;
+      font-size: 1.5rem;
+      color: #888;
     }
   </style>
 </head>
@@ -96,11 +95,6 @@
     <div class="search-section">
       <input type="text" id="player-search" placeholder="Search for a player...">
       <button id="search-btn">Search</button>
-    </div>
-
-    <!-- Loading Spinner -->
-    <div id="spinner">
-      <img src="https://i.gifer.com/4V0P.gif" alt="Loading...">
     </div>
 
     <!-- NBA Player Stats Table -->
@@ -136,26 +130,20 @@
   </div>
 
   <script>
-    const apiUrl = '/api/player_stats/';  // Update to your Flask API endpoint
+    // GitHub NBA API endpoint for player stats
+    const apiUrl = 'https://raw.githubusercontent.com/bttmly/nba/master/data/players.json';
 
-    // Show spinner during fetch
-    document.getElementById("spinner").style.display = "block";
-
-    // Fetch player data from Flask API
+    // Fetch player data
     async function fetchPlayerStats() {
       try {
-        const response = await fetch(apiUrl); // Call the Flask endpoint for player stats
+        const response = await fetch(apiUrl);
         const data = await response.json();
 
-        // Hide loading spinner and loading message
-        document.getElementById("spinner").style.display = "none";
+        // Remove the loading message
         document.getElementById("loadingMessage").style.display = "none";
 
         // Get the table body element
         const tableBody = document.getElementById("playerStatsTable").getElementsByTagName("tbody")[0];
-
-        // Clear any previous rows
-        tableBody.innerHTML = '';
 
         // Loop through the players and add their stats to the table
         data.forEach(player => {
@@ -164,49 +152,32 @@
           // Insert the player data into the table
           row.innerHTML = `
             <td>${player.first_name} ${player.last_name}</td>
-            <td>${player.ppg || 'N/A'}</td>
-            <td>${player.rpg || 'N/A'}</td>
-            <td>${player.apg || 'N/A'}</td>
-            <td>${player.bpg || 'N/A'}</td>
-            <td>${player.spg || 'N/A'}</td>
-            <td>${player.tpg || 'N/A'}</td>
-            <td>${player.fga || 'N/A'}</td>
-            <td>${player.fgm || 'N/A'}</td>
-            <td>${player.ftm || 'N/A'}</td>
-            <td>${player.fta || 'N/A'}</td>
-            <td>${player.tpm || 'N/A'}</td>
+            <td>${player.ppg}</td>
+            <td>${player.rpg}</td>
+            <td>${player.apg}</td>
+            <td>${player.bpg}</td>
+            <td>${player.spg}</td>
+            <td>${player.tpg}</td>
+            <td>${player.fga}</td>
+            <td>${player.fgm}</td>
+            <td>${player.ftm}</td>
+            <td>${player.fta}</td>
+            <td>${player.tpm}</td>
           `;
         });
       } catch (error) {
         console.error("Error fetching player data:", error);
         document.getElementById("loadingMessage").textContent = "Failed to load data.";
-        document.getElementById("spinner").style.display = "none";
       }
     }
 
     // Call the fetchPlayerStats function when the page loads
     fetchPlayerStats();
 
-    // Search functionality
+    // Placeholder function for search (can be expanded)
     document.getElementById('search-btn').addEventListener('click', function() {
-      const playerName = document.getElementById('player-search').value.toLowerCase();
-      const rows = document.getElementById('playerStatsTable').getElementsByTagName('tbody')[0].rows;
-      let found = false;
-
-      // Loop through table rows and hide those that don't match the search term
-      Array.from(rows).forEach(row => {
-        const playerFullName = row.cells[0].innerText.toLowerCase();
-        if (playerFullName.includes(playerName)) {
-          row.style.display = "";
-          found = true;
-        } else {
-          row.style.display = "none";
-        }
-      });
-
-      if (!found) {
-        document.getElementById('watchlist').innerHTML = '<p>No results found.</p>';
-      }
+      const playerName = document.getElementById('player-search').value;
+      alert('Search functionality is not implemented yet for ' + playerName);
     });
   </script>
 </body>
