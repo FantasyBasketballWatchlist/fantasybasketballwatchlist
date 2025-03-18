@@ -5,84 +5,192 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fantasy Basketball Watchlist</title>
 
-  <!-- Google Fonts link for Poppins -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css"> <!-- Ensure path to styles.css is correct -->
 
-  <!-- External CSS -->
-  <link rel="stylesheet" href="styles.css">
-  
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Poppins', sans-serif;
-      margin: 20px;
-      background-color: #f4f4f9;
-      color: #333;
+      background: linear-gradient(45deg, #1d2a3a, #333);
+      color: #fff;
+      display: flex;
+      flex-direction: column; /* Stack content vertically */
+      min-height: 100vh;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      overflow-x: hidden;  /* Prevent horizontal scrolling */
     }
-    header h1 {
+
+    .footer-links {
+      display: flex;            /* Use Flexbox for layout */
+      justify-content: center;  /* Center the links horizontally */
+      margin-top: auto;         /* Pushes the links to the bottom of the page */
+      padding: 20px;
+    }
+
+    .footer-links a {
+      color: #f1c40f;
+      text-decoration: none;
+      font-size: 1.2rem;
+      margin-right: 20px;
+    }
+
+    .footer-links a:last-child {
+      margin-right: 0;  /* Remove right margin from the last link */
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 25px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      width: 95%;
+      max-width: 1200px;
+      padding: 40px;
+      backdrop-filter: blur(15px);
+      overflow: hidden;
       text-align: center;
-      font-size: 2rem;
-      color: #333;
+      flex: 1; /* Makes the container take up remaining space */
     }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 3.5rem;
+      color: #f1c40f;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-shadow: 3px 3px 5px rgba(153, 51, 0, 0.7), /* Dark rust shadow */
+             -3px -3px 5px rgba(153, 51, 0, 0.7),
+             3px -3px 5px rgba(153, 51, 0, 0.7),
+             -3px 3px 5px rgba(153, 51, 0, 0.7);
+    }
+
     .search-section {
       display: flex;
       justify-content: center;
-      margin-bottom: 20px;
-    }
-    .search-section input {
-      padding: 8px;
-      font-size: 16px;
-      width: 300px;
-    }
-    .search-section button {
-      padding: 8px 16px;
-      font-size: 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .search-section button:hover {
-      background-color: #45a049;
-    }
-    .watchlist-section {
-      margin-top: 40px;
-      text-align: center;
-    }
-    .watchlist {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 10px;
-    }
-    .watchlist p {
-      font-size: 1.2rem;
+      gap: 20px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      position: relative;
     }
 
-    /* Table Styling */
-    table {
+    #player-search {
+      padding: 12px 20px;
+      font-size: 1.2rem;
+      border-radius: 20px;
+      border: 2px solid #fff;
+      width: 60%;
+      outline: none;
+      transition: all 0.3s ease;
+      background-color: #1d2a3a;
+      color: #fff;
+    }
+
+    #player-search::placeholder {
+      color: #bdc3c7;
+    }
+
+    #player-search:focus {
+      border-color: #f1c40f;
+      box-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
+    }
+
+    #search-btn {
+      padding: 12px 20px;
+      font-size: 1.2rem;
+      background-color: #f1c40f;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      font-weight: bold;
+      min-width: 150px;
+    }
+
+    #search-btn:hover {
+      background-color: #e67e22;
+      transform: translateY(-5px);
+    }
+
+    .autocomplete-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 145px;
+      right: 0;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      z-index: 999;
+      max-height: 200px;
+      overflow-y: auto;
+      color: black;
+      width: 60%;
+    }
+
+    .autocomplete-suggestions div {
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .autocomplete-suggestions div:hover {
+      background-color: #f1f1f1;
+      font-weight: bold;
+    }
+
+    #spinner {
+      display: none;
+      text-align: center;
+    }
+
+    .loading {
+      font-size: 1.2rem;
+      color: #888;
+    }
+
+    .table-container {
       width: 100%;
-      border-collapse: collapse;
+      overflow-x: auto;
       margin-top: 20px;
     }
+
+    table {
+      width: 100%;
+      table-layout: auto;
+      border-collapse: collapse;
+    }
+
     table, th, td {
       border: 1px solid #ddd;
     }
+
     th, td {
-      padding: 10px;
+      padding: 12px;
       text-align: center;
+      font-size: 1rem;
+      word-wrap: break-word;
     }
+
     th {
       background-color: #4CAF50;
       color: white;
     }
+
     tr:nth-child(even) {
       background-color: #f2f2f2;
     }
-    .loading {
-      text-align: center;
-      font-size: 1.5rem;
-      color: #888;
-    }
+
   </style>
 </head>
 <body>
@@ -91,93 +199,216 @@
       <h1>Fantasy Basketball Watchlist</h1>
     </header>
 
-    <!-- Search Section -->
     <div class="search-section">
       <input type="text" id="player-search" placeholder="Search for a player...">
       <button id="search-btn">Search</button>
+      <div id="autocomplete-container" class="autocomplete-suggestions"></div>
     </div>
 
-    <!-- NBA Player Stats Table -->
-    <h2>NBA Player Stats</h2>
-    <div class="loading" id="loadingMessage">Loading player stats...</div>
-    <table id="playerStatsTable">
-      <thead>
-        <tr>
-          <th>Player Name</th>
-          <th>Points</th>
-          <th>Rebounds</th>
-          <th>Assists</th>
-          <th>Blocks</th>
-          <th>Steals</th>
-          <th>Turnovers</th>
-          <th>FG Attempts</th>
-          <th>FG Made</th>
-          <th>FT Made</th>
-          <th>FT Attempts</th>
-          <th>3PM</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div id="spinner">
+      <img src="https://i.gifer.com/Bs.gif" alt="Loading..." style="width: 600px; height: auto;">
+    </div>
 
-    <!-- Watchlist Section -->
-    <section class="watchlist-section">
-      <h2>Your Watchlist</h2>
-      <div class="watchlist" id="watchlist">
-        <p>Your watchlist is empty!</p>
-      </div>
-    </section>
+    <h2 style="margin-top: -5px; font-size: 1.6rem;">NBA Player Stats (This season)</h2>
+
+    <div id="metrics-container" style="display: flex; justify-content: center; gap: 20px; font-size: 1.77rem; font-weight: bold; margin-top: 8px; margin-bottom: 20px; align-items: center;">
+      <div id="bpv-display" style="color: #3498db;">BPV: --</div>
+      <div id="hci-display" style="color: #f1c40f;">HCI: --</div>
+    </div>
+
+    <div class="loading" id="loadingMessage"></div>
+
+    <div id="watchlist" style="margin-top: 20px;"></div>
+    <div id="playerlist"></div>
+
+    <div class="table-container">
+      <table id="playerStatsTable">
+        <thead>
+          <tr>
+            <th>Points</th>
+            <th>Rebounds</th>
+            <th>Assists</th>
+            <th>Blocks</th>
+            <th>Steals</th>
+            <th>Turnovers</th>
+            <th>FG Attempts</th>
+            <th>FG Made</th>
+            <th>FT Made</th>
+            <th>FT Attempts</th>
+            <th>3PM</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer-links">
+    <a href="good-trades.html">Good Trades</a>
+    <a href="trade-analyzer.html">Trade Analyzer</a>
   </div>
 
   <script>
-    // GitHub NBA API endpoint for player stats
-    const apiUrl = 'https://raw.githubusercontent.com/bttmly/nba/master/data/players.json';
+    const apiUrl = 'http://localhost:5000/api/player_stats';
+    let activePlayers = [];
 
-    // Fetch player data
-    async function fetchPlayerStats() {
+    const formatStat = (stat) => {
+      return (stat && stat !== 0) ? stat.toFixed(2) : 'N/A';
+    };
+
+    async function fetchActivePlayers() {
       try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-
-        // Remove the loading message
-        document.getElementById("loadingMessage").style.display = "none";
-
-        // Get the table body element
-        const tableBody = document.getElementById("playerStatsTable").getElementsByTagName("tbody")[0];
-
-        // Loop through the players and add their stats to the table
-        data.forEach(player => {
-          const row = tableBody.insertRow();
-
-          // Insert the player data into the table
-          row.innerHTML = `
-            <td>${player.first_name} ${player.last_name}</td>
-            <td>${player.ppg}</td>
-            <td>${player.rpg}</td>
-            <td>${player.apg}</td>
-            <td>${player.bpg}</td>
-            <td>${player.spg}</td>
-            <td>${player.tpg}</td>
-            <td>${player.fga}</td>
-            <td>${player.fgm}</td>
-            <td>${player.ftm}</td>
-            <td>${player.fta}</td>
-            <td>${player.tpm}</td>
-          `;
-        });
+        const response = await fetch('http://localhost:5000/api/active_players');
+        const players = await response.json();
+        activePlayers = players;
+        console.log("Fetched active players:", activePlayers);
       } catch (error) {
-        console.error("Error fetching player data:", error);
-        document.getElementById("loadingMessage").textContent = "Failed to load data.";
+        console.error('Error fetching active players:', error);
       }
     }
 
-    // Call the fetchPlayerStats function when the page loads
-    fetchPlayerStats();
+    fetchActivePlayers();
 
-    // Placeholder function for search (can be expanded)
-    document.getElementById('search-btn').addEventListener('click', function() {
-      const playerName = document.getElementById('player-search').value;
-      alert('Search functionality is not implemented yet for ' + playerName);
+    let highestBPV = 0;
+
+    async function fetchTopPlayersStats() {
+      try {
+        const topPlayers = [
+          "LeBron James",
+          "Giannis Antetokounmpo",
+          "Luka Dončić",
+          "Shai Gilgeous-Alexander",
+          "Nikola Jokić",
+          "Jayson Tatum",
+          "Victor Wembanyama",
+          "Anthony Davis"
+        ];
+
+        const playerStatsResponse = await fetch(`${apiUrl}/top_players`);
+        const playerStats = await playerStatsResponse.json();
+
+        highestBPV = 0;
+
+        for (let j = 0; j < playerStats.length; j++) {
+          const playerStat = playerStats[j];
+          if (playerStat.stats) {
+            const season = playerStat.stats;
+            const playerBPV = calculateBPV(season);
+            if (playerBPV > highestBPV) {
+              highestBPV = playerBPV;
+            }
+          }
+        }
+
+        console.log("Highest BPV across all players:", highestBPV);
+      } catch (error) {
+        console.error('Error fetching player stats:', error);
+      }
+    }
+
+    fetchTopPlayersStats();
+
+    async function fetchPlayerStats(playerName) {
+      document.getElementById("spinner").style.display = "block";
+
+      if (!playerName) {
+        document.getElementById("loadingMessage").textContent = "Player name is required.";
+        document.getElementById("spinner").style.display = "none";
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiUrl}?player_name=${playerName}`);
+        const data = await response.json();
+
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("loadingMessage").style.display = "none";
+
+        const tableBody = document.getElementById("playerStatsTable").getElementsByTagName("tbody")[0];
+        tableBody.innerHTML = '';
+
+        if (data.error) {
+          document.getElementById("watchlist").innerHTML = "<p>No results found for the player.</p>";
+          return;
+        }
+
+        const latestSeason = data.find((season) => season.SEASON_ID === "2024-25");
+        if (!latestSeason) {
+          document.getElementById("watchlist").innerHTML = "<p>No data found for the 2024-25 season.</p>";
+          return;
+        }
+
+        console.log("Latest season stats:", latestSeason);
+
+        const bpv = calculateBPV(latestSeason);
+        console.log("Calculated BPV:", bpv);
+
+        const bpvPercentage = (bpv / highestBPV) * 100;
+
+        document.getElementById("bpv-display").textContent = `BPV: ${bpv.toFixed(2)}`;
+        document.getElementById("hci-display").textContent = `Heat Check Index: ${bpvPercentage.toFixed(2)}`;
+
+        const row = tableBody.insertRow();
+        row.innerHTML = ` 
+          <td>${formatStat(latestSeason.PTS / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.REB / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.AST / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.BLK / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.STL / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.TOV / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.FGA / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.FGM / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.FTM / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.FTA / latestSeason.GP)}</td>
+          <td>${formatStat(latestSeason.FG_PCT * 100)}%</td>
+        `;
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+        document.getElementById("loadingMessage").textContent = "Failed to load player stats.";
+        document.getElementById("spinner").style.display = "none";
+      }
+    }
+
+    function calculateBPV(seasonStats) {
+      const { PTS, REB, AST, BLK, STL, TOV, FGA, FGM, FTA, FTM, FG3M, GP } = seasonStats;
+
+      return ((PTS + REB + AST * 2 + BLK * 4 + STL * 4 - TOV * 2 + FGM * 2 - FGA + FTM - FTA + FG3M) / GP);
+    }
+
+    function normalizeString(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    document.getElementById("search-btn").addEventListener("click", function () {
+      const playerName = document.getElementById('player-search').value.trim();
+      if (playerName) {
+        fetchPlayerStats(playerName);
+        document.getElementById('autocomplete-container').innerHTML = '';
+      } else {
+        document.getElementById("watchlist").innerHTML = "<p>Please enter a player name to search.</p>";
+      }
+    });
+
+    document.getElementById("player-search").addEventListener("input", function () {
+      const query = normalizeString(this.value);  // Normalize and remove accents from the input
+      const suggestions = activePlayers.filter(player => normalizeString(player.name).includes(query));  // Normalize and remove accents from player names
+
+      const suggestionList = document.getElementById('autocomplete-container');
+      suggestionList.innerHTML = '';
+
+      suggestions.forEach(player => {
+        const div = document.createElement('div');
+        div.textContent = player.name;
+        div.addEventListener('click', () => {
+          document.getElementById('player-search').value = player.name;
+          suggestionList.innerHTML = ''; // Clear suggestions
+        });
+        suggestionList.appendChild(div);
+      });
+
+      if (query === '') {
+        suggestionList.innerHTML = ''; // Clear suggestions when input is empty
+      }
     });
   </script>
 </body>

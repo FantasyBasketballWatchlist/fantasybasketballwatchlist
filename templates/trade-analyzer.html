@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trade Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(45deg, #1d2a3a, #333);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 25px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 1200px;
+      padding: 40px;
+      backdrop-filter: blur(15px);
+      overflow: hidden;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #f1c40f;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-shadow: 3px 3px 5px rgba(153, 51, 0, 0.7);
+    }
+
+    .teams-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .team {
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      width: 48%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .team h3 {
+      font-size: 1.42rem;
+      color: #3498db;
+      margin-bottom: 15px;
+      font-weight: 600;
+      text-transform: capitalize;
+      text-shadow: 3px 3px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .team h4 {
+      font-size: 1.42rem;
+      color: #e74c3c;
+      margin-bottom: 15px;
+      font-weight: 600;
+      text-transform: capitalize;
+      text-shadow: 3px 3px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .team input {
+      width: 60%;
+      padding: 12px;
+      margin: 4px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      background-color: #1d2a3a;
+      color: white;
+    }
+
+    .team button {
+      background-color: #f1c40f;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+
+    .team button:hover {
+      background-color: #e67e22;
+    }
+
+    .analyze-btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1.2rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin-top: 20px;
+    }
+
+    .analyze-btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-5px);
+    }
+
+    #trade-result {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      padding: 20px;
+      background-color: #2c3e50;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: #f1c40f;
+    }
+
+    .watchlist {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .player-item {
+      width: 48%;
+      background-color: #2c3e50;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 1rem;
+      color: white;
+    }
+
+    .player-item:hover {
+      text-decoration: line-through;
+      background-color: #e74c3c;
+    }
+
+    #autocomplete-container div {
+      background-color: #1d2a3a;
+      padding: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: 275px;
+      margin-left: 0px;
+    }
+
+    #autocomplete-container div:hover {
+      font-weight: bold;
+      background-color: #3498db;
+    }
+
+    #autocomplete-container-2 div:active {
+      background-color: #2980b9;
+    }
+
+#autocomplete-container-2 div {
+      background-color: #1d2a3a;
+      padding: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: 275px;
+      margin-left: 0px;
+    }
+
+    #autocomplete-container-2 div:hover {
+      font-weight: bold;
+      background-color: #3498db;
+    }
+
+    #autocomplete-container-2 div:active {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Trade Analyzer</h2>
+
+    <div class="teams-container">
+      <div class="team">
+        <h3>Team 1 (What I'm Giving)</h3>
+        <input type="text" id="player-search" placeholder="Search for a player">
+        <div id="autocomplete-container"></div>
+        <div id="watchlist" class="watchlist"></div>
+      </div>
+
+      <div class="team">
+        <h4>Team 2 (What I'm Receiving)</h4>
+        <input type="text" id="player-search-2" placeholder="Search for a player">
+        <div id="autocomplete-container-2"></div>
+        <div id="watchlist-2" class="watchlist"></div>
+      </div>
+    </div>
+
+    <button class="analyze-btn" id="analyze-btn">Analyze Trade</button>
+    <div id="trade-result"></div>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:5000/api/player_stats';
+    let activePlayers = [];
+    let team1Players = [];
+    let team2Players = [];
+
+    async function fetchActivePlayers() {
+      try {
+        const response = await fetch('http://localhost:5000/api/active_players');
+        const players = await response.json();
+        activePlayers = players;
+      } catch (error) {
+        console.error('Error fetching active players:', error);
+      }
+    }
+
+    fetchActivePlayers();
+
+    async function fetchPlayerStats(playerName) {
+      if (!playerName) return 0;
+
+      try {
+        const response = await fetch(`${apiUrl}?player_name=${playerName}`);
+        const data = await response.json();
+
+        if (data.error) {
+          return 0;
+        }
+
+        const latestSeason = data.find((season) => season.SEASON_ID === "2024-25");
+        if (!latestSeason) return 0;
+
+        const bpv = calculateBPV(latestSeason);
+        return bpv;
+
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+        return 0;
+      }
+    }
+
+    function calculateBPV(seasonStats) {
+      const { PTS, REB, AST, BLK, STL, TOV, FGA, FGM, FTA, FTM, FG3M, GP } = seasonStats;
+      return Math.abs((PTS + REB + AST * 2 + BLK * 4 + STL * 4 - TOV * 2 + FGM * 2 - FGA + FTM - FTA + FG3M) / GP);
+    }
+
+    // Normalize player name by removing accents
+    function removeAccents(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    document.getElementById("player-search").addEventListener("input", function () {
+      const query = removeAccents(this.value.toLowerCase());
+      const suggestions = activePlayers.filter(player => removeAccents(player.name.toLowerCase()).includes(query));
+
+      const suggestionList = document.getElementById('autocomplete-container');
+      suggestionList.innerHTML = '';
+
+      suggestions.forEach(player => {
+        const div = document.createElement('div');
+        div.textContent = player.name;
+        div.addEventListener('click', () => {
+          addPlayerToTeam(player, 1);
+          suggestionList.innerHTML = ''; // Clear suggestions
+          document.getElementById("player-search").value = ''; // Clear search bar
+          document.getElementById("player-search").blur();
+        });
+        suggestionList.appendChild(div);
+      });
+
+      if (suggestions.length === 1) {
+        addPlayerToTeam(suggestions[0], 1);
+        suggestionList.innerHTML = ''; // Clear suggestions
+        document.getElementById("player-search").value = ''; // Clear search bar
+        document.getElementById("player-search").blur();
+      }
+
+      if (query === '') {
+        suggestionList.innerHTML = ''; // Clear suggestions when input is empty
+      }
+    });
+
+    document.getElementById("player-search-2").addEventListener("input", function () {
+      const query = removeAccents(this.value.toLowerCase());
+      const suggestions = activePlayers.filter(player => removeAccents(player.name.toLowerCase()).includes(query));
+
+      const suggestionList = document.getElementById('autocomplete-container-2');
+      suggestionList.innerHTML = '';
+
+      suggestions.forEach(player => {
+        const div = document.createElement('div');
+        div.textContent = player.name;
+        div.addEventListener('click', () => {
+          addPlayerToTeam(player, 2);
+          suggestionList.innerHTML = ''; // Clear suggestions
+          document.getElementById("player-search-2").value = ''; // Clear search bar
+          document.getElementById("player-search-2").blur();
+        });
+        suggestionList.appendChild(div);
+      });
+
+      if (suggestions.length === 1) {
+        addPlayerToTeam(suggestions[0], 2);
+        suggestionList.innerHTML = ''; // Clear suggestions
+        document.getElementById("player-search-2").value = ''; // Clear search bar
+        document.getElementById("player-search-2").blur();
+      }
+
+      if (query === '') {
+        suggestionList.innerHTML = ''; // Clear suggestions when input is empty
+      }
+    });
+
+    function addPlayerToTeam(player, teamId) {
+      if (teamId === 1 && !team1Players.includes(player.name)) {
+        team1Players.push(player.name);
+        updateWatchlist(1);
+      } else if (teamId === 2 && !team2Players.includes(player.name)) {
+        team2Players.push(player.name);
+        updateWatchlist(2);
+      }
+    }
+
+    function removePlayerFromTeam(player, teamId) {
+      if (teamId === 1) {
+        team1Players = team1Players.filter(p => p !== player);
+        updateWatchlist(1);
+      } else if (teamId === 2) {
+        team2Players = team2Players.filter(p => p !== player);
+        updateWatchlist(2);
+      }
+    }
+
+    function updateWatchlist(teamId) {
+      const watchlist = teamId === 1 ? document.getElementById("watchlist") : document.getElementById("watchlist-2");
+      const players = teamId === 1 ? team1Players : team2Players;
+
+      watchlist.innerHTML = players.map((player, index) => {
+        const playerHTML = `
+          <div class="player-item" onclick="removePlayerFromTeam('${player}', ${teamId})">${player}</div>
+        `;
+        
+        if (index >= 4) {
+          // After the 4th player, add to the other column
+          return `
+            <div class="player-item" onclick="removePlayerFromTeam('${player}', ${teamId})">${player}</div>
+          `;
+        } else {
+          return playerHTML;
+        }
+      }).join('');
+    }
+
+    document.getElementById("analyze-btn").addEventListener("click", async function () {
+      const analyzeButton = document.getElementById("analyze-btn");
+      analyzeButton.textContent = "Loading...";
+      analyzeButton.disabled = true;
+
+      let totalBPV1 = 0;
+      let totalBPV2 = 0;
+
+      // Calculate total BPV for Team 1
+      for (const player of team1Players) {
+        totalBPV1 += await fetchPlayerStats(player);
+      }
+
+      // Calculate total BPV for Team 2
+      for (const player of team2Players) {
+        totalBPV2 += await fetchPlayerStats(player);
+      }
+
+      if (totalBPV1 && totalBPV2) {
+  const bpvDifference = Math.abs(totalBPV1 - totalBPV2);
+  
+  if (totalBPV1 === totalBPV2) {
+    // If BPVs are equal, display "This trade is equal"
+    const result = "This trade is equal (+0.00 BPV)";
+    document.getElementById("trade-result").textContent = result;
+  } else {
+    // If BPVs are not equal, display which team has the better trade
+    const winner = totalBPV1 < totalBPV2 ? "Team 1" : "Team 2";
+    const result = `${winner} is on the better side of the trade (+${bpvDifference.toFixed(2)} BPV)`;
+    document.getElementById("trade-result").textContent = result;
+  }
+}
+
+
+      analyzeButton.textContent = "Analyze Trade";
+      analyzeButton.disabled = false;
+    });
+  </script>
+</body>
+</html>
