@@ -13,6 +13,8 @@ from celery import Celery
 import logging
 import ssl
 import time
+import threading
+from functools import wraps
 
 # Configure logging for better debugging
 logging.basicConfig(level=logging.INFO)
@@ -85,8 +87,8 @@ celery.conf.update(
     redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
 )
 
-# Increase timeout for NBA API calls to avoid timeouts
-FETCH_TIMEOUT = 15  # Increased from 10 to 15 seconds
+# Reduce timeout to avoid Heroku H12 errors (30 second limit)
+NBA_TIMEOUT = 8  # Reduced from 15 to 8 seconds to ensure we stay well under Heroku's 30s limit
 
 # Static list of top 10 players (you can customize this list)
 top_players = [
@@ -140,8 +142,37 @@ def set_to_cache(key, value, expiration=3600):
         logging.error(f"Redis cache set error: {str(e)}")
         return False
 
+# Timeout decorator for functions
+def timeout_handler(timeout_duration):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = [None]
+            error = [None]
+            
+            def target():
+                try:
+                    result[0] = func(*args, **kwargs)
+                except Exception as e:
+                    error[0] = e
+            
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout_duration)
+            
+            if thread.is_alive():
+                raise Timeout(f"Function {func.__name__} timed out after {timeout_duration} seconds")
+            
+            if error[0]:
+                raise error[0]
+                
+            return result[0]
+        return wrapper
+    return decorator
+
 # Safe NBA data fetching function with timeout handling and retries
-def fetch_nba_data(endpoint_class, retries=2, timeout=FETCH_TIMEOUT, **kwargs):
+def fetch_nba_data(endpoint_class, retries=2, timeout=NBA_TIMEOUT, **kwargs):
     """
     A safer version of the NBA API request function with better error handling, timeout and retries.
     """
@@ -155,11 +186,13 @@ def fetch_nba_data(endpoint_class, retries=2, timeout=FETCH_TIMEOUT, **kwargs):
         except Timeout:
             logging.error(f"Timeout error fetching NBA data with {endpoint_class.__name__} (attempt {attempt+1}/{retries+1})")
             last_error = Timeout("Request timed out")
-            time.sleep(1)  # Small delay between retries
+            if attempt < retries:
+                time.sleep(1)  # Small delay between retries
         except Exception as e:
             logging.error(f"Error initializing NBA endpoint {endpoint_class.__name__}: {str(e)} (attempt {attempt+1}/{retries+1})")
             last_error = e
-            time.sleep(1)  # Small delay between retries
+            if attempt < retries:
+                time.sleep(1)  # Small delay between retries
     
     # If we get here, all retries failed
     raise last_error
@@ -183,7 +216,7 @@ def retry_nba_api(self, request_function_name, *args, **kwargs):
     
     # Add timeout to kwargs if not present
     if 'timeout' not in kwargs:
-        kwargs['timeout'] = FETCH_TIMEOUT
+        kwargs['timeout'] = NBA_TIMEOUT
         
     try:
         return request_function(*args, **kwargs).get_dict()
@@ -193,13 +226,13 @@ def retry_nba_api(self, request_function_name, *args, **kwargs):
             raise self.retry(exc=e)
         raise
 
-# Celery Task Example
+# Celery Task for background processing
 @celery.task
 def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
     if player:
         try:
-            career = PlayerCareerStats(player_id=player['id'], timeout=FETCH_TIMEOUT)
+            career = PlayerCareerStats(player_id=player['id'], timeout=NBA_TIMEOUT)
             data = career.get_dict()
             result_set = data['resultSets'][0]
             headers = result_set['headers']
@@ -207,9 +240,29 @@ def fetch_player_stats_in_background(player_name):
             if rows:
                 stats = [dict(zip(headers, row)) for row in rows]
                 set_to_cache(f"player_stats:{player_name.lower()}", stats)
+                return True
         except Exception as e:
             logging.error(f"Background task error for {player_name}: {str(e)}")
-    return "Player stats fetched in background"
+    return False
+
+# Mock data generator for fallback when API times out
+def generate_mock_player_stats(player_name):
+    """Generate mock stats for when the NBA API times out"""
+    current_season = '2024-25'
+    return {
+        "player_name": player_name,
+        "note": "This is estimated data due to API timeout. Refresh later for actual stats.",
+        "stats": {
+            "season": current_season,
+            "team": "TEAM",
+            "games_played": "N/A",
+            "ppg": "N/A",
+            "rpg": "N/A",
+            "apg": "N/A",
+            "fg_pct": "N/A",
+            "fg3_pct": "N/A"
+        }
+    }
 
 # Homepage route
 @app.route('/')
@@ -219,6 +272,7 @@ def home():
 # Route for fetching career stats for a player by name (not ID)
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
+    start_time = time.time()
     player_name = request.args.get('player_name')
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
@@ -228,6 +282,17 @@ def get_player_stats():
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
+        # Schedule background refresh if cache is older than 12 hours
+        try:
+            cache_ttl = redis_client.ttl(cache_key)
+            if cache_ttl < 43200:  # 12 hours in seconds
+                try:
+                    fetch_player_stats_in_background.delay(player_name)
+                except Exception as celery_err:
+                    logging.warning(f"Background refresh task error: {str(celery_err)}")
+        except Exception as redis_err:
+            logging.warning(f"Redis TTL check error: {str(redis_err)}")
+            
         return jsonify(cached_stats)  # Return cached data if available
 
     # Search for player based on the name
@@ -236,9 +301,23 @@ def get_player_stats():
     if not player:
         return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
 
+    # Check if we're approaching Heroku's 30s timeout limit
+    elapsed_time = time.time() - start_time
+    if elapsed_time > 20:  # If more than 20 seconds have elapsed
+        # Return mock data if we're getting close to timeout
+        mock_stats = generate_mock_player_stats(player_name)
+        # Try to fetch real data in the background
+        try:
+            fetch_player_stats_in_background.delay(player_name)
+        except Exception as celery_err:
+            logging.warning(f"Background task scheduling error: {str(celery_err)}")
+        
+        return jsonify(mock_stats)
+
     try:
+        # Set a timeout lower than Heroku's 30s limit to ensure we respond
         # Fetch career stats using player ID - with better error handling and timeout
-        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=FETCH_TIMEOUT)
+        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=NBA_TIMEOUT)
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -249,20 +328,23 @@ def get_player_stats():
 
         stats = [dict(zip(headers, row)) for row in rows]
 
-        # Store the fetched stats in Redis for future use (with an expiration of 1 hour)
-        set_to_cache(cache_key, stats, expiration=3600)
-
-        # Skip background task if worker isn't running properly
-        try:
-            fetch_player_stats_in_background.delay(player_name)
-        except Exception as celery_err:
-            logging.warning(f"Background task scheduling error: {str(celery_err)}")
+        # Store the fetched stats in Redis for future use (with an expiration of 24 hours)
+        set_to_cache(cache_key, stats, expiration=86400)  # Increased to 24 hours
 
         return jsonify(stats)
 
     except Timeout:
         logging.error(f"Timeout fetching player stats for {player_name}")
-        return jsonify({"error": "Request timed out. Please try again later."}), 503
+        # Return a simple response instead of error to avoid breaking the UI
+        mock_stats = generate_mock_player_stats(player_name)
+        
+        # Try to fetch real data in the background
+        try:
+            fetch_player_stats_in_background.delay(player_name)
+        except Exception as celery_err:
+            logging.warning(f"Background task scheduling error: {str(celery_err)}")
+        
+        return jsonify(mock_stats)
     except Exception as e:
         logging.error(f"Error fetching player stats for {player_name}: {str(e)}")
         return jsonify({"error": f"Error fetching player stats. Please try again later."}), 500
@@ -279,7 +361,7 @@ def get_today_games():
         
     try:
         # Fetch today's NBA scoreboard data - with better error handling
-        scoreboard = fetch_nba_data(ScoreBoard, timeout=FETCH_TIMEOUT)
+        scoreboard = fetch_nba_data(ScoreBoard, timeout=NBA_TIMEOUT)
         data = scoreboard.get_dict()
 
         game_list = data['scoreboard']['games']
@@ -305,10 +387,10 @@ def get_today_games():
 
     except Timeout:
         logging.error("Timeout fetching today's games")
-        return jsonify({"error": "Request timed out. Please try again later.", "games": []}), 503
+        return jsonify({"message": "Unable to fetch live games at this time. Please try again later.", "games": []}), 200
     except Exception as e:
         logging.error(f"Error fetching today's games: {str(e)}")
-        return jsonify({"error": f"Error fetching today's games. Please try again later.", "games": []}), 500
+        return jsonify({"message": "Unable to fetch live games. Please try again later.", "games": []}), 200
 
 # Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
@@ -360,7 +442,7 @@ def get_last_5_games():
 
     try:
         # Fetch game logs with better error handling
-        game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5, timeout=FETCH_TIMEOUT)
+        game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5, timeout=NBA_TIMEOUT)
         game_log_data = game_logs.get_dict()['resultSets'][0]
         
         headers = game_log_data['headers']
@@ -389,10 +471,10 @@ def get_last_5_games():
 
     except Timeout:
         logging.error(f"Timeout fetching last 5 games for {player_name}")
-        return jsonify({"error": "Request timed out. Please try again later.", "games": []}), 503
+        return jsonify({"message": "Unable to fetch recent games at this time. Please try again later.", "games": []}), 200
     except Exception as e:
         logging.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
-        return jsonify({"error": f"Error fetching last 5 games. Please try again later.", "games": []}), 500
+        return jsonify({"message": "Unable to fetch recent games. Please try again later.", "games": []}), 200
 
 # Route for fetching stats for the static top 10 players with chunking to avoid timeout
 @app.route('/api/player_stats/top_players', methods=['GET'])
@@ -403,111 +485,60 @@ def get_top_players_stats():
     
     if cached_stats:
         return jsonify(cached_stats)
+    
+    # Return simplified data immediately to avoid timeouts
+    simplified_stats = []
+    for player_name in top_players:
+        # First check if we have this player's stats cached
+        player_cache_key = f"player_stats:{player_name.lower()}"
+        player_stats = get_from_cache(player_cache_key)
         
-    top_players_stats = []
-
-    # Process only 2 players at a time to avoid timeout (reduced from 3)
-    chunk_size = 2
-    current_chunk = request.args.get('chunk', '0')
-    
-    try:
-        current_chunk = int(current_chunk)
-    except ValueError:
-        current_chunk = 0
-    
-    # Get previous chunks from cache if they exist
-    previous_chunks_key = f"top_players_stats:chunks:{current_chunk-1}"
-    previous_chunks = get_from_cache(previous_chunks_key) or []
-    
-    start_idx = current_chunk * chunk_size
-    end_idx = min(start_idx + chunk_size, len(top_players))
-    
-    # If we've processed all players, return complete list
-    if start_idx >= len(top_players):
-        if previous_chunks:
-            set_to_cache(cache_key, previous_chunks, expiration=43200)
-            return jsonify(previous_chunks)
-        return jsonify([])
-    
-    # Process just this chunk of players
-    players_to_process = top_players[start_idx:end_idx]
-    
-    for player_name in players_to_process:
-        player = find_player_by_name(player_name)
-
-        if not player:
-            continue  # If player not found, skip to the next one
-
-        try:
-            # Fetch career stats with better error handling and strict timeout
-            career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=FETCH_TIMEOUT)
-            data = career.get_dict()
-            result_set = data['resultSets'][0]
-            headers = result_set['headers']
-            rows = result_set['rowSet']
-
-            if not rows:
-                continue
-
-            # Look for current season stats - ensure this matches the current NBA season format
+        if player_stats:
+            # Extract current season stats
             current_season = '2024-25'
             current_season_stats = None
             
-            for row in rows:
-                if row[headers.index('SEASON_ID')] == current_season:
-                    current_season_stats = dict(zip(headers, row))
-                    break
-                    
-            # If no current season stats, use the most recent one
-            if not current_season_stats and rows:
-                current_season_stats = dict(zip(headers, rows[-1]))  # Last row is most recent
-
-            if current_season_stats:
-                # Filter to just show key stats
-                simplified_stats = {
-                    "season": current_season_stats.get("SEASON_ID"),
-                    "team": current_season_stats.get("TEAM_ABBREVIATION"),
-                    "games_played": current_season_stats.get("GP"),
-                    "ppg": current_season_stats.get("PTS"),
-                    "rpg": current_season_stats.get("REB"),
-                    "apg": current_season_stats.get("AST"),
-                    "fg_pct": current_season_stats.get("FG_PCT"),
-                    "fg3_pct": current_season_stats.get("FG3_PCT")
-                }
+            # If player_stats is a list (which it probably is), find the current season
+            if isinstance(player_stats, list):
+                for season_stat in player_stats:
+                    if season_stat.get("SEASON_ID") == current_season:
+                        current_season_stats = season_stat
+                        break
                 
-                top_players_stats.append({
+                # If no current season stats, use the most recent one
+                if not current_season_stats and player_stats:
+                    current_season_stats = player_stats[-1]  # Last item is most recent
+            
+            if current_season_stats:
+                stat_entry = {
                     "player_name": player_name,
-                    "stats": simplified_stats
-                })
-
-        except Timeout:
-            logging.error(f"Timeout fetching stats for {player_name}")
-            continue
+                    "stats": {
+                        "season": current_season_stats.get("SEASON_ID", "N/A"),
+                        "team": current_season_stats.get("TEAM_ABBREVIATION", "N/A"),
+                        "games_played": current_season_stats.get("GP", "N/A"),
+                        "ppg": current_season_stats.get("PTS", "N/A"),
+                        "rpg": current_season_stats.get("REB", "N/A"),
+                        "apg": current_season_stats.get("AST", "N/A"),
+                        "fg_pct": current_season_stats.get("FG_PCT", "N/A"),
+                        "fg3_pct": current_season_stats.get("FG3_PCT", "N/A")
+                    }
+                }
+                simplified_stats.append(stat_entry)
+                continue
+        
+        # If we don't have cached stats, add placeholder
+        simplified_stats.append(generate_mock_player_stats(player_name))
+        
+        # Schedule a background fetch for this player
+        try:
+            fetch_player_stats_in_background.delay(player_name)
         except Exception as e:
-            logging.error(f"Error fetching stats for {player_name}: {str(e)}")
-            continue  # Skip to the next player on error
+            logging.error(f"Failed to schedule background update for {player_name}: {str(e)}")
     
-    # Combine with previous chunks
-    combined_stats = previous_chunks + top_players_stats
+    # Cache this simplified result for a short time (1 hour)
+    set_to_cache(cache_key, simplified_stats, expiration=3600)
     
-    # Cache this chunk plus previous chunks
-    set_to_cache(f"top_players_stats:chunks:{current_chunk}", combined_stats, expiration=43200)
-    
-    # If this is the last chunk, cache the complete result
-    if end_idx >= len(top_players):
-        set_to_cache(cache_key, combined_stats, expiration=43200)
-        return jsonify(combined_stats)
-    
-    # Return partial result with pagination info
-    return jsonify({
-        "stats": combined_stats, 
-        "pagination": {
-            "next_chunk": current_chunk + 1,
-            "total_chunks": (len(top_players) + chunk_size - 1) // chunk_size,
-            "processed": end_idx,
-            "total": len(top_players)
-        }
-    })
+    return jsonify(simplified_stats)
 
 # Health check endpoint - needed for Heroku
 @app.route('/health', methods=['GET'])
