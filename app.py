@@ -12,7 +12,11 @@ app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
 # Get the Redis URL from the environment variable (Heroku Redis URL)
-redis_url = os.getenv("REDIS_URL", "rediss://:p7042c05488983a10f7c70496c020d21c1a102b33a1ae564335ed31c8081e3a21@ec2-34-237-159-195.compute-1.amazonaws.com:10470")
+redis_url = os.getenv("REDIS_URL")
+
+# Check if the Redis URL was not found
+if not redis_url:
+    raise ValueError("REDIS_URL environment variable is not set. Make sure to add Heroku Redis add-on.")
 
 # Parse the Redis URL
 url = urlparse(redis_url)
