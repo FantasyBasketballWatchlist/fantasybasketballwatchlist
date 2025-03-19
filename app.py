@@ -81,7 +81,7 @@ def get_player_stats():
 
 @app.route('/trade-analyzer')
 def trade_analyzer():
-    return render_template('trade_analyzer.html')
+    return render_template('trade-analyzer.html')
 
 # Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
