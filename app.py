@@ -1,6 +1,7 @@
 import os
 import unicodedata
 import redis
+import json
 from flask import Flask, render_template, jsonify, request
 from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
 from nba_api.live.nba.endpoints import ScoreBoard
@@ -10,7 +11,7 @@ from urllib.parse import urlparse
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 import requests
 from requests.exceptions import RequestException
-from celery import Celery  # Import Celery
+from celery import Celery
 import logging
 
 # Configure logging for better debugging
@@ -53,7 +54,7 @@ top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
     "Luka Dončić",
-    "Tyrese Halliburton",
+    "Tyrese Haliburton",  # Fixed spelling from "Halliburton"
     "Cade Cunningham",
     "Nikola Jokić",
     "Shai Gilgeous-Alexander",
@@ -78,9 +79,17 @@ def find_player_by_name(player_name):
 
 # Cache helper functions for Redis
 def get_from_cache(key):
-    return redis_client.get(key)
+    data = redis_client.get(key)
+    if data:
+        try:
+            return json.loads(data)  # Parse JSON string back to Python object
+        except json.JSONDecodeError:
+            return data
+    return None
 
 def set_to_cache(key, value, expiration=3600):
+    if isinstance(value, (dict, list)):
+        value = json.dumps(value)  # Convert Python object to JSON string
     redis_client.setex(key, expiration, value)
 
 # Retry logic using `tenacity`
@@ -152,8 +161,8 @@ def get_player_stats():
         # Store the fetched stats in Redis for future use (with an expiration of 1 hour)
         set_to_cache(cache_key, stats, expiration=3600)
 
-        # Trigger the background task for stats fetching
-        fetch_player_stats_in_background.apply_async(args=[player_name])
+        # Trigger the background task for stats fetching (as a separate task)
+        fetch_player_stats_in_background.delay(player_name)
 
         return jsonify(stats)
 
@@ -164,6 +173,13 @@ def get_player_stats():
 # Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
+    # Check cache first
+    cache_key = "today_games"
+    cached_games = get_from_cache(cache_key)
+    
+    if cached_games:
+        return jsonify(cached_games)
+        
     try:
         # Fetch today's NBA scoreboard data
         games = fetch_nba_data(ScoreBoard)
@@ -172,7 +188,7 @@ def get_today_games():
         game_list = data['scoreboard']['games']
         
         if not game_list:
-            return jsonify({"error": "No live games available."}), 404
+            return jsonify({"message": "No live games available today."}), 200
 
         # Format the game data
         game_data = []
@@ -184,6 +200,9 @@ def get_today_games():
                 "away_score": game['awayTeam']['score'],
                 "status": game['gameStatusText']
             })
+            
+        # Cache the results for 5 minutes (games update frequently)
+        set_to_cache(cache_key, game_data, expiration=300)
 
         return jsonify(game_data)
 
@@ -194,6 +213,13 @@ def get_today_games():
 # Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
+    # Check cache first
+    cache_key = "active_players"
+    cached_players = get_from_cache(cache_key)
+    
+    if cached_players:
+        return jsonify(cached_players)
+        
     try:
         # Fetch the full list of players (active and inactive)
         all_players = players.get_players()
@@ -203,6 +229,9 @@ def get_active_players():
 
         active_players = [player for player in all_players if player['is_active']]
         player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
+        
+        # Cache active players for 24 hours (doesn't change often)
+        set_to_cache(cache_key, player_data, expiration=86400)
 
         return jsonify(player_data)
 
@@ -217,26 +246,43 @@ def get_last_5_games():
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
+    # Check cache first
+    cache_key = f"last_5_games:{player_name.lower()}"
+    cached_games = get_from_cache(cache_key)
+    
+    if cached_games:
+        return jsonify(cached_games)
+
     player = find_player_by_name(player_name)
     
     if not player:
         return jsonify({"error": "Player not found"}), 404
 
     try:
-        game_logs = PlayerGameLogs(player_id_nullable=player['id'], last_n_games_nullable=5)
-        game_log_data = game_logs.player_game_logs.get_data()
-
+        game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5)
+        game_log_data = game_logs.get_dict()['resultSets'][0]
+        
+        headers = game_log_data['headers']
+        rows = game_log_data['rowSet']
+        
+        if not rows:
+            return jsonify({"message": "No recent games found for this player."}), 200
+            
         last_5_games = []
-        for game in game_log_data:
+        for row in rows:
+            game_dict = dict(zip(headers, row))
             formatted_game = {
-                "date": game.get("GAME_DATE", "N/A"),
-                "home_team": game.get("HOME_TEAM_NAME", "N/A"),
-                "away_team": game.get("VISITOR_TEAM_NAME", "N/A"),
-                "home_score": game.get("HOME_TEAM_SCORE", "N/A"),
-                "away_score": game.get("VISITOR_TEAM_SCORE", "N/A"),
-                "outcome": game.get("WL", "N/A"),
+                "date": game_dict.get("GAME_DATE", "N/A"),
+                "home_team": game_dict.get("HOME_TEAM_NAME", "N/A"),
+                "away_team": game_dict.get("VISITOR_TEAM_NAME", "N/A"),
+                "home_score": game_dict.get("HOME_TEAM_SCORE", "N/A"),
+                "away_score": game_dict.get("VISITOR_TEAM_SCORE", "N/A"),
+                "outcome": game_dict.get("WL", "N/A"),
             }
             last_5_games.append(formatted_game)
+            
+        # Cache the results for 6 hours
+        set_to_cache(cache_key, last_5_games, expiration=21600)
 
         return jsonify(last_5_games)
 
@@ -247,6 +293,13 @@ def get_last_5_games():
 # Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
+    # Check cache first
+    cache_key = "top_players_stats"
+    cached_stats = get_from_cache(cache_key)
+    
+    if cached_stats:
+        return jsonify(cached_stats)
+        
     top_players_stats = []
 
     for player_name in top_players:
@@ -254,13 +307,6 @@ def get_top_players_stats():
 
         if not player:
             continue  # If player not found, skip to the next one
-
-        cache_key = f"player_stats_top:{player_name.lower()}"
-        cached_stats = get_from_cache(cache_key)
-        
-        if cached_stats:
-            top_players_stats.append({"player_name": player_name, "stats": cached_stats})
-            continue  # Skip to the next player if stats are cached
 
         try:
             career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
@@ -272,25 +318,45 @@ def get_top_players_stats():
             if not rows:
                 continue
 
-            stats_2024_25 = [
-                dict(zip(headers, row)) for row in rows if row[headers.index('SEASON_ID')] == '2024-25'
-            ]
+            # Look for current season stats - ensure this matches the current NBA season format
+            current_season = '2024-25'
+            current_season_stats = None
+            
+            for row in rows:
+                if row[headers.index('SEASON_ID')] == current_season:
+                    current_season_stats = dict(zip(headers, row))
+                    break
+                    
+            # If no current season stats, use the most recent one
+            if not current_season_stats and rows:
+                current_season_stats = dict(zip(headers, rows[-1]))  # Last row is most recent
 
-            if stats_2024_25:
-                season_stats = stats_2024_25[0]
+            if current_season_stats:
+                # Filter to just show key stats
+                simplified_stats = {
+                    "season": current_season_stats.get("SEASON_ID"),
+                    "team": current_season_stats.get("TEAM_ABBREVIATION"),
+                    "games_played": current_season_stats.get("GP"),
+                    "ppg": current_season_stats.get("PTS"),
+                    "rpg": current_season_stats.get("REB"),
+                    "apg": current_season_stats.get("AST"),
+                    "fg_pct": current_season_stats.get("FG_PCT"),
+                    "fg3_pct": current_season_stats.get("FG3_PCT")
+                }
+                
                 top_players_stats.append({
                     "player_name": player_name,
-                    "stats": season_stats
+                    "stats": simplified_stats
                 })
-
-                # Cache the stats for future requests
-                set_to_cache(cache_key, season_stats)
 
         except Exception as e:
             logging.error(f"Error fetching stats for {player_name}: {str(e)}")
+            
+    # Cache the top players stats for 12 hours
+    set_to_cache(cache_key, top_players_stats, expiration=43200)
 
     return jsonify(top_players_stats)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)  # Set debug=False for production
