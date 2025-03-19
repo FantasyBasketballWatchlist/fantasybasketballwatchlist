@@ -11,6 +11,10 @@ from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_t
 import requests
 from requests.exceptions import RequestException
 from celery import Celery  # Import Celery
+import logging
+
+# Configure logging for better debugging
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -35,6 +39,14 @@ redis_client = redis.StrictRedis(
     db=0,
     decode_responses=True
 )
+
+# Celery configuration
+app.config['CELERY_BROKER_URL'] = redis_url  # Redis broker URL
+app.config['CELERY_RESULT_BACKEND'] = redis_url  # Redis result backend
+
+# Ensure Celery handles rediss URLs properly
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # Static list of top 10 players (you can customize this list)
 top_players = [
@@ -83,12 +95,6 @@ def fetch_nba_data(request_function, *args, **kwargs):
     This function will retry the request up to 3 times with a 2-second delay.
     """
     return request_function(*args, **kwargs)
-
-# Celery configuration
-app.config['CELERY_BROKER_URL'] = redis_url  # Redis broker URL
-app.config['CELERY_RESULT_BACKEND'] = redis_url  # Redis result backend
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
 
 # Celery Task Example
 @celery.task
@@ -152,11 +158,8 @@ def get_player_stats():
         return jsonify(stats)
 
     except Exception as e:
+        logging.error(f"Error fetching player stats for {player_name}: {str(e)}")
         return jsonify({"error": f"Error fetching player stats: {str(e)}"}), 400  # Handle errors
-
-@app.route('/trade-analyzer')
-def trade_analyzer():
-    return render_template('trade-analyzer.html')
 
 # Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
@@ -185,6 +188,7 @@ def get_today_games():
         return jsonify(game_data)
 
     except Exception as e:
+        logging.error(f"Error fetching today's games: {str(e)}")
         return jsonify({"error": f"Error fetching today's games: {str(e)}"}), 400
 
 # Route for fetching active players list (for frontend autocomplete)
@@ -203,6 +207,7 @@ def get_active_players():
         return jsonify(player_data)
 
     except Exception as e:
+        logging.error(f"Error fetching active players: {str(e)}")
         return jsonify({"error": f"Error fetching active players: {str(e)}"}), 500
 
 # Route for fetching last 5 games for a player
@@ -236,6 +241,7 @@ def get_last_5_games():
         return jsonify(last_5_games)
 
     except Exception as e:
+        logging.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
         return jsonify({"error": f"Error fetching last 5 games: {str(e)}"}), 400
 
 # Route for fetching stats for the static top 10 players
@@ -281,7 +287,7 @@ def get_top_players_stats():
                 set_to_cache(cache_key, season_stats)
 
         except Exception as e:
-            print(f"Error fetching stats for {player_name}: {str(e)}")
+            logging.error(f"Error fetching stats for {player_name}: {str(e)}")
 
     return jsonify(top_players_stats)
 
