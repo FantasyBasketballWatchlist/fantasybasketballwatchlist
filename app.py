@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 import requests
 from requests.exceptions import RequestException
+from celery import Celery  # Import Celery
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -83,6 +84,27 @@ def fetch_nba_data(request_function, *args, **kwargs):
     """
     return request_function(*args, **kwargs)
 
+# Celery configuration
+app.config['CELERY_BROKER_URL'] = redis_url  # Redis broker URL
+app.config['CELERY_RESULT_BACKEND'] = redis_url  # Redis result backend
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+
+# Celery Task Example
+@celery.task
+def fetch_player_stats_in_background(player_name):
+    player = find_player_by_name(player_name)
+    if player:
+        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
+        data = career.get_dict()
+        result_set = data['resultSets'][0]
+        headers = result_set['headers']
+        rows = result_set['rowSet']
+        if rows:
+            stats = [dict(zip(headers, row)) for row in rows]
+            set_to_cache(f"player_stats:{player_name.lower()}", stats)
+    return "Player stats fetched in background"
+
 # Homepage route
 @app.route('/')
 def home():
@@ -123,6 +145,9 @@ def get_player_stats():
 
         # Store the fetched stats in Redis for future use (with an expiration of 1 hour)
         set_to_cache(cache_key, stats, expiration=3600)
+
+        # Trigger the background task for stats fetching
+        fetch_player_stats_in_background.apply_async(args=[player_name])
 
         return jsonify(stats)
 
