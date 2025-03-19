@@ -14,7 +14,6 @@ import logging
 import ssl
 import time
 import threading
-import concurrent.futures
 
 # Configure logging for better debugging
 logging.basicConfig(level=logging.INFO)
@@ -160,7 +159,7 @@ def set_to_cache(key, value, expiration=3600):
         logging.error(f"Redis cache set error: {str(e)}")
         return False
 
-# Pre-fetch and cache all player IDs on startup
+# Pre-fetch and cache all player IDs for top players
 def preload_player_ids():
     for player_name in top_players:
         find_player_by_name(player_name)
@@ -290,9 +289,28 @@ def generate_mock_player_stats(player_name):
         }
     }
 
+# Function to initialize app data - called manually instead of using before_first_request
+def initialize_app_data():
+    # Preload top player IDs to make lookups faster
+    preload_player_ids()
+    
+    # Schedule background fetch of top player stats
+    for player_name in top_players:
+        try:
+            fetch_player_stats_in_background.delay(player_name, True)
+        except Exception:
+            pass
+
 # Flask route for homepage
 @app.route('/')
 def home():
+    # Initialize app data on first request - a replacement for before_first_request
+    if not player_id_cache:
+        try:
+            initialize_app_data()
+        except Exception as e:
+            logging.error(f"Error initializing app data: {str(e)}")
+    
     return render_template('index.html')
 
 # Route for fetching career stats for a player by name
@@ -526,19 +544,6 @@ def get_top_players_stats():
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy", "timestamp": time.time()}), 200
-
-# Initialize the app
-@app.before_first_request
-def initialize():
-    # Preload top player IDs to make lookups faster
-    preload_player_ids()
-    
-    # Schedule background fetch of top player stats
-    for player_name in top_players:
-        try:
-            fetch_player_stats_in_background.delay(player_name, True)
-        except Exception:
-            pass
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  
