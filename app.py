@@ -7,8 +7,7 @@ from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
 from nba_api.stats.static import players
-from urllib.parse import urlparse
-import requests
+from urllib.parse import urlparse, parse_qs
 from requests.exceptions import RequestException, Timeout
 from celery import Celery
 import logging
@@ -31,15 +30,27 @@ if not redis_url:
 # Parse the Redis URL
 url = urlparse(redis_url)
 
-# Set proper SSL configuration for Redis
+# Set proper SSL configuration for Redis connection
 if url.scheme == 'rediss':
-    # Fix for the Redis SSL configuration error
+    # Add ssl_cert_reqs parameter to URL if not already present
+    query_params = parse_qs(url.query)
+    
+    if 'ssl_cert_reqs' not in query_params:
+        # Modify the URL to include ssl_cert_reqs
+        if url.query:
+            modified_redis_url = f"{redis_url}&ssl_cert_reqs=CERT_NONE"
+        else:
+            modified_redis_url = f"{redis_url}?ssl_cert_reqs=CERT_NONE"
+    else:
+        modified_redis_url = redis_url
+    
+    # Redis client with SSL
     redis_client = redis.StrictRedis(
         host=url.hostname,
         port=url.port,
         password=url.password,
         ssl=True,
-        ssl_cert_reqs=ssl.CERT_NONE,  # Explicitly set SSL cert requirements
+        ssl_cert_reqs=ssl.CERT_NONE,
         db=0,
         decode_responses=True
     )
@@ -55,21 +66,27 @@ else:
     )
 
 # Celery configuration with proper SSL settings
-app.config['CELERY_BROKER_URL'] = redis_url
-app.config['CELERY_RESULT_BACKEND'] = redis_url
-
-# Ensure Celery handles rediss URLs properly
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
-
-# Configure Celery to handle SSL properly for Redis
+# Use the modified URL with ssl_cert_reqs parameter
 if url.scheme == 'rediss':
-    celery.conf.broker_transport_options = {
-        'ssl_cert_reqs': ssl.CERT_NONE
-    }
-    celery.conf.redis_backend_transport_options = {
-        'ssl_cert_reqs': ssl.CERT_NONE
-    }
+    broker_url = modified_redis_url
+    result_backend = modified_redis_url
+else:
+    broker_url = redis_url
+    result_backend = redis_url
+
+# Create Celery app with the modified URLs
+celery = Celery(app.name, broker=broker_url, backend=result_backend)
+
+# Important: Set these options for both broker and backend
+celery.conf.update(
+    broker_transport_options={'ssl_cert_reqs': ssl.CERT_NONE},
+    redis_backend_transport_options={'ssl_cert_reqs': ssl.CERT_NONE},
+    broker_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE},
+    redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
+)
+
+# Increase timeout for NBA API calls to avoid timeouts
+FETCH_TIMEOUT = 15  # Increased from 10 to 15 seconds
 
 # Static list of top 10 players (you can customize this list)
 top_players = [
@@ -123,22 +140,29 @@ def set_to_cache(key, value, expiration=3600):
         logging.error(f"Redis cache set error: {str(e)}")
         return False
 
-# Safe NBA data fetching function with timeout handling
-def fetch_nba_data(endpoint_class, timeout=10, **kwargs):
+# Safe NBA data fetching function with timeout handling and retries
+def fetch_nba_data(endpoint_class, retries=2, timeout=FETCH_TIMEOUT, **kwargs):
     """
-    A safer version of the NBA API request function with better error handling and timeout.
+    A safer version of the NBA API request function with better error handling, timeout and retries.
     """
-    try:
-        # Set a shorter timeout to avoid Heroku H12 errors (30s limit)
-        kwargs['timeout'] = timeout
-        endpoint = endpoint_class(**kwargs)
-        return endpoint
-    except Timeout:
-        logging.error(f"Timeout error fetching NBA data with {endpoint_class.__name__}")
-        raise
-    except Exception as e:
-        logging.error(f"Error initializing NBA endpoint {endpoint_class.__name__}: {str(e)}")
-        raise
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            # Set timeout to avoid Heroku H12 errors (30s limit)
+            kwargs['timeout'] = timeout
+            endpoint = endpoint_class(**kwargs)
+            return endpoint
+        except Timeout:
+            logging.error(f"Timeout error fetching NBA data with {endpoint_class.__name__} (attempt {attempt+1}/{retries+1})")
+            last_error = Timeout("Request timed out")
+            time.sleep(1)  # Small delay between retries
+        except Exception as e:
+            logging.error(f"Error initializing NBA endpoint {endpoint_class.__name__}: {str(e)} (attempt {attempt+1}/{retries+1})")
+            last_error = e
+            time.sleep(1)  # Small delay between retries
+    
+    # If we get here, all retries failed
+    raise last_error
 
 # Celery Task for retrying NBA API requests
 @celery.task(bind=True, max_retries=3, default_retry_delay=2)
@@ -159,7 +183,7 @@ def retry_nba_api(self, request_function_name, *args, **kwargs):
     
     # Add timeout to kwargs if not present
     if 'timeout' not in kwargs:
-        kwargs['timeout'] = 10
+        kwargs['timeout'] = FETCH_TIMEOUT
         
     try:
         return request_function(*args, **kwargs).get_dict()
@@ -175,7 +199,7 @@ def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
     if player:
         try:
-            career = PlayerCareerStats(player_id=player['id'], timeout=10)
+            career = PlayerCareerStats(player_id=player['id'], timeout=FETCH_TIMEOUT)
             data = career.get_dict()
             result_set = data['resultSets'][0]
             headers = result_set['headers']
@@ -214,7 +238,7 @@ def get_player_stats():
 
     try:
         # Fetch career stats using player ID - with better error handling and timeout
-        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=10)
+        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=FETCH_TIMEOUT)
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -255,7 +279,7 @@ def get_today_games():
         
     try:
         # Fetch today's NBA scoreboard data - with better error handling
-        scoreboard = fetch_nba_data(ScoreBoard, timeout=10)
+        scoreboard = fetch_nba_data(ScoreBoard, timeout=FETCH_TIMEOUT)
         data = scoreboard.get_dict()
 
         game_list = data['scoreboard']['games']
@@ -336,7 +360,7 @@ def get_last_5_games():
 
     try:
         # Fetch game logs with better error handling
-        game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5, timeout=10)
+        game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5, timeout=FETCH_TIMEOUT)
         game_log_data = game_logs.get_dict()['resultSets'][0]
         
         headers = game_log_data['headers']
@@ -382,9 +406,8 @@ def get_top_players_stats():
         
     top_players_stats = []
 
-    # Process only 3 players at a time to avoid timeout
-    # The full list will be built up over multiple requests
-    chunk_size = 3
+    # Process only 2 players at a time to avoid timeout (reduced from 3)
+    chunk_size = 2
     current_chunk = request.args.get('chunk', '0')
     
     try:
@@ -417,7 +440,7 @@ def get_top_players_stats():
 
         try:
             # Fetch career stats with better error handling and strict timeout
-            career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=8)
+            career = fetch_nba_data(PlayerCareerStats, player_id=player['id'], timeout=FETCH_TIMEOUT)
             data = career.get_dict()
             result_set = data['resultSets'][0]
             headers = result_set['headers']
