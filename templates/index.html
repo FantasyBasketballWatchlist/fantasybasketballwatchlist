@@ -346,7 +346,10 @@
         const bpvPercentage = (bpv / highestBPV) * 100;
 
         document.getElementById("bpv-display").textContent = `BPV: ${bpv.toFixed(2)}`;
-        document.getElementById("hci-display").textContent = `Heat Check Index: ${bpvPercentage.toFixed(2)}`;
+        // Truncate all decimal points
+let truncatedBpvPercentage = Math.trunc(bpvPercentage);
+document.getElementById("hci-display").textContent = `Heat Check Index: ${truncatedBpvPercentage}`;
+
 
         const row = tableBody.insertRow();
         row.innerHTML = ` 

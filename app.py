@@ -1,10 +1,10 @@
 import os
 import unicodedata
 from flask import Flask, render_template, jsonify, request
-from nba_api.stats.endpoints import PlayerCareerStats, playergamelogs
+from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
-from nba_api.stats.static import players  # Importing players from nba_api
+from nba_api.stats.static import players  # Correctly importing players module from nba_api.stats.static
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -28,14 +28,20 @@ def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-# Fetch the full list of players
-def fetch_all_players():
-    print("Fetching all players...")
-    all_players = players.get_players()  # This returns a list of all NBA players (both active and inactive)
-    return all_players
+# Function to search and return player by name
+def find_player_by_name(player_name):
+    # Normalize the player name to handle cases like accents and case sensitivity
+    player_name_normalized = remove_accents(player_name.strip().lower())
 
-# Store players in memory (in real use cases, you might store this in a database)
-all_players = fetch_all_players()  # This will store the players once, to prevent calling the API every time
+    # Check if players is a module and print its type (for debugging purposes)
+    print(f"Type of players module: {type(players)}")
+
+    # Search for players using the `nba_api` search function
+    all_players = players.get_players()  # Correctly using the function from the `players` module
+    for player in all_players:
+        if remove_accents(player['full_name'].lower()) == player_name_normalized:
+            return player
+    return None
 
 # Route to serve the index.html page
 @app.route('/')
@@ -49,19 +55,15 @@ def get_player_stats():
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
-    player_name = player_name.strip().lower()  # Make sure the name is properly formatted
-    player_id = None
-    for player in all_players:
-        if player['full_name'].lower() == player_name:
-            player_id = player['id']
-            break
-
-    if not player_id:
+    # Search for player based on the name
+    player = find_player_by_name(player_name)
+    
+    if not player:
         return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
 
     try:
         # Fetch career stats using player ID
-        career = PlayerCareerStats(player_id=player_id)
+        career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -108,12 +110,12 @@ def get_today_games():
         print(f"Error occurred while fetching today games: {str(e)}")  # Debugging log
         return jsonify({"error": str(e)}), 400
 
-# Route to serve the active players list (for frontend autocomplete)
+# Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
     try:
         # Fetch the full list of players (active and inactive)
-        all_players = fetch_all_players()
+        all_players = players.get_players()  # Correctly using the function from the `players` module
 
         if not all_players:
             return jsonify({"error": "No players found."}), 500  # If no players are found
@@ -137,33 +139,31 @@ def get_last_5_games():
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
-    player_name = player_name.strip().lower()  # Ensure the name is properly formatted
-    player_id = None
-    for player in all_players:
-        if player['full_name'].lower() == player_name:
-            player_id = player['id']
-            break
-
-    if not player_id:
-        return jsonify({"error": "Player not found"}), 404
+    # Search for player based on the name
+    player = find_player_by_name(player_name)
+    
+    if not player:
+        return jsonify({"error": "Player not found"}), 404  # Player not found in the list
 
     try:
-        # Fetch game logs using the player ID for the correct season (2024-2025)
-        game_logs = playergamelogs.PlayerGameLogs(player_id=player_id, season='2024-25')
-        data = game_logs.get_dict()  # Fetch data in a dictionary format instead of pandas DataFrame
+        # Fetch game logs using the player ID
+        game_logs = PlayerGameLogs(player_id_nullable=player['id'], last_n_games_nullable=5)  # Correct parameters
+        
+        # Extract data from the game logs response
+        game_log_data = game_logs.player_game_logs.get_data()
 
-        if 'resultSets' not in data or len(data['resultSets']) == 0 or len(data['resultSets'][0]['rowSet']) == 0:
-            return jsonify({"error": "No game logs available for the player."}), 404
-
-        # Extract the game logs
-        game_log_rows = data['resultSets'][0]['rowSet']
-        headers = data['resultSets'][0]['headers']
-
-        # Format the data to return in a more readable format
-        games = [dict(zip(headers, row)) for row in game_log_rows]
-
-        # Get the last 5 games (most recent games)
-        last_5_games = games[:5]  # Select the first 5 games
+        # Process and return the last 5 games
+        last_5_games = []
+        for game in game_log_data:
+            formatted_game = {
+                "date": game.get("GAME_DATE", "N/A"),
+                "home_team": game.get("HOME_TEAM_NAME", "N/A"),
+                "away_team": game.get("VISITOR_TEAM_NAME", "N/A"),
+                "home_score": game.get("HOME_TEAM_SCORE", "N/A"),
+                "away_score": game.get("VISITOR_TEAM_SCORE", "N/A"),
+                "outcome": game.get("WL", "N/A"),
+            }
+            last_5_games.append(formatted_game)
 
         return jsonify(last_5_games)
 
@@ -179,18 +179,15 @@ def get_top_players_stats():
 
     # Static list of top players, no need to iterate over all players to find them
     for player_name in top_players:
-        # Normalize the player name to avoid issues with accents
-        normalized_player_name = remove_accents(player_name.lower())
+        # Search for player based on the name
+        player = find_player_by_name(player_name)
 
-        # Directly get the player ID using the name from the static list
-        player_id = next((p['id'] for p in all_players if remove_accents(p['full_name'].lower()) == normalized_player_name), None)
-
-        if not player_id:
+        if not player:
             continue  # If player not found in the list, skip to the next one
 
         try:
             # Fetch career stats using player ID
-            career = PlayerCareerStats(player_id=player_id)
+            career = PlayerCareerStats(player_id=player['id'])
             data = career.get_dict()
             result_set = data['resultSets'][0]
             headers = result_set['headers']
