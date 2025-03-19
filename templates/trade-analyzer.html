@@ -228,14 +228,14 @@
   </div>
 
   <script>
-    const apiUrl = 'http://localhost:5000/api/player_stats';
+    const apiUrl = 'https://mynewapp000-bf74bc70f33f.herokuapp.com/api/player_stats';
     let activePlayers = [];
     let team1Players = [];
     let team2Players = [];
 
     async function fetchActivePlayers() {
       try {
-        const response = await fetch('http://localhost:5000/api/active_players');
+        const response = await fetch('https://mynewapp000-bf74bc70f33f.herokuapp.com/api/active_players');
         const players = await response.json();
         activePlayers = players;
       } catch (error) {
