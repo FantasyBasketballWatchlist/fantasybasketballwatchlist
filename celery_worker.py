@@ -1,37 +1,30 @@
-from __future__ import absolute_import, unicode_literals
 import os
+import ssl
 from celery import Celery
-from flask import Flask
+from urllib.parse import urlparse
 
-# Initialize Flask app
-app = Flask(__name__)
+# Get the Redis URL from the environment variable
+redis_url = os.getenv("REDIS_URL")
 
-# Set up the Flask app and Celery configuration
-def make_celery(app):
-    # Fetch the Redis URL from the environment variable
-    redis_url = os.environ.get('REDIS_URL')
-    if not redis_url:
-        raise ValueError("REDIS_URL environment variable is not set. Make sure to add Heroku Redis add-on.")
-    
-    # Initialize Celery with Flask app context
-    celery = Celery(
-        app.import_name,
-        backend=redis_url,  # Use Redis as both backend and broker
-        broker=redis_url
-    )
-    celery.conf.update(app.config)
-    return celery
+# Check if the Redis URL was not found
+if not redis_url:
+    raise ValueError("REDIS_URL environment variable is not set")
 
-# Initialize Celery with the Flask app context
-celery = make_celery(app)
+# Create Celery app
+celery = Celery('nba_app')
 
-# Example of a Celery task
-@celery.task
-def background_task(arg):
-    return f"Processed {arg}"
+# Configure Celery
+celery.conf.broker_url = redis_url
+celery.conf.result_backend = redis_url
 
-# Now you can use this Celery instance to configure any tasks in the future.
+# Ensure proper SSL configuration for Redis
+if redis_url.startswith('rediss://'):
+    celery.conf.broker_transport_options = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
+    celery.conf.redis_backend_transport_options = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  
-    app.run(debug=True, host='0.0.0.0', port=port)
+# Import tasks to register them with Celery
+from app import retry_nba_api, fetch_player_stats_in_background

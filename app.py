@@ -8,11 +8,11 @@ from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
 from nba_api.stats.static import players
 from urllib.parse import urlparse
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 import requests
 from requests.exceptions import RequestException
 from celery import Celery
 import logging
+import ssl
 
 # Configure logging for better debugging
 logging.basicConfig(level=logging.INFO)
@@ -35,26 +35,35 @@ redis_client = redis.StrictRedis(
     host=url.hostname,
     port=url.port,
     password=url.password,
-    ssl=True,  # Enable SSL connection for rediss://
-    ssl_cert_reqs=None,  # Disable certificate verification (specific to Heroku Redis)
+    ssl=url.scheme == 'rediss',  # Enable SSL only if scheme is rediss://
+    ssl_cert_reqs=ssl.CERT_NONE if url.scheme == 'rediss' else None,  # Proper SSL cert config
     db=0,
     decode_responses=True
 )
 
 # Celery configuration
-app.config['CELERY_BROKER_URL'] = redis_url  # Redis broker URL
-app.config['CELERY_RESULT_BACKEND'] = redis_url  # Redis result backend
+app.config['CELERY_BROKER_URL'] = redis_url
+app.config['CELERY_RESULT_BACKEND'] = redis_url
 
 # Ensure Celery handles rediss URLs properly
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
+
+# Configure Celery to handle SSL properly for Redis
+if redis_url.startswith('rediss://'):
+    celery.conf.broker_transport_options = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
+    celery.conf.redis_backend_transport_options = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
 
 # Static list of top 10 players (you can customize this list)
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
     "Luka Dončić",
-    "Tyrese Haliburton",  # Fixed spelling from "Halliburton"
+    "Tyrese Haliburton",
     "Cade Cunningham",
     "Nikola Jokić",
     "Shai Gilgeous-Alexander",
@@ -71,7 +80,7 @@ def remove_accents(input_str):
 # Function to search and return player by name
 def find_player_by_name(player_name):
     player_name_normalized = remove_accents(player_name.strip().lower())
-    all_players = players.get_players()  # Correctly using the function from the `players` module
+    all_players = players.get_players()
     for player in all_players:
         if remove_accents(player['full_name'].lower()) == player_name_normalized:
             return player
@@ -79,29 +88,38 @@ def find_player_by_name(player_name):
 
 # Cache helper functions for Redis
 def get_from_cache(key):
-    data = redis_client.get(key)
-    if data:
-        try:
-            return json.loads(data)  # Parse JSON string back to Python object
-        except json.JSONDecodeError:
-            return data
-    return None
+    try:
+        data = redis_client.get(key)
+        if data:
+            try:
+                return json.loads(data)  # Parse JSON string back to Python object
+            except json.JSONDecodeError:
+                return data
+        return None
+    except Exception as e:
+        logging.error(f"Redis cache get error: {str(e)}")
+        return None
 
 def set_to_cache(key, value, expiration=3600):
-    if isinstance(value, (dict, list)):
-        value = json.dumps(value)  # Convert Python object to JSON string
-    redis_client.setex(key, expiration, value)
+    try:
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)  # Convert Python object to JSON string
+        redis_client.setex(key, expiration, value)
+        return True
+    except Exception as e:
+        logging.error(f"Redis cache set error: {str(e)}")
+        return False
 
-# Modified the retry decorator for blocking web servers like gunicorn
-def fetch_nba_data(request_function, *args, **kwargs):
+# Safe NBA data fetching function
+def fetch_nba_data(endpoint_class, **kwargs):
     """
-    A non-blocking version of the NBA API request function.
-    Attempts the request once and returns the result or raises the exception.
+    A safer version of the NBA API request function with better error handling.
     """
     try:
-        return request_function(*args, **kwargs)
+        endpoint = endpoint_class(**kwargs)
+        return endpoint
     except Exception as e:
-        logging.error(f"Error fetching NBA data: {str(e)}")
+        logging.error(f"Error initializing NBA endpoint {endpoint_class.__name__}: {str(e)}")
         raise
 
 # Celery Task for retrying NBA API requests
@@ -173,7 +191,7 @@ def get_player_stats():
         return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
 
     try:
-        # Fetch career stats using player ID - without blocking retries
+        # Fetch career stats using player ID - with better error handling
         career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
@@ -188,8 +206,11 @@ def get_player_stats():
         # Store the fetched stats in Redis for future use (with an expiration of 1 hour)
         set_to_cache(cache_key, stats, expiration=3600)
 
-        # Schedule background refresh as a separate task
-        fetch_player_stats_in_background.delay(player_name)
+        # Skip background task if worker isn't running properly
+        try:
+            fetch_player_stats_in_background.delay(player_name)
+        except Exception as celery_err:
+            logging.warning(f"Background task scheduling error: {str(celery_err)}")
 
         return jsonify(stats)
 
@@ -208,14 +229,14 @@ def get_today_games():
         return jsonify(cached_games)
         
     try:
-        # Fetch today's NBA scoreboard data - without blocking retries
-        games = fetch_nba_data(ScoreBoard)
-        data = games.get_dict()
+        # Fetch today's NBA scoreboard data - with better error handling
+        scoreboard = fetch_nba_data(ScoreBoard)
+        data = scoreboard.get_dict()
 
         game_list = data['scoreboard']['games']
         
         if not game_list:
-            return jsonify({"message": "No live games available today."}), 200
+            return jsonify({"message": "No live games available today.", "games": []}), 200
 
         # Format the game data
         game_data = []
@@ -235,7 +256,7 @@ def get_today_games():
 
     except Exception as e:
         logging.error(f"Error fetching today's games: {str(e)}")
-        return jsonify({"error": f"Error fetching today's games. Please try again later."}), 500
+        return jsonify({"error": f"Error fetching today's games. Please try again later.", "games": []}), 500
 
 # Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
@@ -286,7 +307,7 @@ def get_last_5_games():
         return jsonify({"error": "Player not found"}), 404
 
     try:
-        # Fetch game logs without blocking retries
+        # Fetch game logs with better error handling
         game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5)
         game_log_data = game_logs.get_dict()['resultSets'][0]
         
@@ -294,7 +315,7 @@ def get_last_5_games():
         rows = game_log_data['rowSet']
         
         if not rows:
-            return jsonify({"message": "No recent games found for this player."}), 200
+            return jsonify({"message": "No recent games found for this player.", "games": []}), 200
             
         last_5_games = []
         for row in rows:
@@ -316,7 +337,7 @@ def get_last_5_games():
 
     except Exception as e:
         logging.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
-        return jsonify({"error": f"Error fetching last 5 games. Please try again later."}), 500
+        return jsonify({"error": f"Error fetching last 5 games. Please try again later.", "games": []}), 500
 
 # Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
@@ -337,7 +358,7 @@ def get_top_players_stats():
             continue  # If player not found, skip to the next one
 
         try:
-            # Fetch career stats without blocking retries
+            # Fetch career stats with better error handling
             career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
             data = career.get_dict()
             result_set = data['resultSets'][0]
