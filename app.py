@@ -30,7 +30,7 @@ redis_client = redis.StrictRedis(
     host=url.hostname,
     port=url.port,
     password=url.password,
-    ssl=True,  # Enable SSL connection
+    ssl=True,  # Enable SSL connection for rediss://
     ssl_cert_reqs=None,  # Disable certificate verification (specific to Heroku Redis)
     db=0,
     decode_responses=True
@@ -152,7 +152,7 @@ def get_player_stats():
         return jsonify(stats)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400  # Handle errors
+        return jsonify({"error": f"Error fetching player stats: {str(e)}"}), 400  # Handle errors
 
 @app.route('/trade-analyzer')
 def trade_analyzer():
@@ -185,7 +185,7 @@ def get_today_games():
         return jsonify(game_data)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error fetching today's games: {str(e)}"}), 400
 
 # Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
@@ -203,7 +203,7 @@ def get_active_players():
         return jsonify(player_data)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error fetching active players: {str(e)}"}), 500
 
 # Route for fetching last 5 games for a player
 @app.route('/api/last_5_games', methods=['GET'])
@@ -236,7 +236,7 @@ def get_last_5_games():
         return jsonify(last_5_games)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error fetching last 5 games: {str(e)}"}), 400
 
 # Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
