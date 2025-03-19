@@ -29,9 +29,9 @@ else:
     modified_redis_url = redis_url
 
 # Create Celery app
-celery = Celery('nba_app')
+celery = Celery('app')
 
-# Configure Celery
+# Configure Celery 
 celery.conf.update(
     broker_url=modified_redis_url,
     result_backend=modified_redis_url,
@@ -39,8 +39,9 @@ celery.conf.update(
     accept_content=['json'],
     result_serializer='json',
     worker_concurrency=2,
-    task_time_limit=30,
-    task_soft_time_limit=25
+    task_time_limit=15,  # Reduced time limit to avoid long-running tasks
+    task_soft_time_limit=10, # Even shorter soft time limit
+    broker_connection_retry_on_startup=True
 )
 
 # Ensure proper SSL configuration for Redis
@@ -50,5 +51,5 @@ if url.scheme == 'rediss':
         redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
     )
 
-# Import just the fetch_player_stats_in_background function from app.py
+# Import just the fetch_player_stats_in_background function
 from app import fetch_player_stats_in_background
