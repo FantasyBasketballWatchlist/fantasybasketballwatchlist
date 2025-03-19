@@ -92,32 +92,59 @@ def set_to_cache(key, value, expiration=3600):
         value = json.dumps(value)  # Convert Python object to JSON string
     redis_client.setex(key, expiration, value)
 
-# Retry logic using `tenacity`
-@retry(
-    stop=stop_after_attempt(3),  # Retry up to 3 attempts
-    wait=wait_fixed(2),  # Wait 2 seconds between retries
-    retry=retry_if_exception_type(RequestException)  # Retry only for request exceptions
-)
+# Modified the retry decorator for blocking web servers like gunicorn
 def fetch_nba_data(request_function, *args, **kwargs):
     """
-    A wrapper around the NBA API requests to retry in case of failure.
-    This function will retry the request up to 3 times with a 2-second delay.
+    A non-blocking version of the NBA API request function.
+    Attempts the request once and returns the result or raises the exception.
     """
-    return request_function(*args, **kwargs)
+    try:
+        return request_function(*args, **kwargs)
+    except Exception as e:
+        logging.error(f"Error fetching NBA data: {str(e)}")
+        raise
+
+# Celery Task for retrying NBA API requests
+@celery.task(bind=True, max_retries=3, default_retry_delay=2)
+def retry_nba_api(self, request_function_name, *args, **kwargs):
+    """
+    A Celery task that can retry NBA API requests if they fail.
+    """
+    # Map function names to actual functions
+    function_map = {
+        'PlayerCareerStats': PlayerCareerStats,
+        'PlayerGameLogs': PlayerGameLogs,
+        'ScoreBoard': ScoreBoard
+    }
+    
+    request_function = function_map.get(request_function_name)
+    if not request_function:
+        raise ValueError(f"Unknown function: {request_function_name}")
+        
+    try:
+        return request_function(*args, **kwargs).get_dict()
+    except Exception as e:
+        # Retry up to 3 times
+        if self.request.retries < 3:
+            raise self.retry(exc=e)
+        raise
 
 # Celery Task Example
 @celery.task
 def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
     if player:
-        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
-        data = career.get_dict()
-        result_set = data['resultSets'][0]
-        headers = result_set['headers']
-        rows = result_set['rowSet']
-        if rows:
-            stats = [dict(zip(headers, row)) for row in rows]
-            set_to_cache(f"player_stats:{player_name.lower()}", stats)
+        try:
+            career = PlayerCareerStats(player_id=player['id'])
+            data = career.get_dict()
+            result_set = data['resultSets'][0]
+            headers = result_set['headers']
+            rows = result_set['rowSet']
+            if rows:
+                stats = [dict(zip(headers, row)) for row in rows]
+                set_to_cache(f"player_stats:{player_name.lower()}", stats)
+        except Exception as e:
+            logging.error(f"Background task error for {player_name}: {str(e)}")
     return "Player stats fetched in background"
 
 # Homepage route
@@ -146,7 +173,7 @@ def get_player_stats():
         return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
 
     try:
-        # Fetch career stats using player ID
+        # Fetch career stats using player ID - without blocking retries
         career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
@@ -161,14 +188,14 @@ def get_player_stats():
         # Store the fetched stats in Redis for future use (with an expiration of 1 hour)
         set_to_cache(cache_key, stats, expiration=3600)
 
-        # Trigger the background task for stats fetching (as a separate task)
+        # Schedule background refresh as a separate task
         fetch_player_stats_in_background.delay(player_name)
 
         return jsonify(stats)
 
     except Exception as e:
         logging.error(f"Error fetching player stats for {player_name}: {str(e)}")
-        return jsonify({"error": f"Error fetching player stats: {str(e)}"}), 400  # Handle errors
+        return jsonify({"error": f"Error fetching player stats. Please try again later."}), 500
 
 # Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
@@ -181,7 +208,7 @@ def get_today_games():
         return jsonify(cached_games)
         
     try:
-        # Fetch today's NBA scoreboard data
+        # Fetch today's NBA scoreboard data - without blocking retries
         games = fetch_nba_data(ScoreBoard)
         data = games.get_dict()
 
@@ -208,7 +235,7 @@ def get_today_games():
 
     except Exception as e:
         logging.error(f"Error fetching today's games: {str(e)}")
-        return jsonify({"error": f"Error fetching today's games: {str(e)}"}), 400
+        return jsonify({"error": f"Error fetching today's games. Please try again later."}), 500
 
 # Route for fetching active players list (for frontend autocomplete)
 @app.route('/api/active_players', methods=['GET'])
@@ -237,7 +264,7 @@ def get_active_players():
 
     except Exception as e:
         logging.error(f"Error fetching active players: {str(e)}")
-        return jsonify({"error": f"Error fetching active players: {str(e)}"}), 500
+        return jsonify({"error": f"Error fetching active players. Please try again later."}), 500
 
 # Route for fetching last 5 games for a player
 @app.route('/api/last_5_games', methods=['GET'])
@@ -259,6 +286,7 @@ def get_last_5_games():
         return jsonify({"error": "Player not found"}), 404
 
     try:
+        # Fetch game logs without blocking retries
         game_logs = fetch_nba_data(PlayerGameLogs, player_id_nullable=player['id'], last_n_games_nullable=5)
         game_log_data = game_logs.get_dict()['resultSets'][0]
         
@@ -288,7 +316,7 @@ def get_last_5_games():
 
     except Exception as e:
         logging.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
-        return jsonify({"error": f"Error fetching last 5 games: {str(e)}"}), 400
+        return jsonify({"error": f"Error fetching last 5 games. Please try again later."}), 500
 
 # Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
@@ -309,6 +337,7 @@ def get_top_players_stats():
             continue  # If player not found, skip to the next one
 
         try:
+            # Fetch career stats without blocking retries
             career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
             data = career.get_dict()
             result_set = data['resultSets'][0]
@@ -351,9 +380,11 @@ def get_top_players_stats():
 
         except Exception as e:
             logging.error(f"Error fetching stats for {player_name}: {str(e)}")
+            continue  # Skip to the next player on error
             
     # Cache the top players stats for 12 hours
-    set_to_cache(cache_key, top_players_stats, expiration=43200)
+    if top_players_stats:  # Only cache if we have stats
+        set_to_cache(cache_key, top_players_stats, expiration=43200)
 
     return jsonify(top_players_stats)
 
