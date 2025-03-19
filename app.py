@@ -6,12 +6,27 @@ from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
 from nba_api.stats.static import players  # Correctly importing players module from nba_api.stats.static
+from urllib.parse import urlparse  # For parsing the Redis URL
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
-# Initialize Redis (assumes Redis is running on localhost with default port)
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+# Get the Redis URL from the environment variable (Heroku Redis URL)
+redis_url = os.getenv("REDIS_URL", "rediss://:p7042c05488983a10f7c70496c020d21c1a102b33a1ae564335ed31c8081e3a21@ec2-34-237-159-195.compute-1.amazonaws.com:10470")
+
+# Parse the Redis URL
+url = urlparse(redis_url)
+
+# Initialize Redis client with SSL support
+redis_client = redis.StrictRedis(
+    host=url.hostname,
+    port=url.port,
+    password=url.password,
+    ssl=True,  # Enable SSL connection
+    ssl_cert_reqs=None,  # Disable certificate verification (specific to Heroku Redis)
+    db=0,
+    decode_responses=True
+)
 
 # Static list of top 10 players (you can customize this list)
 top_players = [
