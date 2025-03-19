@@ -319,13 +319,18 @@ def get_player_stats():
     start_time = time.time()
     player_name = request.args.get('player_name')
     if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
+        # Return empty array instead of error object
+        return jsonify([]), 400
 
     # Try to get the stats from Redis cache first
     cache_key = f"player_stats:{player_name.lower()}"
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
+        # Ensure cached_stats is always an array
+        if not isinstance(cached_stats, list):
+            cached_stats = []
+            
         # Schedule a refresh if data is older than 12 hours
         try:
             ttl = redis_client.ttl(cache_key)
@@ -340,15 +345,16 @@ def get_player_stats():
     player = find_player_by_name(player_name)
     
     if not player:
-        return jsonify({"error": "Player not found"}), 404
+        # Return empty array for not found
+        return jsonify([]), 404
 
     # Check if we're already getting close to timeout
     elapsed_time = time.time() - start_time
     if elapsed_time > 1:  # If more than 1 second has elapsed
-        # Schedule background fetch and return placeholder
+        # Schedule background fetch and return empty array
         fetch_player_stats_in_background.delay(player_name, 
             player_name in top_players)
-        return jsonify({"message": "Stats loading, please try again in a moment"}), 202
+        return jsonify([]), 202
 
     try:
         # Use direct and simple approach for immediate fetch
@@ -359,7 +365,8 @@ def get_player_stats():
         rows = result_set['rowSet']
 
         if not rows:
-            return jsonify({"error": "No stats available for this player"}), 404
+            # Return empty array if no stats
+            return jsonify([]), 404
 
         stats = [dict(zip(headers, row)) for row in rows]
         
@@ -375,13 +382,14 @@ def get_player_stats():
         return jsonify(stats)
 
     except Timeout:
-        # Schedule a background fetch and return "loading" message
+        # Return empty array for timeout
         fetch_player_stats_in_background.delay(player_name, 
             player_name in top_players)
-        return jsonify({"message": "Stats loading, please try again in a moment"}), 202
+        return jsonify([]), 202
     except Exception as e:
         logging.error(f"Error fetching stats for {player_name}: {str(e)}")
-        return jsonify({"error": "Error fetching player stats"}), 500
+        # Return empty array for any error
+        return jsonify([]), 500
 
 # Route for today's games
 @app.route('/api/today_games', methods=['GET'])
@@ -439,14 +447,14 @@ def get_active_players():
 
     except Exception as e:
         logging.error(f"Error fetching active players: {str(e)}")
-        return jsonify({"error": "Error fetching player list"}), 500
+        return jsonify([]), 500  # Return empty array instead of error object
 
 # Route for last 5 games
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
     player_name = request.args.get('player_name')
     if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
+        return jsonify([]), 400  # Return empty array with error code
 
     cache_key = f"last_5_games:{player_name.lower()}"
     cached_games = get_from_cache(cache_key)
@@ -456,7 +464,7 @@ def get_last_5_games():
 
     player = find_player_by_name(player_name)
     if not player:
-        return jsonify({"error": "Player not found"}), 404
+        return jsonify([]), 404  # Return empty array with not found code
 
     try:
         # Quick direct fetch
