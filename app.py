@@ -14,9 +14,11 @@ import logging
 import ssl
 import time
 import threading
+from functools import lru_cache
 
 # Configure logging for better debugging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -26,70 +28,95 @@ redis_url = os.getenv("REDIS_URL")
 
 # Check if the Redis URL was not found
 if not redis_url:
-    raise ValueError("REDIS_URL environment variable is not set. Make sure to add Heroku Redis add-on.")
+    redis_url = "redis://localhost:6379/0"  # Fallback for local development
+    logger.warning("REDIS_URL not set. Using local Redis.")
 
 # Parse the Redis URL
 url = urlparse(redis_url)
 
-# Set proper SSL configuration for Redis connection
-if url.scheme == 'rediss':
-    # Add ssl_cert_reqs parameter to URL if not already present
-    query_params = parse_qs(url.query)
-    
-    if 'ssl_cert_reqs' not in query_params:
-        # Modify the URL to include ssl_cert_reqs
-        if url.query:
-            modified_redis_url = f"{redis_url}&ssl_cert_reqs=CERT_NONE"
-        else:
-            modified_redis_url = f"{redis_url}?ssl_cert_reqs=CERT_NONE"
+# Set up Redis with proper SSL configuration
+try:
+    if url.scheme == 'rediss':
+        # For secure Redis connections
+        redis_client = redis.StrictRedis(
+            host=url.hostname,
+            port=url.port,
+            password=url.password,
+            ssl=True,
+            ssl_cert_reqs=ssl.CERT_NONE,
+            db=0,
+            decode_responses=True,
+            socket_connect_timeout=3,
+            socket_timeout=3
+        )
+        
+        # Modified URL for Celery
+        modified_redis_url = (
+            f"{redis_url}?ssl_cert_reqs=CERT_NONE" 
+            if '?' not in redis_url 
+            else f"{redis_url}&ssl_cert_reqs=CERT_NONE"
+        )
     else:
+        # Non-SSL Redis connection
+        redis_client = redis.StrictRedis(
+            host=url.hostname,
+            port=url.port,
+            password=url.password,
+            ssl=False,
+            db=0,
+            decode_responses=True,
+            socket_connect_timeout=3,
+            socket_timeout=3
+        )
         modified_redis_url = redis_url
+        
+    # Test Redis connection
+    redis_client.ping()
+    logger.info("Redis connection successful")
+except Exception as e:
+    logger.error(f"Redis connection error: {str(e)}")
+    # Create a dummy redis client for graceful fallback
+    class DummyRedis:
+        def get(self, key): return None
+        def setex(self, key, time, value): return None
+        def ttl(self, key): return 0
+        def ping(self): return False
     
-    # Redis client with SSL
-    redis_client = redis.StrictRedis(
-        host=url.hostname,
-        port=url.port,
-        password=url.password,
-        ssl=True,
-        ssl_cert_reqs=ssl.CERT_NONE,
-        db=0,
-        decode_responses=True
-    )
-else:
-    # Non-SSL Redis connection
-    redis_client = redis.StrictRedis(
-        host=url.hostname,
-        port=url.port,
-        password=url.password,
-        ssl=False,
-        db=0,
-        decode_responses=True
-    )
+    redis_client = DummyRedis()
+    modified_redis_url = "memory://"
+    logger.warning("Using in-memory fallback instead of Redis")
 
 # Celery configuration with proper SSL settings
-# Use the modified URL with ssl_cert_reqs parameter
-if url.scheme == 'rediss':
-    broker_url = modified_redis_url
-    result_backend = modified_redis_url
-else:
-    broker_url = redis_url
-    result_backend = redis_url
-
-# Create Celery app with the modified URLs
-celery = Celery(app.name, broker=broker_url, backend=result_backend)
-
-# Important: Set these options for both broker and backend
+celery = Celery(app.name)
 celery.conf.update(
-    broker_transport_options={'ssl_cert_reqs': ssl.CERT_NONE},
-    redis_backend_transport_options={'ssl_cert_reqs': ssl.CERT_NONE},
-    broker_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE},
-    redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
+    broker_url=modified_redis_url,
+    result_backend=modified_redis_url,
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    broker_transport_options={'visibility_timeout': 3600},
+    redis_backend_transport_options={'socket_timeout': 5},
+    broker_connection_retry_on_startup=True,
+    worker_max_tasks_per_child=100,
+    task_acks_late=True,
+    worker_prefetch_multiplier=1
 )
 
-# Super short timeout to avoid Heroku H12 errors
-NBA_TIMEOUT = 3  # Reduced to 3 seconds to ensure fast responses
+# If using SSL, add specific SSL config
+if url.scheme == 'rediss':
+    celery.conf.update(
+        broker_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE},
+        redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
+    )
 
-# Static list of top 10 players
+# NBA API timeout config
+NBA_TIMEOUT = 3  # Very short timeout to avoid Heroku H12 errors
+
+# In-memory cache
+_cache = {}
+CACHE_EXPIRY = {}
+
+# Top players to highlight
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
@@ -103,127 +130,240 @@ top_players = [
     "Jayson Tatum",
 ]
 
-# Pre-cache player IDs to avoid lookups
+# Cache for player IDs to avoid repeated lookups
 player_id_cache = {}
 
 # Helper function to remove accents from characters
 def remove_accents(input_str):
+    if not input_str:
+        return ""
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-# Function to search and return player by name - with caching
-def find_player_by_name(player_name):
-    # Check in-memory cache first
-    normalized_name = remove_accents(player_name.strip().lower())
-    if normalized_name in player_id_cache:
-        return player_id_cache[normalized_name]
-    
-    # Then check Redis cache
-    cache_key = f"player:{normalized_name}"
-    cached_player = get_from_cache(cache_key)
-    if cached_player:
-        player_id_cache[normalized_name] = cached_player  # Update in-memory cache
-        return cached_player
-    
-    # If not found, search API
-    all_players = players.get_players()
-    for player in all_players:
-        if remove_accents(player['full_name'].lower()) == normalized_name:
-            # Cache this result in both Redis and in-memory
-            set_to_cache(cache_key, player, expiration=604800)  # Cache for 1 week
-            player_id_cache[normalized_name] = player
-            return player
+# Efficient memory cache functions
+def memcache_get(key):
+    """Get value from memory cache"""
+    if key in _cache and key in CACHE_EXPIRY:
+        if CACHE_EXPIRY[key] > time.time():
+            return _cache[key]
+        # Expired
+        del _cache[key]
+        del CACHE_EXPIRY[key]
     return None
 
-# Cache helper functions for Redis
+def memcache_set(key, value, expiration=3600):
+    """Set value in memory cache"""
+    _cache[key] = value
+    CACHE_EXPIRY[key] = time.time() + expiration
+    # Clean expired items occasionally
+    if len(_cache) > 1000:  # Limit cache size
+        clean_expired_cache_items()
+    return True
+
+def clean_expired_cache_items():
+    """Remove expired items from memory cache"""
+    now = time.time()
+    expired_keys = [k for k, exp in CACHE_EXPIRY.items() if exp <= now]
+    for k in expired_keys:
+        if k in _cache:
+            del _cache[k]
+        if k in CACHE_EXPIRY:
+            del CACHE_EXPIRY[k]
+
+# Multi-level cache get function
 def get_from_cache(key):
+    """Get value from cache (memory first, then Redis)"""
+    # Try memory cache first (faster)
+    value = memcache_get(key)
+    if value is not None:
+        return value
+    
+    # Try Redis cache
     try:
         data = redis_client.get(key)
         if data:
             try:
-                return json.loads(data)
+                value = json.loads(data)
+                # Store in memory for faster future access
+                memcache_set(key, value)
+                return value
             except json.JSONDecodeError:
                 return data
-        return None
     except Exception as e:
-        logging.error(f"Redis cache get error: {str(e)}")
-        return None
+        logger.debug(f"Redis get error: {str(e)}")
+    
+    return None
 
+# Multi-level cache set function
 def set_to_cache(key, value, expiration=3600):
+    """Set value in cache (both memory and Redis)"""
+    # Always set in memory cache
+    memcache_set(key, value, expiration)
+    
+    # Try to set in Redis
     try:
         if isinstance(value, (dict, list)):
             value = json.dumps(value)
         redis_client.setex(key, expiration, value)
         return True
     except Exception as e:
-        logging.error(f"Redis cache set error: {str(e)}")
+        logger.debug(f"Redis set error: {str(e)}")
         return False
 
-# Pre-fetch and cache all player IDs for top players
-def preload_player_ids():
-    for player_name in top_players:
-        find_player_by_name(player_name)
-    logging.info(f"Preloaded {len(player_id_cache)} player IDs")
+# Optimized player search
+@lru_cache(maxsize=1000)  # Cache up to 1000 player lookups
+def find_player_by_name(player_name):
+    """Find player by name with efficient caching"""
+    if not player_name:
+        return None
+        
+    # Normalize name for consistent lookups
+    normalized_name = remove_accents(player_name.strip().lower())
+    
+    # Check in-memory cache first (fastest)
+    if normalized_name in player_id_cache:
+        return player_id_cache[normalized_name]
+    
+    # Check Redis cache
+    cache_key = f"player:{normalized_name}"
+    cached_player = get_from_cache(cache_key)
+    if cached_player:
+        player_id_cache[normalized_name] = cached_player
+        return cached_player
+    
+    # Search through API data
+    try:
+        all_players = players.get_players()
+        for player in all_players:
+            player_full_name = remove_accents(player['full_name'].lower())
+            if player_full_name == normalized_name:
+                # Cache result for future lookups
+                player_id_cache[normalized_name] = player
+                set_to_cache(cache_key, player, expiration=604800)  # Cache for 1 week
+                return player
+    except Exception as e:
+        logger.error(f"Error loading players list: {str(e)}")
+    
+    return None
 
-# Simplified NBA data fetching with very short timeout
-def fetch_nba_data(endpoint_class, **kwargs):
+# Preload player IDs for frequently accessed players
+def preload_player_ids():
+    """Preload top player IDs into cache"""
+    loaded_count = 0
+    for player_name in top_players:
+        player = find_player_by_name(player_name)
+        if player:
+            loaded_count += 1
+    
+    logger.info(f"Preloaded {loaded_count} player IDs")
+    return loaded_count
+
+# Safe NBA data fetching
+def fetch_nba_data(endpoint_class, retries=1, **kwargs):
+    """Fetch NBA data with timeout and retry logic"""
     if 'timeout' not in kwargs:
         kwargs['timeout'] = NBA_TIMEOUT
-    try:
-        endpoint = endpoint_class(**kwargs)
-        return endpoint
-    except Exception as e:
-        logging.error(f"Error with {endpoint_class.__name__}: {str(e)}")
-        raise
+        
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            endpoint = endpoint_class(**kwargs)
+            return endpoint
+        except (Timeout, RequestException) as e:
+            logger.warning(f"NBA API timeout ({attempt+1}/{retries+1}): {str(e)}")
+            last_error = e
+            if attempt < retries:
+                time.sleep(0.5)  # Brief pause between retries
+        except Exception as e:
+            logger.error(f"NBA API error: {str(e)}")
+            last_error = e
+            if attempt < retries:
+                time.sleep(0.5)
+    
+    if last_error:
+        raise last_error
+    raise Exception("Failed to fetch NBA data")
 
-# Celery Task for background processing with priority for top players
-@celery.task
-def fetch_player_stats_in_background(player_name, is_top_player=False):
-    player = find_player_by_name(player_name)
-    if not player:
-        return False
+# Background task for fetching player stats
+@celery.task(bind=True, max_retries=2, default_retry_delay=5, time_limit=20)
+def fetch_player_stats_in_background(self, player_name, is_top_player=False):
+    """Background task to fetch player stats"""
+    logger.info(f"Background fetch for {player_name}")
     
     try:
+        player = find_player_by_name(player_name)
+        if not player:
+            logger.warning(f"Player not found: {player_name}")
+            return False
+        
         cache_key = f"player_stats:{player_name.lower()}"
         
-        # Don't waste time refetching if we have recent data
-        if not is_top_player and get_from_cache(cache_key):
-            ttl = redis_client.ttl(cache_key)
-            if ttl > 21600:  # 6 hours
-                return False  # Don't refetch if cache is still fresh
+        # Skip if we have fresh data already
+        cached_data = get_from_cache(cache_key)
+        if cached_data and not is_top_player:
+            try:
+                ttl = redis_client.ttl(cache_key)
+                if ttl > 21600:  # 6 hours
+                    return False
+            except Exception:
+                pass
         
+        # Fetch player stats
         career = PlayerCareerStats(player_id=player['id'], timeout=NBA_TIMEOUT)
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
         
-        if rows:
-            stats = [dict(zip(headers, row)) for row in rows]
-            # Cache longer for top players
-            expiration = 86400 * 2 if is_top_player else 86400  # 48 or 24 hours
-            set_to_cache(cache_key, stats, expiration=expiration)
+        if not rows:
+            logger.warning(f"No stats found for {player_name}")
+            return False
             
-            # Update the aggregate top players stats if this is a top player
-            if is_top_player:
-                update_top_players_stats_cache(player_name, stats)
+        # Process stats
+        stats = [dict(zip(headers, row)) for row in rows]
+        
+        # Cache period
+        expiration = 86400 * 2 if is_top_player else 86400  # 48 or 24 hours
+        set_to_cache(cache_key, stats, expiration=expiration)
+        
+        # Update top players cache
+        if is_top_player:
+            update_top_players_stats_cache(player_name, stats)
             
-            return True
+        return True
+    except (Timeout, RequestException) as e:
+        logger.warning(f"Background task timeout for {player_name}: {str(e)}")
+        # Retry with exponential backoff
+        if self.request.retries < self.max_retries:
+            self.retry(countdown=self.default_retry_delay * (2 ** self.request.retries))
+        return False
     except Exception as e:
-        logging.error(f"Background task error for {player_name}: {str(e)}")
-    return False
+        logger.error(f"Background task error for {player_name}: {str(e)}")
+        return False
 
-# Function to extract relevant stats from full stats for faster processing
+# Extract relevant stats 
 def extract_key_stats(stats, season_id='2024-25'):
-    current_season_stats = None
+    """Extract key stats from raw data"""
+    if not stats or not isinstance(stats, list):
+        return {
+            "season": "N/A",
+            "team": "N/A",
+            "games_played": 0,
+            "ppg": 0,
+            "rpg": 0,
+            "apg": 0,
+            "fg_pct": 0,
+            "fg3_pct": 0
+        }
     
     # Find current season stats
+    current_season_stats = None
     for stat in stats:
         if stat.get('SEASON_ID') == season_id:
             current_season_stats = stat
             break
     
-    # If not found, use the most recent season
+    # If not found, use most recent
     if not current_season_stats and stats:
         current_season_stats = stats[-1]
     
@@ -239,7 +379,7 @@ def extract_key_stats(stats, season_id='2024-25'):
             "fg3_pct": 0
         }
     
-    # Return only the key stats we need
+    # Return relevant stats
     return {
         "season": current_season_stats.get("SEASON_ID", "N/A"),
         "team": current_season_stats.get("TEAM_ABBREVIATION", "N/A"),
@@ -251,113 +391,127 @@ def extract_key_stats(stats, season_id='2024-25'):
         "fg3_pct": current_season_stats.get("FG3_PCT", 0)
     }
 
-# Update the aggregated top players stats cache when individual player stats change
+# Update top players stats cache
 def update_top_players_stats_cache(player_name, stats):
+    """Update the cache of top players stats"""
     cache_key = "top_players_stats"
     top_stats = get_from_cache(cache_key) or []
     
-    # If this is a new cache, initialize with placeholder data
+    # Initialize if empty
     if not top_stats:
         top_stats = [{"player_name": name, "stats": {"note": "Loading..."}} for name in top_players]
     
-    # Find and update this player's stats
+    # Find and update this player
+    found = False
     for i, player_stat in enumerate(top_stats):
         if player_stat["player_name"].lower() == player_name.lower():
             top_stats[i] = {
                 "player_name": player_name,
                 "stats": extract_key_stats(stats)
             }
+            found = True
             break
     
-    # Update the cache
-    set_to_cache(cache_key, top_stats, expiration=3600)  # 1 hour expiration
+    # If player wasn't in the list, add them
+    if not found and player_name in top_players:
+        top_stats.append({
+            "player_name": player_name,
+            "stats": extract_key_stats(stats)
+        })
+    
+    # Cache the updated stats
+    set_to_cache(cache_key, top_stats, expiration=3600)  # 1 hour
 
-# Generate mock stats for immediate response when real data is unavailable
+# Generate placeholder stats
 def generate_mock_player_stats(player_name):
+    """Generate placeholder stats for when real data is unavailable"""
     return {
         "player_name": player_name,
-        "note": "Stats loading...",
         "stats": {
             "season": "2024-25",
             "team": "-",
-            "games_played": "-",
-            "ppg": "-",
-            "rpg": "-",
-            "apg": "-",
-            "fg_pct": "-",
-            "fg3_pct": "-"
+            "games_played": 0,
+            "ppg": 0,
+            "rpg": 0,
+            "apg": 0,
+            "fg_pct": 0,
+            "fg3_pct": 0,
+            "note": "Loading..."
         }
     }
 
-# Function to initialize app data - called manually instead of using before_first_request
+# Initialize app data
 def initialize_app_data():
-    # Preload top player IDs to make lookups faster
+    """Initialize app data and preload caches"""
     preload_player_ids()
     
-    # Schedule background fetch of top player stats
+    # Queue background tasks for top players
     for player_name in top_players:
         try:
-            fetch_player_stats_in_background.delay(player_name, True)
-        except Exception:
-            pass
+            # Use apply_async with specific queue and lower priority
+            fetch_player_stats_in_background.apply_async(
+                args=[player_name, True],
+                expires=300  # Expire task after 5 minutes if not executed
+            )
+        except Exception as e:
+            logger.error(f"Failed to schedule background task: {str(e)}")
 
 # Flask route for homepage
 @app.route('/')
 def home():
-    # Initialize app data on first request - a replacement for before_first_request
+    """Serve homepage with app initialization on first visit"""
     if not player_id_cache:
         try:
-            initialize_app_data()
+            # Initialize in a non-blocking way
+            threading.Thread(target=initialize_app_data).start()
         except Exception as e:
-            logging.error(f"Error initializing app data: {str(e)}")
+            logger.error(f"Error initializing app data: {str(e)}")
     
     return render_template('index.html')
 
-# Route for fetching career stats for a player by name
+# API route for player stats
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
+    """Get career stats for a player"""
     start_time = time.time()
     player_name = request.args.get('player_name')
+    
     if not player_name:
-        # Return empty array instead of error object
         return jsonify([]), 400
 
-    # Try to get the stats from Redis cache first
+    # Check cache first
     cache_key = f"player_stats:{player_name.lower()}"
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
-        # Ensure cached_stats is always an array
+        # Ensure it's an array
         if not isinstance(cached_stats, list):
             cached_stats = []
-            
-        # Schedule a refresh if data is older than 12 hours
+        
+        # Schedule refresh if needed
         try:
             ttl = redis_client.ttl(cache_key)
             if ttl < 43200:  # 12 hours
-                fetch_player_stats_in_background.delay(player_name, 
-                    player_name in top_players)
+                fetch_player_stats_in_background.delay(player_name, player_name in top_players)
         except Exception:
             pass
+            
         return jsonify(cached_stats)
 
-    # Search for player based on the name
+    # Find player
     player = find_player_by_name(player_name)
-    
     if not player:
-        # Return empty array for not found
         return jsonify([]), 404
 
-    # Check if we're already getting close to timeout
+    # Check for timeout risk
     elapsed_time = time.time() - start_time
-    if elapsed_time > 1:  # If more than 1 second has elapsed
-        # Schedule background fetch and return empty array
-        fetch_player_stats_in_background.delay(player_name, 
-            player_name in top_players)
+    if elapsed_time > 1:
+        # Too slow, use background processing
+        fetch_player_stats_in_background.delay(player_name, player_name in top_players)
         return jsonify([]), 202
 
     try:
-        # Use direct and simple approach for immediate fetch
+        # Fetch stats directly
         career = PlayerCareerStats(player_id=player['id'], timeout=NBA_TIMEOUT)
         data = career.get_dict()
         result_set = data['resultSets'][0]
@@ -365,35 +519,34 @@ def get_player_stats():
         rows = result_set['rowSet']
 
         if not rows:
-            # Return empty array if no stats
             return jsonify([]), 404
 
+        # Process stats
         stats = [dict(zip(headers, row)) for row in rows]
         
-        # Cache the results
+        # Cache results
         is_top_player = player_name in top_players
         expiration = 86400 * 2 if is_top_player else 86400  # 48 or 24 hours
         set_to_cache(cache_key, stats, expiration=expiration)
         
-        # Update top players cache if needed
+        # Update top players stats
         if is_top_player:
             update_top_players_stats_cache(player_name, stats)
         
         return jsonify(stats)
 
     except Timeout:
-        # Return empty array for timeout
-        fetch_player_stats_in_background.delay(player_name, 
-            player_name in top_players)
+        # Handle timeout
+        fetch_player_stats_in_background.delay(player_name, player_name in top_players)
         return jsonify([]), 202
     except Exception as e:
-        logging.error(f"Error fetching stats for {player_name}: {str(e)}")
-        # Return empty array for any error
+        logger.error(f"Error fetching stats for {player_name}: {str(e)}")
         return jsonify([]), 500
 
-# Route for today's games
+# API route for today's games
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
+    """Get today's NBA games"""
     cache_key = "today_games"
     cached_games = get_from_cache(cache_key)
     
@@ -408,6 +561,7 @@ def get_today_games():
         if not game_list:
             return jsonify([]), 200
 
+        # Format game data
         game_data = []
         for game in game_list:
             game_data.append({
@@ -418,16 +572,18 @@ def get_today_games():
                 "status": game['gameStatusText']
             })
             
+        # Cache results
         set_to_cache(cache_key, game_data, expiration=300)  # 5 minutes
         return jsonify(game_data)
 
     except Exception as e:
-        logging.error(f"Error fetching today's games: {str(e)}")
-        return jsonify([]), 200  # Return empty list instead of error
+        logger.error(f"Error fetching today's games: {str(e)}")
+        return jsonify([]), 200
 
-# Route for active players list
+# API route for active players
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
+    """Get list of active NBA players"""
     cache_key = "active_players"
     cached_players = get_from_cache(cache_key)
     
@@ -439,43 +595,51 @@ def get_active_players():
         if not all_players:
             return jsonify([]), 200
 
+        # Filter active players
         active_players = [player for player in all_players if player['is_active']]
         player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
         
+        # Cache results
         set_to_cache(cache_key, player_data, expiration=86400)  # 24 hours
         return jsonify(player_data)
 
     except Exception as e:
-        logging.error(f"Error fetching active players: {str(e)}")
-        return jsonify([]), 500  # Return empty array instead of error object
+        logger.error(f"Error fetching active players: {str(e)}")
+        return jsonify([]), 500
 
-# Route for last 5 games
+# API route for player's recent games
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
+    """Get player's last 5 games"""
     player_name = request.args.get('player_name')
     if not player_name:
-        return jsonify([]), 400  # Return empty array with error code
+        return jsonify([]), 400
 
+    # Check cache
     cache_key = f"last_5_games:{player_name.lower()}"
     cached_games = get_from_cache(cache_key)
     
     if cached_games:
         return jsonify(cached_games)
 
+    # Find player
     player = find_player_by_name(player_name)
     if not player:
-        return jsonify([]), 404  # Return empty array with not found code
+        return jsonify([]), 404
 
     try:
-        # Quick direct fetch
-        game_logs = PlayerGameLogs(player_id_nullable=player['id'], 
-                                  last_n_games_nullable=5, 
-                                  timeout=NBA_TIMEOUT)
+        # Fetch game logs
+        game_logs = PlayerGameLogs(
+            player_id_nullable=player['id'], 
+            last_n_games_nullable=5, 
+            timeout=NBA_TIMEOUT
+        )
         data = game_logs.get_dict()
         
         if not data.get('resultSets') or not data['resultSets'][0].get('rowSet'):
             return jsonify([]), 200
             
+        # Process game data
         headers = data['resultSets'][0]['headers']
         rows = data['resultSets'][0]['rowSet']
         
@@ -492,67 +656,73 @@ def get_last_5_games():
             }
             formatted_games.append(formatted_game)
             
+        # Cache results
         set_to_cache(cache_key, formatted_games, expiration=21600)  # 6 hours
         return jsonify(formatted_games)
 
     except Exception as e:
-        logging.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
-        return jsonify([]), 200  # Return empty list instead of error
+        logger.error(f"Error fetching last 5 games for {player_name}: {str(e)}")
+        return jsonify([]), 200
 
-# Optimized route for top players stats - returns immediately with available data
+# API route for top players stats
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
-    # First check the aggregated cache
+    """Get stats for top players"""
+    # Check cache first
     cache_key = "top_players_stats"
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
-        # Check if we need to refresh any missing players in the background
+        # Schedule updates for missing data
         for player_data in cached_stats:
-            if "note" in player_data.get("stats", {}):
+            if "note" in player_data.get("stats", {}) or player_data.get("stats", {}).get("note"):
                 try:
-                    fetch_player_stats_in_background.delay(
-                        player_data["player_name"], True)
+                    fetch_player_stats_in_background.delay(player_data["player_name"], True)
                 except Exception:
                     pass
         return jsonify(cached_stats)
     
-    # If no cached aggregate, build a quick response with available data
+    # No cache, build response with available data
     response_data = []
-    needs_background_update = False
     
     for player_name in top_players:
-        # Try to get individual player stats from cache
+        # Try to get player stats from cache
         player_cache_key = f"player_stats:{player_name.lower()}"
         player_stats = get_from_cache(player_cache_key)
         
-        if player_stats:
-            # We have this player's stats cached
+        if player_stats and isinstance(player_stats, list):
+            # We have cached stats
             response_data.append({
                 "player_name": player_name,
                 "stats": extract_key_stats(player_stats)
             })
         else:
-            # We don't have this player's stats - add placeholder
+            # Use placeholder and schedule background fetch
             response_data.append(generate_mock_player_stats(player_name))
-            needs_background_update = True
-            
-            # Schedule individual background fetch
             try:
                 fetch_player_stats_in_background.delay(player_name, True)
             except Exception as e:
-                logging.error(f"Failed to schedule background fetch: {str(e)}")
+                logger.error(f"Failed to schedule background fetch: {str(e)}")
     
-    # Cache this aggregate response
+    # Cache aggregate response
     set_to_cache(cache_key, response_data, expiration=3600)  # 1 hour
     
     return jsonify(response_data)
 
-# Health check endpoint for Heroku
+# Health check endpoint
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "healthy", "timestamp": time.time()}), 200
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy", 
+        "timestamp": time.time(),
+        "redis": redis_client.ping() if hasattr(redis_client, 'ping') else False,
+        "cache_size": len(_cache)
+    }), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  
+    port = int(os.environ.get('PORT', 5000))
+    # Initialize on startup
+    threading.Thread(target=initialize_app_data).start()
+    # Run app
     app.run(debug=False, host='0.0.0.0', port=port)
