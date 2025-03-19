@@ -43,7 +43,7 @@ def find_player_by_name(player_name):
             return player
     return None
 
-# Route to serve the index.html page
+# Route to serve the index page without the .html suffix
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -79,6 +79,7 @@ def get_player_stats():
         print(f"Error occurred while fetching player stats: {str(e)}")  # Debugging log
         return jsonify({"error": str(e)}), 400  # Handle other potential errors
 
+# Route for the trade analyzer page without the .html suffix
 @app.route('/trade-analyzer')
 def trade_analyzer():
     return render_template('trade-analyzer.html')
