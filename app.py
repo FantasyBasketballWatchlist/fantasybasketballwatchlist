@@ -80,7 +80,7 @@ def get_player_stats():
         return jsonify({"error": str(e)}), 400  # Handle other potential errors
 
 @app.route('/trade-analyzer')
-def trade-analyzer():
+def trade_analyzer():
     return render_template('trade-analyzer.html')
 
 # Route for fetching today's NBA scoreboard
