@@ -83,6 +83,11 @@ def fetch_nba_data(request_function, *args, **kwargs):
     """
     return request_function(*args, **kwargs)
 
+# Homepage route
+@app.route('/')
+def home():
+    return render_template('index.html')  # You can replace this with your homepage template
+
 # Route for fetching career stats for a player by name (not ID)
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
