@@ -5,8 +5,11 @@ from flask import Flask, render_template, jsonify, request
 from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
-from nba_api.stats.static import players  # Correctly importing players module from nba_api.stats.static
-from urllib.parse import urlparse  # For parsing the Redis URL
+from nba_api.stats.static import players
+from urllib.parse import urlparse
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+import requests
+from requests.exceptions import RequestException
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -67,6 +70,19 @@ def get_from_cache(key):
 def set_to_cache(key, value, expiration=3600):
     redis_client.setex(key, expiration, value)
 
+# Retry logic using `tenacity`
+@retry(
+    stop=stop_after_attempt(3),  # Retry up to 3 attempts
+    wait=wait_fixed(2),  # Wait 2 seconds between retries
+    retry=retry_if_exception_type(RequestException)  # Retry only for request exceptions
+)
+def fetch_nba_data(request_function, *args, **kwargs):
+    """
+    A wrapper around the NBA API requests to retry in case of failure.
+    This function will retry the request up to 3 times with a 2-second delay.
+    """
+    return request_function(*args, **kwargs)
+
 # Route for fetching career stats for a player by name (not ID)
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
@@ -89,7 +105,7 @@ def get_player_stats():
 
     try:
         # Fetch career stats using player ID
-        career = PlayerCareerStats(player_id=player['id'])
+        career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -117,7 +133,7 @@ def trade_analyzer():
 def get_today_games():
     try:
         # Fetch today's NBA scoreboard data
-        games = ScoreBoard()
+        games = fetch_nba_data(ScoreBoard)
         data = games.get_dict()
 
         game_list = data['scoreboard']['games']
@@ -211,7 +227,7 @@ def get_top_players_stats():
             continue  # Skip to the next player if stats are cached
 
         try:
-            career = PlayerCareerStats(player_id=player['id'])
+            career = fetch_nba_data(PlayerCareerStats, player_id=player['id'])
             data = career.get_dict()
             result_set = data['resultSets'][0]
             headers = result_set['headers']
