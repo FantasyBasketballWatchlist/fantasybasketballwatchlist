@@ -2,12 +2,8 @@ import os
 import unicodedata
 import redis
 import json
-import base64
-import requests
-import redis
-import json
 from flask import Flask, render_template, jsonify, request
-from nba_api.stats.endpoints import PlayerCareerStats, PlayerGameLogs
+from nba_api.stats.endpoints import PlayerCareerStats, playergamelogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
 from nba_api.stats.static import players
@@ -18,6 +14,10 @@ import logging
 import ssl
 import time
 import random
+
+# Configure logging for better debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Add user agent headers to avoid rate limiting
 from nba_api.stats.library.http import NBAStatsHTTP
@@ -46,10 +46,6 @@ NBAStatsHTTP.nba_response.headers = {
     'x-nba-stats-origin': 'stats',
     'x-nba-stats-token': 'true'
 }
-
-# Configure logging for better debugging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -136,12 +132,12 @@ if url.scheme == 'rediss':
 _cache = {}
 CACHE_EXPIRY = {}
 
-# Top players to highlight
+# Top players to highlight - using exact same list from the working code
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
     "Luka Dončić",
-    "Tyrese Haliburton", 
+    "Tyrese Halliburton", 
     "Cade Cunningham",
     "Nikola Jokić",
     "Shai Gilgeous-Alexander",
@@ -152,24 +148,6 @@ top_players = [
 
 # Cache for player IDs to avoid repeated lookups
 player_id_cache = {}
-
-# GitHub API Configuration
-GITHUB_API_BASE = "https://api.github.com"
-GITHUB_REPO_OWNER = "swar"
-GITHUB_REPO_NAME = "nba_api"
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")  # Optional: For higher rate limits
-
-# GitHub API Headers
-def get_github_headers():
-    headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': random.choice(user_agents)
-    }
-    
-    if GITHUB_TOKEN:
-        headers['Authorization'] = f'token {GITHUB_TOKEN}'
-        
-    return headers
 
 # Helper function to remove accents from characters
 def remove_accents(input_str):
@@ -220,13 +198,16 @@ def set_to_cache(key, value, expiration=3600):
         logger.debug(f"Redis error: {str(e)}")
         return False
 
-# Function to search and return player by name
+# Function to search and return player by name - using the working implementation
 def find_player_by_name(player_name):
     if not player_name:
         return None
-        
+    
+    # Normalize the player name to handle cases like accents and case sensitivity
+    player_name_normalized = remove_accents(player_name.strip().lower())
+    
     # Check cache first
-    normalized_name = remove_accents(player_name.strip().lower())
+    normalized_name = player_name_normalized
     
     # Check memory cache
     if normalized_name in player_id_cache:
@@ -238,12 +219,12 @@ def find_player_by_name(player_name):
     if cached_player:
         player_id_cache[normalized_name] = cached_player
         return cached_player
-    
-    # Search through players list
+
+    # Search for players using the `nba_api` search function (from working code)
     try:
         all_players = players.get_players()
         for player in all_players:
-            if remove_accents(player['full_name'].lower()) == normalized_name:
+            if remove_accents(player['full_name'].lower()) == player_name_normalized:
                 # Cache for future
                 player_id_cache[normalized_name] = player
                 set_to_cache(cache_key, player, expiration=604800)  # 1 week
@@ -293,156 +274,7 @@ def fetch_from_nba_api(fetch_function, *args, **kwargs):
             logger.error(f"Unexpected error in NBA API call: {str(e)}")
             raise
 
-# GitHub API helper functions
-def fetch_from_github_api(endpoint, params=None):
-    """
-    Fetch data from GitHub API with proper error handling and retries
-    """
-    url = f"{GITHUB_API_BASE}/{endpoint}"
-    headers = get_github_headers()
-    max_retries = 3
-    base_delay = 1
-    
-    for attempt in range(1, max_retries + 1):
-        try:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            
-            # Check for rate limiting
-            if response.status_code == 403 and 'X-RateLimit-Remaining' in response.headers:
-                remaining = int(response.headers.get('X-RateLimit-Remaining', 0))
-                if remaining == 0:
-                    reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
-                    wait_time = max(reset_time - time.time(), 0) + 1
-                    logger.warning(f"GitHub API rate limit exceeded. Waiting {wait_time:.1f} seconds")
-                    time.sleep(min(wait_time, 60))  # Wait at most 1 minute
-                    continue
-                    
-            # Check for success
-            response.raise_for_status()
-            return response.json()
-            
-        except RequestException as e:
-            delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 1)
-            
-            if attempt < max_retries:
-                logger.warning(f"GitHub API request failed: {str(e)}. Retrying in {delay:.2f} seconds...")
-                time.sleep(delay)
-            else:
-                logger.error(f"GitHub API request failed after {max_retries} attempts: {str(e)}")
-                raise
-        except Exception as e:
-            logger.error(f"Unexpected error in GitHub API call: {str(e)}")
-            raise
-
-def get_player_data_from_github(player_id):
-    """
-    Get player data from GitHub nba_api repository data files
-    """
-    cache_key = f"github:player:{player_id}"
-    cached_data = get_from_cache(cache_key)
-    
-    if cached_data:
-        return cached_data
-    
-    try:
-        # First check in the player data directory in the repo
-        endpoint = f"repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/contents/nba_api/data/player_data.json"
-        response = fetch_from_github_api(endpoint)
-        
-        # Get content and decode from base64
-        if 'content' in response:
-            content = base64.b64decode(response['content']).decode('utf-8')
-            players_data = json.loads(content)
-            
-            # Find player by ID
-            for player_data in players_data:
-                if str(player_data.get('id')) == str(player_id):
-                    # Cache and return
-                    set_to_cache(cache_key, player_data, expiration=604800)  # 1 week
-                    return player_data
-                    
-        # Player not found in the main file, search in other directories
-        logger.info(f"Player {player_id} not found in main player data file, searching in other endpoints...")
-        
-        # You could search for other data sources in the repo here
-        
-        return None
-    except Exception as e:
-        logger.error(f"Error fetching player data from GitHub: {str(e)}")
-        return None
-
-def get_additional_stats_models_from_github():
-    """
-    Get available stats endpoint definitions from the GitHub repository
-    """
-    cache_key = "github:stats_endpoints"
-    cached_data = get_from_cache(cache_key)
-    
-    if cached_data:
-        return cached_data
-    
-    try:
-        # Check endpoints directory
-        endpoint = f"repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/contents/nba_api/stats/endpoints"
-        response = fetch_from_github_api(endpoint)
-        
-        if isinstance(response, list):
-            # Get list of endpoint files
-            endpoints = []
-            for item in response:
-                if item['type'] == 'file' and item['name'].endswith('.py'):
-                    endpoints.append(item['name'].replace('.py', ''))
-            
-            # Cache and return
-            set_to_cache(cache_key, endpoints, expiration=86400)  # 24 hours
-            return endpoints
-    except Exception as e:
-        logger.error(f"Error fetching stats models from GitHub: {str(e)}")
-    
-    return None
-
-def get_endpoint_details_from_github(endpoint_name):
-    """
-    Get details for a specific stats endpoint from GitHub
-    """
-    cache_key = f"github:endpoint:{endpoint_name}"
-    cached_data = get_from_cache(cache_key)
-    
-    if cached_data:
-        return cached_data
-    
-    try:
-        # Get endpoint code
-        file_path = f"repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/contents/nba_api/stats/endpoints/{endpoint_name}.py"
-        response = fetch_from_github_api(file_path)
-        
-        if 'content' in response:
-            content = base64.b64decode(response['content']).decode('utf-8')
-            
-            # Very basic parsing to extract parameters (could be improved)
-            params = []
-            for line in content.split('\n'):
-                if 'param_name' in line and 'param_default' in line:
-                    try:
-                        param_name = line.split('param_name=')[1].split(',')[0].strip().strip('"\'')
-                        params.append(param_name)
-                    except Exception:
-                        continue
-            
-            result = {
-                'name': endpoint_name,
-                'parameters': params
-            }
-            
-            # Cache and return
-            set_to_cache(cache_key, result, expiration=86400)  # 24 hours
-            return result
-    except Exception as e:
-        logger.error(f"Error fetching endpoint details from GitHub: {str(e)}")
-    
-    return None
-
-# Background task for player stats - without mock data fallback
+# Background task for player stats using the working implementation approach
 @celery.task
 def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
@@ -451,13 +283,8 @@ def fetch_player_stats_in_background(player_name):
         return False
     
     try:
-        # Use retry mechanism with longer timeout for background tasks
-        career = fetch_from_nba_api(
-            PlayerCareerStats, 
-            player_id=player['id'], 
-            timeout=20
-        )
-        
+        # Using exact same approach from the working code
+        career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -476,56 +303,6 @@ def fetch_player_stats_in_background(player_name):
         logger.error(f"Background task error for {player_name}: {str(e)}")
         return False
 
-# New background task to fetch both NBA API stats and GitHub data
-@celery.task
-def fetch_player_complete_stats_in_background(player_name):
-    """
-    Background task that fetches player stats from both NBA API and GitHub
-    """
-    player = find_player_by_name(player_name)
-    if not player:
-        logger.error(f"Player not found: {player_name}")
-        return False
-    
-    success = False
-    
-    # Try to fetch from NBA API first
-    try:
-        career = fetch_from_nba_api(
-            PlayerCareerStats, 
-            player_id=player['id'], 
-            timeout=20
-        )
-        
-        data = career.get_dict()
-        result_set = data['resultSets'][0]
-        headers = result_set['headers']
-        rows = result_set['rowSet']
-        
-        if rows:
-            stats = [dict(zip(headers, row)) for row in rows]
-            cache_key = f"player_stats:{player_name.lower()}"
-            set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
-            logger.info(f"Successfully cached NBA API stats for {player_name}")
-            success = True
-    except Exception as e:
-        logger.error(f"Background NBA API task error for {player_name}: {str(e)}")
-    
-    # Then fetch from GitHub
-    try:
-        # Get additional player data from GitHub
-        github_data = get_player_data_from_github(player['id'])
-        
-        if github_data:
-            cache_key = f"github_player:{player_name.lower()}"
-            set_to_cache(cache_key, github_data, expiration=86400)  # 24 hours
-            logger.info(f"Successfully cached GitHub data for {player_name}")
-            success = True
-    except Exception as e:
-        logger.error(f"Background GitHub task error for {player_name}: {str(e)}")
-    
-    return success
-
 # Initialize app data
 def initialize_app():
     # Preload player IDs only
@@ -536,16 +313,9 @@ def initialize_app():
         # Check if already cached
         cache_key = f"player_stats:{player_name.lower()}"
         if not get_from_cache(cache_key):
-            # Schedule fetch in background - now using the enhanced version
-            logger.info(f"Scheduling complete stats fetch for {player_name}")
-            fetch_player_complete_stats_in_background.delay(player_name)
-    
-    # Also fetch available endpoints from GitHub for discoverability
-    if not get_from_cache("github:stats_endpoints"):
-        try:
-            get_additional_stats_models_from_github()
-        except Exception as e:
-            logger.error(f"Error initializing GitHub stats endpoints: {str(e)}")
+            # Schedule fetch in background
+            logger.info(f"Scheduling stats fetch for {player_name}")
+            fetch_player_stats_in_background.delay(player_name)
 
 # Home route
 @app.route('/')
@@ -555,10 +325,10 @@ def home():
         initialize_app()
     return render_template('index.html')
 
-# Route for player stats - with retries but no mock data
+# Route for player stats - based on the working code approach
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
-    player_name = request.args.get('player_name')
+    player_name = request.args.get('player_name')  # Get player name from query parameter
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
     
@@ -569,29 +339,24 @@ def get_player_stats():
     if cached_stats:
         return jsonify(cached_stats)
     
-    # Find player
+    # Search for player based on the name - using the working code approach
     player = find_player_by_name(player_name)
+    
     if not player:
-        return jsonify({"error": "Player not found"}), 404
+        return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
     
     try:
-        # Try to fetch data with retry logic
-        career = fetch_from_nba_api(
-            PlayerCareerStats,
-            player_id=player['id'],
-            timeout=15
-        )
-        
+        # Fetch career stats using player ID - exact approach from working code
+        career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
         
         if not rows:
-            return jsonify({"error": "No stats available"}), 404
+            return jsonify({"error": "Player not found or no stats available."}), 404
         
-        # Process stats
-        stats = [dict(zip(headers, row)) for row in rows]
+        stats = [dict(zip(headers, row)) for row in rows]  # Return the player's stats
         
         # Cache result
         set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
@@ -600,110 +365,14 @@ def get_player_stats():
     except Exception as e:
         logger.error(f"Error fetching stats for {player_name}: {str(e)}")
         # Try to schedule a background task to fetch it
-        fetch_player_complete_stats_in_background.delay(player_name)
+        fetch_player_stats_in_background.delay(player_name)
         # Return a more informative error
         return jsonify({
             "error": "Stats temporarily unavailable",
             "message": "We're fetching this player's stats in the background. Please try again in a moment."
         }), 202
 
-# New route for fetching combined player stats (NBA API + GitHub)
-@app.route('/api/player_complete_stats', methods=['GET'])
-def get_player_complete_stats():
-    player_name = request.args.get('player_name')
-    if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
-    
-    # Find player
-    player = find_player_by_name(player_name)
-    if not player:
-        return jsonify({"error": "Player not found"}), 404
-    
-    # Prepare response data
-    result = {"player_id": player['id'], "player_name": player['full_name']}
-    
-    # Check NBA API stats cache
-    nba_cache_key = f"player_stats:{player_name.lower()}"
-    nba_stats = get_from_cache(nba_cache_key)
-    
-    if nba_stats:
-        result["nba_api_stats"] = nba_stats
-    
-    # Check GitHub data cache
-    github_cache_key = f"github_player:{player_name.lower()}"
-    github_data = get_from_cache(github_cache_key)
-    
-    if github_data:
-        result["github_data"] = github_data
-    
-    # If we don't have either, try to fetch
-    if not nba_stats and not github_data:
-        try:
-            # Try to get NBA API stats
-            career = fetch_from_nba_api(
-                PlayerCareerStats,
-                player_id=player['id'],
-                timeout=15
-            )
-            
-            data = career.get_dict()
-            result_set = data['resultSets'][0]
-            headers = result_set['headers']
-            rows = result_set['rowSet']
-            
-            if rows:
-                stats = [dict(zip(headers, row)) for row in rows]
-                set_to_cache(nba_cache_key, stats, expiration=86400)  # 24 hours
-                result["nba_api_stats"] = stats
-        except Exception as e:
-            logger.error(f"Error fetching NBA API stats: {str(e)}")
-        
-        try:
-            # Try to get GitHub data
-            github_data = get_player_data_from_github(player['id'])
-            
-            if github_data:
-                set_to_cache(github_cache_key, github_data, expiration=86400)  # 24 hours
-                result["github_data"] = github_data
-        except Exception as e:
-            logger.error(f"Error fetching GitHub data: {str(e)}")
-        
-        # If still no data, schedule background task
-        if "nba_api_stats" not in result and "github_data" not in result:
-            fetch_player_complete_stats_in_background.delay(player_name)
-            return jsonify({
-                "message": "Player stats are being fetched in the background. Please try again shortly."
-            }), 202
-    
-    return jsonify(result)
-
-# Route for fetching available stats endpoints from GitHub
-@app.route('/api/github/endpoints', methods=['GET'])
-def get_github_endpoints():
-    endpoints = get_additional_stats_models_from_github()
-    
-    if not endpoints:
-        return jsonify({
-            "error": "Unable to fetch available endpoints",
-            "message": "GitHub API may be unavailable. Please try again later."
-        }), 503
-    
-    return jsonify({"endpoints": endpoints})
-
-# Route for fetching details about a specific endpoint
-@app.route('/api/github/endpoints/<endpoint_name>', methods=['GET'])
-def get_github_endpoint_details(endpoint_name):
-    details = get_endpoint_details_from_github(endpoint_name)
-    
-    if not details:
-        return jsonify({
-            "error": "Endpoint details not found",
-            "message": f"Could not find details for endpoint: {endpoint_name}"
-        }), 404
-    
-    return jsonify(details)
-
-# Route for today's games
+# Route for today's games - based on the working code approach
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
     cache_key = "today_games"
@@ -713,15 +382,17 @@ def get_today_games():
         return jsonify(cached_games)
     
     try:
-        # Use retry logic
-        games = fetch_from_nba_api(ScoreBoard, timeout=15)
+        # Fetch today's NBA scoreboard data - exact approach from working code
+        games = ScoreBoard()
         data = games.get_dict()
+        
+        # Extract games list
         game_list = data['scoreboard']['games']
         
         if not game_list:
-            return jsonify([]), 200
+            return jsonify({"error": "No live games available."}), 404
         
-        # Format data
+        # Format the game data - exact approach from working code
         game_data = []
         for game in game_list:
             game_data.append({
@@ -738,9 +409,9 @@ def get_today_games():
         return jsonify(game_data)
     except Exception as e:
         logger.error(f"Error fetching games: {str(e)}")
-        return jsonify({"error": "Unable to fetch today's games"}), 503
+        return jsonify({"error": str(e)}), 400
 
-# Route for active players
+# Route for active players - based on the working code approach
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
     cache_key = "active_players"
@@ -750,13 +421,16 @@ def get_active_players():
         return jsonify(cached_players)
     
     try:
-        # Direct approach with custom error handling
+        # Fetch the full list of players - exact approach from working code
         all_players = players.get_players()
-        if not all_players:
-            return jsonify([]), 200
         
-        # Filter active players
+        if not all_players:
+            return jsonify({"error": "No players found."}), 500
+        
+        # Filter out only active players
         active_players = [player for player in all_players if player['is_active']]
+        
+        # Simplify the response with just player ID and name
         player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
         
         # Cache result
@@ -765,12 +439,12 @@ def get_active_players():
         return jsonify(player_data)
     except Exception as e:
         logger.error(f"Error fetching active players: {str(e)}")
-        return jsonify({"error": "Unable to fetch active players"}), 503
+        return jsonify({"error": str(e)}), 500
 
-# Route for last 5 games
+# Route for last 5 games - based on the working code approach
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
-    player_name = request.args.get('player_name')
+    player_name = request.args.get('player_name')  # Get player name from query parameter
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
     
@@ -781,39 +455,36 @@ def get_last_5_games():
     if cached_games:
         return jsonify(cached_games)
     
-    # Find player
+    # Search for player based on the name
     player = find_player_by_name(player_name)
+    
     if not player:
         return jsonify({"error": "Player not found"}), 404
     
     try:
-        # Use retry logic for game logs
-        game_logs = fetch_from_nba_api(
-            PlayerGameLogs,
-            player_id_nullable=player['id'],
-            last_n_games_nullable=5,
-            timeout=15
-        )
-        
+        # Fetch game logs using the player ID - exact approach from working code
+        game_logs = playergamelogs(Player_ID=player['id'])
         data = game_logs.get_dict()
         
         if 'resultSets' not in data or len(data['resultSets']) == 0 or len(data['resultSets'][0]['rowSet']) == 0:
-            return jsonify([]), 200
+            return jsonify({"error": "No game logs available for the player."}), 404
         
-        # Process games
+        game_log_rows = data['resultSets'][0]['rowSet']
         headers = data['resultSets'][0]['headers']
-        rows = data['resultSets'][0]['rowSet']
+        
+        # Process and return the last 5 games
+        games = [dict(zip(headers, row)) for row in game_log_rows]
+        last_5_games = games[:5]
         
         formatted_games = []
-        for row in rows:
-            game_dict = dict(zip(headers, row))
+        for game in last_5_games:
             formatted_game = {
-                "date": game_dict.get("GAME_DATE", "N/A"),
-                "home_team": game_dict.get("HOME_TEAM_NAME", "N/A"),
-                "away_team": game_dict.get("VISITOR_TEAM_NAME", "N/A"),
-                "home_score": game_dict.get("HOME_TEAM_SCORE", "N/A"),
-                "away_score": game_dict.get("VISITOR_TEAM_SCORE", "N/A"),
-                "outcome": game_dict.get("WL", "N/A"),
+                "date": game.get("GAME_DATE", "N/A"),
+                "home_team": game.get("HOME_TEAM_ID", "N/A"),
+                "away_team": game.get("VISITOR_TEAM_ID", "N/A"),
+                "home_score": game.get("HOME_TEAM_SCORE", "N/A"),
+                "away_score": game.get("VISITOR_TEAM_SCORE", "N/A"),
+                "outcome": game.get("WL", "N/A"),
             }
             formatted_games.append(formatted_game)
         
@@ -823,9 +494,9 @@ def get_last_5_games():
         return jsonify(formatted_games)
     except Exception as e:
         logger.error(f"Error fetching game logs: {str(e)}")
-        return jsonify({"error": "Unable to fetch recent games"}), 503
+        return jsonify({"error": str(e)}), 400
 
-# Route for top players stats - use real API data with better error handling
+# Route for top players stats - exact approach from the working code
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
     cache_key = "top_players_stats"
@@ -834,138 +505,48 @@ def get_top_players_stats():
     if cached_stats:
         return jsonify(cached_stats)
     
-    # Prepare response using real data
+    # List to hold the top players' stats
     top_players_stats = []
-    missing_players = []
     
+    # Static list of top players - exact approach from working code
     for player_name in top_players:
-        # Check individual cache first
-        player_cache_key = f"player_stats:{player_name.lower()}"
-        player_stats = get_from_cache(player_cache_key)
+        # Search for player based on the name
+        player = find_player_by_name(player_name)
         
-        if player_stats:
-            # Find the current season stats
-            current_season = '2024-25'
-            current_season_stats = None
+        if not player:
+            continue  # If player not found in the list, skip to the next one
+        
+        try:
+            # Fetch career stats using player ID - exact approach from working code
+            career = PlayerCareerStats(player_id=player['id'])
+            data = career.get_dict()
+            result_set = data['resultSets'][0]
+            headers = result_set['headers']
+            rows = result_set['rowSet']
             
-            for stat in player_stats:
-                if stat.get('SEASON_ID') == current_season:
-                    current_season_stats = stat
-                    break
+            if not rows:
+                continue  # Skip if no stats found for this player
             
-            # If found, add to list
-            if current_season_stats:
+            # Filter for the 2024-25 season stats only - exact approach from working code
+            stats_2024_25 = [
+                dict(zip(headers, row)) for row in rows if row[headers.index('SEASON_ID')] == '2024-25'
+            ]
+            
+            if stats_2024_25:
+                season_stats = stats_2024_25[0]  # Assuming one entry per player for 2024-25 season
                 top_players_stats.append({
                     "player_name": player_name,
-                    "stats": current_season_stats
+                    "stats": season_stats
                 })
-            else:
-                # If we have stats but not for current season
-                # Add the most recent one instead
-                if player_stats:
-                    # Sort by season ID in descending order and take the first
-                    sorted_stats = sorted(player_stats, 
-                                         key=lambda x: x.get('SEASON_ID', ''), 
-                                         reverse=True)
-                    top_players_stats.append({
-                        "player_name": player_name,
-                        "stats": sorted_stats[0]
-                    })
-        else:
-            # If not in cache, schedule a background task to fetch
-            missing_players.append(player_name)
-            fetch_player_complete_stats_in_background.delay(player_name)
+        
+        except Exception as e:
+            logger.error(f"Error fetching player stats for {player_name}: {str(e)}")
     
-    # Cache the result if we have some data
+    # Cache the result
     if top_players_stats:
         set_to_cache(cache_key, top_players_stats, expiration=3600)  # 1 hour
     
-    # If we're missing more than half the players, return a partial data response
-    if len(missing_players) > len(top_players) / 2:
-        return jsonify({
-            "partial_data": True,
-            "available_players": top_players_stats,
-            "missing_players": missing_players,
-            "message": "Some player data is being fetched in the background. Please try again shortly."
-        }), 206
-    
     return jsonify(top_players_stats)
-
-# New route for top players with combined data from NBA API and GitHub
-@app.route('/api/player_stats/top_players/complete', methods=['GET'])
-def get_top_players_complete_stats():
-    cache_key = "top_players_complete_stats"
-    cached_stats = get_from_cache(cache_key)
-    
-    if cached_stats:
-        return jsonify(cached_stats)
-    
-    # Prepare response using data from both sources
-    top_players_complete = []
-    missing_players = []
-    
-    for player_name in top_players:
-        player = find_player_by_name(player_name)
-        if not player:
-            continue
-            
-        player_data = {
-            "player_name": player_name,
-            "player_id": player['id']
-        }
-        
-        # Get NBA API stats
-        nba_cache_key = f"player_stats:{player_name.lower()}"
-        nba_stats = get_from_cache(nba_cache_key)
-        
-        if nba_stats:
-            # Find current season stats
-            current_season = '2024-25'
-            current_season_stats = None
-            
-            for stat in nba_stats:
-                if stat.get('SEASON_ID') == current_season:
-                    current_season_stats = stat
-                    break
-                    
-            if current_season_stats:
-                player_data["nba_api_stats"] = current_season_stats
-            elif nba_stats:
-                # Use most recent if current not available
-                sorted_stats = sorted(nba_stats, 
-                                     key=lambda x: x.get('SEASON_ID', ''), 
-                                     reverse=True)
-                player_data["nba_api_stats"] = sorted_stats[0]
-        
-        # Get GitHub data
-        github_cache_key = f"github_player:{player_name.lower()}"
-        github_data = get_from_cache(github_cache_key)
-        
-        if github_data:
-            player_data["github_data"] = github_data
-        
-        # Add to response if we have at least one data source
-        if "nba_api_stats" in player_data or "github_data" in player_data:
-            top_players_complete.append(player_data)
-        else:
-            missing_players.append(player_name)
-            # Schedule background task
-            fetch_player_complete_stats_in_background.delay(player_name)
-    
-    # Cache results
-    if top_players_complete:
-        set_to_cache(cache_key, top_players_complete, expiration=3600)  # 1 hour
-    
-    # Return partial data notice if needed
-    if len(missing_players) > len(top_players) / 2:
-        return jsonify({
-            "partial_data": True,
-            "available_players": top_players_complete,
-            "missing_players": missing_players,
-            "message": "Complete data for some players is being fetched in the background."
-        }), 206
-    
-    return jsonify(top_players_complete)
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])
@@ -978,34 +559,17 @@ def health_check():
     nba_api_status = "unknown"
     try:
         # Try to get a quick response from the API
-        response = fetch_from_nba_api(ScoreBoard, timeout=5)
+        response = ScoreBoard()
         if response:
             nba_api_status = "connected"
     except Exception:
         nba_api_status = "disconnected"
-    
-    # Check GitHub API connectivity
-    github_api_status = "unknown"
-    try:
-        # Simple GitHub API check
-        response = requests.get(
-            f"{GITHUB_API_BASE}/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}",
-            headers=get_github_headers(),
-            timeout=5
-        )
-        if response.status_code == 200:
-            github_api_status = "connected"
-        else:
-            github_api_status = "disconnected"
-    except Exception:
-        github_api_status = "disconnected"
         
     return jsonify({
         "status": "healthy", 
         "timestamp": time.time(),
         "cache_size": len(_cache),
-        "nba_api_status": nba_api_status,
-        "github_api_status": github_api_status
+        "nba_api_status": nba_api_status
     }), 200
 
 if __name__ == '__main__':
