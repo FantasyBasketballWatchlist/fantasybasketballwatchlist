@@ -274,7 +274,7 @@ def fetch_from_nba_api(fetch_function, *args, **kwargs):
             logger.error(f"Unexpected error in NBA API call: {str(e)}")
             raise
 
-# Background task for player stats with ordered display stats
+# Background task for player stats with robust error handling
 @celery.task
 def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
@@ -286,6 +286,12 @@ def fetch_player_stats_in_background(player_name):
         # Fetch career stats
         career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
+        
+        # Validate data structure
+        if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
+            logger.error(f"Invalid API response format for {player_name}")
+            return False
+            
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
@@ -294,18 +300,28 @@ def fetch_player_stats_in_background(player_name):
             logger.warning(f"No stats found for {player_name}")
             return False
             
-        # Process stats with proper ordering
+        # Process stats with proper ordering and error handling
         all_stats = []
         for row in rows:
+            # Ensure row has the same length as headers
+            if len(row) != len(headers):
+                # Pad or truncate row to match headers
+                if len(row) < len(headers):
+                    row = row + [None] * (len(headers) - len(row))
+                else:
+                    row = row[:len(headers)]
+                    
+            # Create stats dictionary with proper types
             stats_dict = dict(zip(headers, row))
-            # Apply the ordered stats format
+            
+            # Apply consistent formatting to ensure fields are properly processed
             formatted_stats = format_stats_in_order(stats_dict)
             all_stats.append(formatted_stats)
         
         # Cache result
         cache_key = f"player_stats:{player_name.lower()}"
         set_to_cache(cache_key, all_stats, expiration=86400)  # 24 hours
-        logger.info(f"Successfully cached stats for {player_name}")
+        logger.info(f"Successfully cached {len(all_stats)} stat records for {player_name}")
         return True
     except Exception as e:
         logger.error(f"Background task error for {player_name}: {str(e)}")
@@ -333,7 +349,7 @@ def home():
         initialize_app()
     return render_template('index.html')
 
-# Route for player stats - with ordered display stats
+# Route for player stats with robust error handling
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
     player_name = request.args.get('player_name')  # Get player name from query parameter
@@ -364,6 +380,11 @@ def get_player_stats():
         # Fetch career stats using player ID
         career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
+        
+        # Validate data structure
+        if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
+            return jsonify({"error": "Invalid API response format"}), 500
+            
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
@@ -371,23 +392,37 @@ def get_player_stats():
         if not rows:
             return jsonify({"error": "Player not found or no stats available."}), 404
         
-        # Process stats and order them properly
+        # Process all stats with robust error handling
         all_stats = []
         for row in rows:
+            # Ensure row has the same length as headers
+            if len(row) != len(headers):
+                # Pad or truncate row to match headers
+                if len(row) < len(headers):
+                    row = row + [None] * (len(headers) - len(row))
+                else:
+                    row = row[:len(headers)]
+            
+            # Create stats dictionary with proper types
             stats_dict = dict(zip(headers, row))
-            # Apply the ordered stats format
+            
+            # Apply proper formatting
             formatted_stats = format_stats_in_order(stats_dict)
             all_stats.append(formatted_stats)
         
         # Apply season filter if specified
         if season_filter:
-            filtered_stats = [stat for stat in all_stats if stat['SEASON_ID'] == season_filter]
+            filtered_stats = [stat for stat in all_stats if stat.get('SEASON_ID') == season_filter]
             stats = filtered_stats
         else:
             stats = all_stats
         
         # Cache result
         set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
+        
+        # Log a sample of the stats for debugging
+        if stats and len(stats) > 0:
+            logger.info(f"Sample display_stats for {player_name}: {stats[0].get('display_stats')}")
         
         return jsonify(stats)
     except Exception as e:
@@ -532,7 +567,7 @@ def get_last_5_games():
         logger.error(f"Error fetching game logs: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for top players stats with ordered display stats
+# Route for top players stats with robust error handling
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
     cache_key = "top_players_stats"
@@ -546,6 +581,7 @@ def get_top_players_stats():
     
     # List to hold the top players' stats
     top_players_stats = []
+    error_players = []
     
     # Static list of top players
     for player_name in top_players:
@@ -553,53 +589,92 @@ def get_top_players_stats():
         player = find_player_by_name(player_name)
         
         if not player:
-            continue  # If player not found in the list, skip to the next one
+            logger.warning(f"Player not found: {player_name}")
+            error_players.append({"player_name": player_name, "error": "Player not found"})
+            continue
         
         try:
             # Fetch career stats using player ID
             career = PlayerCareerStats(player_id=player['id'])
             data = career.get_dict()
+            
+            # Validate data structure
+            if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
+                logger.error(f"Invalid API response format for {player_name}")
+                error_players.append({"player_name": player_name, "error": "Invalid API response"})
+                continue
+                
             result_set = data['resultSets'][0]
             headers = result_set['headers']
             rows = result_set['rowSet']
             
             if not rows:
-                continue  # Skip if no stats found for this player
+                logger.warning(f"No stats found for {player_name}")
+                error_players.append({"player_name": player_name, "error": "No stats available"})
+                continue
             
-            # Convert all rows to dictionaries with ordered stats
+            # Convert all rows to dictionaries with robust error handling
             all_stats = []
             for row in rows:
+                # Ensure row has the same length as headers
+                if len(row) != len(headers):
+                    # Pad or truncate row to match headers
+                    if len(row) < len(headers):
+                        row = row + [None] * (len(headers) - len(row))
+                    else:
+                        row = row[:len(headers)]
+                
+                # Create stats dictionary with proper types
                 stats_dict = dict(zip(headers, row))
-                # Apply the ordered stats format
+                
+                # Apply robust formatting
                 formatted_stats = format_stats_in_order(stats_dict)
                 all_stats.append(formatted_stats)
             
             # If specific season is requested (and not 'all'), filter for that season
             if season_filter != 'all':
-                filtered_stats = [stat for stat in all_stats if stat['SEASON_ID'] == season_filter]
+                filtered_stats = [stat for stat in all_stats if stat.get('SEASON_ID') == season_filter]
                 
                 if filtered_stats:
                     top_players_stats.append({
                         "player_name": player_name,
+                        "player_id": player['id'],
                         "stats": filtered_stats
+                    })
+                else:
+                    logger.warning(f"No stats found for {player_name} in season {season_filter}")
+                    error_players.append({
+                        "player_name": player_name, 
+                        "error": f"No stats for season {season_filter}"
                     })
             else:
                 # Return all seasons
                 top_players_stats.append({
                     "player_name": player_name,
+                    "player_id": player['id'],
                     "stats": all_stats
                 })
+                
+            # Log a sample for debugging
+            if all_stats and len(all_stats) > 0:
+                logger.info(f"Sample display_stats for {player_name}: {all_stats[0].get('display_stats')}")
         
         except Exception as e:
             logger.error(f"Error fetching player stats for {player_name}: {str(e)}")
+            error_players.append({"player_name": player_name, "error": str(e)})
+    
+    # Add error players to the response if any
+    response = {"players": top_players_stats}
+    if error_players:
+        response["errors"] = error_players
     
     # Cache the result
     if top_players_stats:
         # Don't cache if specific season requested, as the cache key doesn't include the season
         if season_filter == 'all':
-            set_to_cache(cache_key, top_players_stats, expiration=3600)  # 1 hour
+            set_to_cache(cache_key, response, expiration=3600)  # 1 hour
     
-    return jsonify(top_players_stats)
+    return jsonify(response)
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])
