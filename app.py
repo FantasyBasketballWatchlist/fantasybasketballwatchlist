@@ -274,7 +274,7 @@ def fetch_from_nba_api(fetch_function, *args, **kwargs):
             logger.error(f"Unexpected error in NBA API call: {str(e)}")
             raise
 
-# Background task for player stats using the working implementation approach
+# Background task for player stats with ordered display stats
 @celery.task
 def fetch_player_stats_in_background(player_name):
     player = find_player_by_name(player_name)
@@ -283,22 +283,30 @@ def fetch_player_stats_in_background(player_name):
         return False
     
     try:
-        # Using exact same approach from the working code
+        # Fetch career stats
         career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
         
-        if rows:
-            stats = [dict(zip(headers, row)) for row in rows]
-            cache_key = f"player_stats:{player_name.lower()}"
-            set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
-            logger.info(f"Successfully cached stats for {player_name}")
-            return True
-        else:
+        if not rows:
             logger.warning(f"No stats found for {player_name}")
             return False
+            
+        # Process stats with proper ordering
+        all_stats = []
+        for row in rows:
+            stats_dict = dict(zip(headers, row))
+            # Apply the ordered stats format
+            formatted_stats = format_stats_in_order(stats_dict)
+            all_stats.append(formatted_stats)
+        
+        # Cache result
+        cache_key = f"player_stats:{player_name.lower()}"
+        set_to_cache(cache_key, all_stats, expiration=86400)  # 24 hours
+        logger.info(f"Successfully cached stats for {player_name}")
+        return True
     except Exception as e:
         logger.error(f"Background task error for {player_name}: {str(e)}")
         return False
@@ -325,28 +333,35 @@ def home():
         initialize_app()
     return render_template('index.html')
 
-# Route for player stats - based on the working code approach
+# Route for player stats - with ordered display stats
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
     player_name = request.args.get('player_name')  # Get player name from query parameter
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
     
-    # Check cache first
+    # Get optional season filter
+    season_filter = request.args.get('season')
+    
+    # Generate cache key based on player name and optional season
     cache_key = f"player_stats:{player_name.lower()}"
+    if season_filter:
+        cache_key = f"{cache_key}:{season_filter}"
+    
+    # Check cache first
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
         return jsonify(cached_stats)
     
-    # Search for player based on the name - using the working code approach
+    # Search for player based on the name
     player = find_player_by_name(player_name)
     
     if not player:
-        return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
+        return jsonify({"error": "Player not found"}), 404
     
     try:
-        # Fetch career stats using player ID - exact approach from working code
+        # Fetch career stats using player ID
         career = PlayerCareerStats(player_id=player['id'])
         data = career.get_dict()
         result_set = data['resultSets'][0]
@@ -356,7 +371,20 @@ def get_player_stats():
         if not rows:
             return jsonify({"error": "Player not found or no stats available."}), 404
         
-        stats = [dict(zip(headers, row)) for row in rows]  # Return the player's stats
+        # Process stats and order them properly
+        all_stats = []
+        for row in rows:
+            stats_dict = dict(zip(headers, row))
+            # Apply the ordered stats format
+            formatted_stats = format_stats_in_order(stats_dict)
+            all_stats.append(formatted_stats)
+        
+        # Apply season filter if specified
+        if season_filter:
+            filtered_stats = [stat for stat in all_stats if stat['SEASON_ID'] == season_filter]
+            stats = filtered_stats
+        else:
+            stats = all_stats
         
         # Cache result
         set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
@@ -441,7 +469,7 @@ def get_active_players():
         logger.error(f"Error fetching active players: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Route for last 5 games - based on the working code approach
+# Route for last 5 games with ordered stats
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
     player_name = request.args.get('player_name')  # Get player name from query parameter
@@ -462,7 +490,7 @@ def get_last_5_games():
         return jsonify({"error": "Player not found"}), 404
     
     try:
-        # Fetch game logs using the player ID - exact approach from working code
+        # Fetch game logs using the player ID
         game_logs = playergamelogs(Player_ID=player['id'])
         data = game_logs.get_dict()
         
@@ -473,30 +501,38 @@ def get_last_5_games():
         headers = data['resultSets'][0]['headers']
         
         # Process and return the last 5 games
-        games = [dict(zip(headers, row)) for row in game_log_rows]
+        games = []
+        for row in game_log_rows:
+            # Convert row to dict
+            game_dict = dict(zip(headers, row))
+            
+            # Add formatted display stats
+            formatted_game = format_stats_in_order(game_dict)
+            
+            # Create a simplified view with just the key info
+            game_summary = {
+                "date": game_dict.get("GAME_DATE", "N/A"),
+                "home_team": game_dict.get("HOME_TEAM_NAME", game_dict.get("HOME_TEAM_ID", "N/A")),
+                "away_team": game_dict.get("VISITOR_TEAM_NAME", game_dict.get("VISITOR_TEAM_ID", "N/A")),
+                "home_score": game_dict.get("HOME_TEAM_SCORE", "N/A"),
+                "away_score": game_dict.get("VISITOR_TEAM_SCORE", "N/A"),
+                "outcome": game_dict.get("WL", "N/A"),
+                "display_stats": formatted_game["display_stats"] if "display_stats" in formatted_game else {}
+            }
+            games.append(game_summary)
+        
+        # Limit to last 5 games
         last_5_games = games[:5]
         
-        formatted_games = []
-        for game in last_5_games:
-            formatted_game = {
-                "date": game.get("GAME_DATE", "N/A"),
-                "home_team": game.get("HOME_TEAM_ID", "N/A"),
-                "away_team": game.get("VISITOR_TEAM_ID", "N/A"),
-                "home_score": game.get("HOME_TEAM_SCORE", "N/A"),
-                "away_score": game.get("VISITOR_TEAM_SCORE", "N/A"),
-                "outcome": game.get("WL", "N/A"),
-            }
-            formatted_games.append(formatted_game)
-        
         # Cache result
-        set_to_cache(cache_key, formatted_games, expiration=21600)  # 6 hours
+        set_to_cache(cache_key, last_5_games, expiration=21600)  # 6 hours
         
-        return jsonify(formatted_games)
+        return jsonify(last_5_games)
     except Exception as e:
         logger.error(f"Error fetching game logs: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for top players stats - exact approach from the working code
+# Route for top players stats with ordered display stats
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
     cache_key = "top_players_stats"
@@ -505,10 +541,13 @@ def get_top_players_stats():
     if cached_stats:
         return jsonify(cached_stats)
     
+    # Get the season parameter, defaulting to 'all' if not specified
+    season_filter = request.args.get('season', 'all')
+    
     # List to hold the top players' stats
     top_players_stats = []
     
-    # Static list of top players - exact approach from working code
+    # Static list of top players
     for player_name in top_players:
         # Search for player based on the name
         player = find_player_by_name(player_name)
@@ -517,7 +556,7 @@ def get_top_players_stats():
             continue  # If player not found in the list, skip to the next one
         
         try:
-            # Fetch career stats using player ID - exact approach from working code
+            # Fetch career stats using player ID
             career = PlayerCareerStats(player_id=player['id'])
             data = career.get_dict()
             result_set = data['resultSets'][0]
@@ -527,16 +566,28 @@ def get_top_players_stats():
             if not rows:
                 continue  # Skip if no stats found for this player
             
-            # Filter for the 2024-25 season stats only - exact approach from working code
-            stats_2024_25 = [
-                dict(zip(headers, row)) for row in rows if row[headers.index('SEASON_ID')] == '2024-25'
-            ]
+            # Convert all rows to dictionaries with ordered stats
+            all_stats = []
+            for row in rows:
+                stats_dict = dict(zip(headers, row))
+                # Apply the ordered stats format
+                formatted_stats = format_stats_in_order(stats_dict)
+                all_stats.append(formatted_stats)
             
-            if stats_2024_25:
-                season_stats = stats_2024_25[0]  # Assuming one entry per player for 2024-25 season
+            # If specific season is requested (and not 'all'), filter for that season
+            if season_filter != 'all':
+                filtered_stats = [stat for stat in all_stats if stat['SEASON_ID'] == season_filter]
+                
+                if filtered_stats:
+                    top_players_stats.append({
+                        "player_name": player_name,
+                        "stats": filtered_stats
+                    })
+            else:
+                # Return all seasons
                 top_players_stats.append({
                     "player_name": player_name,
-                    "stats": season_stats
+                    "stats": all_stats
                 })
         
         except Exception as e:
@@ -544,7 +595,9 @@ def get_top_players_stats():
     
     # Cache the result
     if top_players_stats:
-        set_to_cache(cache_key, top_players_stats, expiration=3600)  # 1 hour
+        # Don't cache if specific season requested, as the cache key doesn't include the season
+        if season_filter == 'all':
+            set_to_cache(cache_key, top_players_stats, expiration=3600)  # 1 hour
     
     return jsonify(top_players_stats)
 
