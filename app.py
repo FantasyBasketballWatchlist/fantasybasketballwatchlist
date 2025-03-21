@@ -14,6 +14,8 @@ import logging
 import ssl
 import time
 import random
+import threading
+from functools import wraps
 
 # Configure logging for better debugging
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +30,7 @@ user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36 Edg/87.0.664.75',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36 Edge/18.18363',
 ]
+
 # Set custom headers to avoid rate limiting
 NBAStatsHTTP.nba_response.headers = {
     'Accept': 'application/json, text/plain, */*',
@@ -109,7 +112,7 @@ except Exception as e:
     modified_redis_url = "memory://"
     logger.warning("Using in-memory fallback instead of Redis")
 
-# Celery configuration with proper SSL settings
+# Celery configuration with proper SSL settings and increased timeouts
 celery = Celery('app')
 celery.conf.update(
     broker_url=modified_redis_url,
@@ -118,7 +121,10 @@ celery.conf.update(
     accept_content=['json'],
     result_serializer='json',
     worker_concurrency=2,
-    broker_connection_retry_on_startup=True
+    broker_connection_retry_on_startup=True,
+    task_time_limit=180,          # Hard limit: 3 minutes
+    task_soft_time_limit=120,     # Soft limit: 2 minutes
+    worker_max_tasks_per_child=50 # Restart workers after 50 tasks
 )
 
 # If using SSL, add specific SSL config
@@ -128,16 +134,34 @@ if url.scheme == 'rediss':
         redis_backend_use_ssl={'ssl_cert_reqs': ssl.CERT_NONE}
     )
 
+# Rate limiting implementation
+class RateLimiter:
+    def __init__(self, calls_per_second=1):
+        self.calls_per_second = calls_per_second
+        self.min_interval = 1.0 / calls_per_second
+        self.last_call_time = 0
+        self.lock = threading.Lock()
+    
+    def wait(self):
+        with self.lock:
+            elapsed = time.time() - self.last_call_time
+            if elapsed < self.min_interval:
+                time.sleep(self.min_interval - elapsed)
+            self.last_call_time = time.time()
+
+# Create rate limiter for NBA API - 1 call per 1.5 seconds to avoid rate limiting
+nba_api_limiter = RateLimiter(calls_per_second=0.67)
+
 # In-memory cache
 _cache = {}
 CACHE_EXPIRY = {}
 
-# Top players to highlight - using exact same list from the working code
+# Top players to highlight with correct spelling
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
     "Luka Dončić",
-    "Tyrese Halliburton", 
+    "Tyrese Haliburton",  # Fixed spelling (was Halliburton)
     "Cade Cunningham",
     "Nikola Jokić",
     "Shai Gilgeous-Alexander",
@@ -148,6 +172,7 @@ top_players = [
 
 # Cache for player IDs to avoid repeated lookups
 player_id_cache = {}
+all_players_cache = None
 
 # Helper function to remove accents from characters
 def remove_accents(input_str):
@@ -155,6 +180,47 @@ def remove_accents(input_str):
         return ""
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+# Format stats in a consistent order - this function was missing from your original code
+def format_stats_in_order(stats_dict):
+    # Create a formatted stats dictionary with primary display stats
+    try:
+        # Create a normalized version of the stats for display
+        display_stats = {}
+        
+        # Extract key stats if they exist
+        if "PTS" in stats_dict:
+            display_stats["PTS"] = stats_dict.get("PTS", 0)
+        if "REB" in stats_dict:
+            display_stats["REB"] = stats_dict.get("REB", 0)
+        if "AST" in stats_dict:
+            display_stats["AST"] = stats_dict.get("AST", 0)
+        if "STL" in stats_dict:
+            display_stats["STL"] = stats_dict.get("STL", 0)
+        if "BLK" in stats_dict:
+            display_stats["BLK"] = stats_dict.get("BLK", 0)
+        if "FG_PCT" in stats_dict:
+            display_stats["FG%"] = round(stats_dict.get("FG_PCT", 0) * 100, 1) if stats_dict.get("FG_PCT") is not None else 0
+        if "FG3_PCT" in stats_dict:
+            display_stats["3P%"] = round(stats_dict.get("FG3_PCT", 0) * 100, 1) if stats_dict.get("FG3_PCT") is not None else 0
+        if "FT_PCT" in stats_dict:
+            display_stats["FT%"] = round(stats_dict.get("FT_PCT", 0) * 100, 1) if stats_dict.get("FT_PCT") is not None else 0
+        if "MIN" in stats_dict:
+            display_stats["MIN"] = stats_dict.get("MIN", 0)
+        if "GP" in stats_dict:
+            display_stats["GP"] = stats_dict.get("GP", 0)
+        if "SEASON_ID" in stats_dict:
+            display_stats["SEASON"] = stats_dict.get("SEASON_ID", "")
+            
+        # Add the display stats to the original dictionary
+        formatted_stats = stats_dict.copy()
+        formatted_stats["display_stats"] = display_stats
+        
+        return formatted_stats
+    except Exception as e:
+        logger.error(f"Error formatting stats: {str(e)}")
+        # Return the original stats if there's an error
+        return stats_dict
 
 # Cache helper functions
 def get_from_cache(key):
@@ -198,7 +264,32 @@ def set_to_cache(key, value, expiration=3600):
         logger.debug(f"Redis error: {str(e)}")
         return False
 
-# Function to search and return player by name - using the working implementation
+# Function to get all players with caching
+def get_all_players():
+    global all_players_cache
+    
+    if all_players_cache is not None:
+        return all_players_cache
+    
+    # Check Redis cache
+    cache_key = "all_players"
+    cached_players = get_from_cache(cache_key)
+    if cached_players:
+        all_players_cache = cached_players
+        return cached_players
+    
+    # If not in cache, fetch from API
+    try:
+        all_players = players.get_players()
+        # Cache for 24 hours
+        set_to_cache(cache_key, all_players, expiration=86400)
+        all_players_cache = all_players
+        return all_players
+    except Exception as e:
+        logger.error(f"Error fetching players list: {str(e)}")
+        return []
+
+# Function to search and return player by name with improved error handling
 def find_player_by_name(player_name):
     if not player_name:
         return None
@@ -220,19 +311,38 @@ def find_player_by_name(player_name):
         player_id_cache[normalized_name] = cached_player
         return cached_player
 
-    # Search for players using the `nba_api` search function (from working code)
-    try:
-        all_players = players.get_players()
-        for player in all_players:
-            if remove_accents(player['full_name'].lower()) == player_name_normalized:
-                # Cache for future
-                player_id_cache[normalized_name] = player
-                set_to_cache(cache_key, player, expiration=604800)  # 1 week
-                return player
-    except Exception as e:
-        logger.error(f"Error getting players list: {str(e)}")
+    # Search for players using all_players
+    all_players = get_all_players()
+    for player in all_players:
+        if remove_accents(player['full_name'].lower()) == player_name_normalized:
+            # Cache for future
+            player_id_cache[normalized_name] = player
+            set_to_cache(cache_key, player, expiration=604800)  # 1 week
+            return player
+    
+    # Try partial matching if exact match not found
+    for player in all_players:
+        if remove_accents(player['full_name'].lower()).startswith(player_name_normalized):
+            # Cache for future
+            player_id_cache[normalized_name] = player
+            set_to_cache(cache_key, player, expiration=604800)  # 1 week
+            return player
     
     return None
+
+# Batch player lookup
+def batch_find_players(player_names):
+    results = {}
+    not_found = []
+    
+    for name in player_names:
+        player = find_player_by_name(name)
+        if player:
+            results[name] = player
+        else:
+            not_found.append(name)
+    
+    return results, not_found
 
 # Preload player IDs for top players
 def preload_player_ids():
@@ -245,19 +355,22 @@ def preload_player_ids():
     logger.info(f"Preloaded {loaded} player IDs")
     return loaded
 
-# Implement exponential backoff for NBA API calls
+# Implement exponential backoff for NBA API calls with rate limiting
 def fetch_from_nba_api(fetch_function, *args, **kwargs):
     max_retries = 3
-    base_delay = 1
+    base_delay = 2
     
     for attempt in range(1, max_retries + 1):
         try:
-            # Randomly select user agent to reduce rate limiting
+            # Apply rate limiting to avoid NBA API rate limiting
+            nba_api_limiter.wait()
+            
+            # Randomly select user agent to reduce rate limiting detection
             NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
             
-            # Set a default timeout if not provided
+            # Set a default timeout if not provided - increased to 45 seconds
             if 'timeout' not in kwargs:
-                kwargs['timeout'] = 15
+                kwargs['timeout'] = 45
                 
             return fetch_function(*args, **kwargs)
         except (RequestException, Timeout) as e:
@@ -275,17 +388,35 @@ def fetch_from_nba_api(fetch_function, *args, **kwargs):
             raise
 
 # Background task for player stats with robust error handling
-@celery.task
-def fetch_player_stats_in_background(player_name):
+@celery.task(bind=True, soft_time_limit=120, time_limit=180)
+def fetch_player_stats_in_background(self, player_name):
     player = find_player_by_name(player_name)
     if not player:
         logger.error(f"Player not found: {player_name}")
         return False
     
     try:
-        # Fetch career stats
-        career = PlayerCareerStats(player_id=player['id'])
-        data = career.get_dict()
+        # Check cache first to avoid unnecessary API calls
+        cache_key = f"player_stats:{player_name.lower()}"
+        cached_stats = get_from_cache(cache_key)
+        if cached_stats:
+            logger.info(f"Using cached stats for {player_name}")
+            return True
+        
+        # Apply rate limiting
+        nba_api_limiter.wait()
+        
+        # Fetch career stats safely with proper error handling
+        try:
+            # Randomly select user agent
+            NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+            
+            # Increased timeout
+            career = PlayerCareerStats(player_id=player['id'], timeout=45)
+            data = career.get_dict()
+        except Exception as e:
+            logger.error(f"API error for {player_name}: {str(e)}")
+            return False
         
         # Validate data structure
         if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
@@ -318,28 +449,122 @@ def fetch_player_stats_in_background(player_name):
             formatted_stats = format_stats_in_order(stats_dict)
             all_stats.append(formatted_stats)
         
-        # Cache result
-        cache_key = f"player_stats:{player_name.lower()}"
-        set_to_cache(cache_key, all_stats, expiration=86400)  # 24 hours
+        # Cache result with longer expiration (1 day)
+        set_to_cache(cache_key, all_stats, expiration=86400)
         logger.info(f"Successfully cached {len(all_stats)} stat records for {player_name}")
         return True
+    except celery.exceptions.SoftTimeLimitExceeded:
+        logger.error(f"Task timed out for {player_name}")
+        return False
     except Exception as e:
         logger.error(f"Background task error for {player_name}: {str(e)}")
         return False
 
-# Initialize app data
+# Background task for batch fetching player stats
+@celery.task(bind=True, soft_time_limit=300, time_limit=360)
+def batch_fetch_player_stats(self, player_names):
+    results = {}
+    
+    # Process players one by one with rate limiting
+    for name in player_names:
+        player = find_player_by_name(name)
+        if not player:
+            logger.error(f"Player not found: {name}")
+            results[name] = {"success": False, "error": "Player not found"}
+            continue
+        
+        try:
+            # Check cache first
+            cache_key = f"player_stats:{name.lower()}"
+            cached_stats = get_from_cache(cache_key)
+            if cached_stats:
+                logger.info(f"Using cached stats for {name}")
+                results[name] = {"success": True}
+                continue
+            
+            # Apply rate limiting and fetch stats
+            nba_api_limiter.wait()
+            
+            # Randomly select user agent
+            NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+            
+            # Fetch with extended timeout
+            career = PlayerCareerStats(player_id=player['id'], timeout=45)
+            data = career.get_dict()
+            
+            # Process and cache stats (similar to fetch_player_stats_in_background)
+            result_set = data['resultSets'][0]
+            headers = result_set['headers']
+            rows = result_set['rowSet']
+            
+            all_stats = []
+            for row in rows:
+                if len(row) != len(headers):
+                    if len(row) < len(headers):
+                        row = row + [None] * (len(headers) - len(row))
+                    else:
+                        row = row[:len(headers)]
+                        
+                stats_dict = dict(zip(headers, row))
+                formatted_stats = format_stats_in_order(stats_dict)
+                all_stats.append(formatted_stats)
+            
+            # Cache with longer expiration (1 day)
+            set_to_cache(cache_key, all_stats, expiration=86400)
+            logger.info(f"Successfully cached {len(all_stats)} stat records for {name}")
+            results[name] = {"success": True}
+            
+        except Exception as e:
+            logger.error(f"Error fetching stats for {name}: {str(e)}")
+            results[name] = {"success": False, "error": str(e)}
+    
+    return results
+
+# Initialize app data with staggered requests to avoid rate limiting
 def initialize_app():
     # Preload player IDs only
     preload_player_ids()
     
-    # Schedule background tasks to fetch stats for top players
-    for player_name in top_players:
+    # Staggered schedule for background tasks
+    for i, player_name in enumerate(top_players):
         # Check if already cached
         cache_key = f"player_stats:{player_name.lower()}"
         if not get_from_cache(cache_key):
-            # Schedule fetch in background
+            # Schedule fetch in background with staggered delays
             logger.info(f"Scheduling stats fetch for {player_name}")
-            fetch_player_stats_in_background.delay(player_name)
+            fetch_player_stats_in_background.apply_async(
+                args=[player_name],
+                countdown=i * 5  # Stagger by 5 seconds per player
+            )
+
+# Cache decorator for API endpoints
+def cached_endpoint(expiration=3600):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Generate cache key from function name and request arguments
+            cache_key = f"{f.__name__}:{request.url}"
+            
+            # Check cache
+            cached_response = get_from_cache(cache_key)
+            if cached_response:
+                return jsonify(cached_response)
+            
+            # Call the original function
+            result = f(*args, **kwargs)
+            
+            # Cache the result if it's a successful response
+            if isinstance(result, tuple):
+                response, status_code = result
+                if 200 <= status_code < 300:
+                    set_to_cache(cache_key, response, expiration=expiration)
+                return jsonify(response), status_code
+            else:
+                set_to_cache(cache_key, result, expiration=expiration)
+                return jsonify(result)
+            
+        return decorated_function
+    return decorator
 
 # Home route
 @app.route('/')
@@ -349,7 +574,7 @@ def home():
         initialize_app()
     return render_template('index.html')
 
-# Route for player stats with robust error handling
+# Route for player stats with robust error handling and caching
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
     player_name = request.args.get('player_name')  # Get player name from query parameter
@@ -376,76 +601,131 @@ def get_player_stats():
     if not player:
         return jsonify({"error": "Player not found"}), 404
     
+    # Check if task is already in progress
+    in_progress_key = f"task_in_progress:{player_name.lower()}"
+    if get_from_cache(in_progress_key):
+        return jsonify({
+            "status": "in_progress",
+            "message": f"Stats for {player_name} are being fetched. Please try again in a few moments."
+        }), 202
+    
     try:
-        # Fetch career stats using player ID
-        career = PlayerCareerStats(player_id=player['id'])
-        data = career.get_dict()
+        # Set in-progress flag
+        set_to_cache(in_progress_key, True, expiration=60)
         
-        # Validate data structure
-        if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
-            return jsonify({"error": "Invalid API response format"}), 500
-            
-        result_set = data['resultSets'][0]
-        headers = result_set['headers']
-        rows = result_set['rowSet']
+        # Try to get from cache without season filter first
+        base_cache_key = f"player_stats:{player_name.lower()}"
+        base_cached_stats = get_from_cache(base_cache_key)
         
-        if not rows:
-            return jsonify({"error": "Player not found or no stats available."}), 404
+        if base_cached_stats:
+            # If we have base stats and need to filter by season
+            if season_filter:
+                filtered_stats = [stat for stat in base_cached_stats if stat.get('SEASON_ID') == season_filter]
+                if filtered_stats:
+                    # Cache the filtered result
+                    set_to_cache(cache_key, filtered_stats, expiration=86400)
+                    return jsonify(filtered_stats)
+            else:
+                # Return unfiltered stats
+                return jsonify(base_cached_stats)
         
-        # Process all stats with robust error handling
-        all_stats = []
-        for row in rows:
-            # Ensure row has the same length as headers
-            if len(row) != len(headers):
-                # Pad or truncate row to match headers
-                if len(row) < len(headers):
-                    row = row + [None] * (len(headers) - len(row))
-                else:
-                    row = row[:len(headers)]
-            
-            # Create stats dictionary with proper types
-            stats_dict = dict(zip(headers, row))
-            
-            # Apply proper formatting
-            formatted_stats = format_stats_in_order(stats_dict)
-            all_stats.append(formatted_stats)
+        # If we get here, we need to fetch from the API
+        # Schedule background task and return a 202 response
+        fetch_player_stats_in_background.delay(player_name)
         
-        # Apply season filter if specified
-        if season_filter:
-            filtered_stats = [stat for stat in all_stats if stat.get('SEASON_ID') == season_filter]
-            stats = filtered_stats
-        else:
-            stats = all_stats
-        
-        # Cache result
-        set_to_cache(cache_key, stats, expiration=86400)  # 24 hours
-        
-        # Log a sample of the stats for debugging
-        if stats and len(stats) > 0:
-            logger.info(f"Sample display_stats for {player_name}: {stats[0].get('display_stats')}")
-        
-        return jsonify(stats)
+        return jsonify({
+            "status": "in_progress",
+            "message": f"Stats for {player_name} are being fetched in the background. Please try again in a few moments."
+        }), 202
     except Exception as e:
         logger.error(f"Error fetching stats for {player_name}: {str(e)}")
+        # Clear in-progress flag on error
+        set_to_cache(in_progress_key, None, expiration=1)
+        
         # Try to schedule a background task to fetch it
         fetch_player_stats_in_background.delay(player_name)
+        
         # Return a more informative error
         return jsonify({
             "error": "Stats temporarily unavailable",
             "message": "We're fetching this player's stats in the background. Please try again in a moment."
         }), 202
 
-# Route for today's games - based on the working code approach
+# Route for batch player stats
+@app.route('/api/batch_player_stats', methods=['POST'])
+def get_batch_player_stats():
+    data = request.json
+    if not data or 'player_names' not in data:
+        return jsonify({"error": "player_names array is required"}), 400
+    
+    player_names = data['player_names']
+    if not isinstance(player_names, list) or not player_names:
+        return jsonify({"error": "player_names must be a non-empty array"}), 400
+    
+    # Season filter (optional)
+    season_filter = data.get('season')
+    
+    # Limit batch size to prevent abuse
+    if len(player_names) > 20:
+        return jsonify({"error": "Maximum 20 players allowed per batch"}), 400
+    
+    # Check which players are already cached
+    cached_results = {}
+    players_to_fetch = []
+    
+    for name in player_names:
+        # Generate cache key
+        cache_key = f"player_stats:{name.lower()}"
+        if season_filter:
+            cache_key = f"{cache_key}:{season_filter}"
+        
+        # Check cache
+        cached_stats = get_from_cache(cache_key)
+        if cached_stats:
+            cached_results[name] = cached_stats
+        else:
+            players_to_fetch.append(name)
+    
+    # If all players are cached, return immediately
+    if not players_to_fetch:
+        return jsonify({"status": "complete", "results": cached_results})
+    
+    # Check which players exist
+    player_lookup = {}
+    not_found = []
+    
+    for name in players_to_fetch:
+        player = find_player_by_name(name)
+        if player:
+            player_lookup[name] = player
+        else:
+            not_found.append(name)
+    
+    # Schedule background task for players that need fetching
+    if player_lookup:
+        players_to_fetch = list(player_lookup.keys())
+        batch_fetch_player_stats.delay(players_to_fetch)
+    
+    # Return partial results
+    return jsonify({
+        "status": "partial",
+        "results": cached_results,
+        "pending": players_to_fetch,
+        "not_found": not_found,
+        "message": "Some player stats are being fetched in the background. Please try again in a few moments for complete results."
+    }), 202
+
+# Route for today's games with caching
 @app.route('/api/today_games', methods=['GET'])
+@cached_endpoint(expiration=300)  # Cache for 5 minutes
 def get_today_games():
-    cache_key = "today_games"
-    cached_games = get_from_cache(cache_key)
-    
-    if cached_games:
-        return jsonify(cached_games)
-    
     try:
-        # Fetch today's NBA scoreboard data - exact approach from working code
+        # Fetch today's NBA scoreboard data with rate limiting
+        nba_api_limiter.wait()
+        
+        # Randomly select user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
         games = ScoreBoard()
         data = games.get_dict()
         
@@ -453,9 +733,9 @@ def get_today_games():
         game_list = data['scoreboard']['games']
         
         if not game_list:
-            return jsonify({"error": "No live games available."}), 404
+            return {"error": "No live games available."}, 404
         
-        # Format the game data - exact approach from working code
+        # Format the game data
         game_data = []
         for game in game_list:
             game_data.append({
@@ -466,29 +746,21 @@ def get_today_games():
                 "status": game['gameStatusText']
             })
         
-        # Cache result
-        set_to_cache(cache_key, game_data, expiration=300)  # 5 minutes
-        
-        return jsonify(game_data)
+        return game_data
     except Exception as e:
         logger.error(f"Error fetching games: {str(e)}")
-        return jsonify({"error": str(e)}), 400
+        return {"error": str(e)}, 400
 
-# Route for active players - based on the working code approach
+# Route for active players with longer caching
 @app.route('/api/active_players', methods=['GET'])
+@cached_endpoint(expiration=86400)  # Cache for 24 hours
 def get_active_players():
-    cache_key = "active_players"
-    cached_players = get_from_cache(cache_key)
-    
-    if cached_players:
-        return jsonify(cached_players)
-    
     try:
-        # Fetch the full list of players - exact approach from working code
-        all_players = players.get_players()
+        # Get all players with caching
+        all_players = get_all_players()
         
         if not all_players:
-            return jsonify({"error": "No players found."}), 500
+            return {"error": "No players found."}, 500
         
         # Filter out only active players
         active_players = [player for player in all_players if player['is_active']]
@@ -496,41 +768,41 @@ def get_active_players():
         # Simplify the response with just player ID and name
         player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
         
-        # Cache result
-        set_to_cache(cache_key, player_data, expiration=86400)  # 24 hours
-        
-        return jsonify(player_data)
+        return player_data
     except Exception as e:
         logger.error(f"Error fetching active players: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}, 500
 
 # Route for last 5 games with ordered stats
 @app.route('/api/last_5_games', methods=['GET'])
+@cached_endpoint(expiration=21600)  # Cache for 6 hours
 def get_last_5_games():
-    player_name = request.args.get('player_name')  # Get player name from query parameter
+    player_name = request.args.get('player_name')
     if not player_name:
-        return jsonify({"error": "Player name is required"}), 400
-    
-    # Check cache
-    cache_key = f"last_5_games:{player_name.lower()}"
-    cached_games = get_from_cache(cache_key)
-    
-    if cached_games:
-        return jsonify(cached_games)
+        return {"error": "Player name is required"}, 400
     
     # Search for player based on the name
     player = find_player_by_name(player_name)
     
     if not player:
-        return jsonify({"error": "Player not found"}), 404
+        return {"error": "Player not found"}, 404
     
     try:
-        # Fetch game logs using the player ID
-        game_logs = playergamelogs(Player_ID=player['id'])
+        # Apply rate limiting
+        nba_api_limiter.wait()
+        
+        # Set random user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
+        # Fetch game logs with increased timeout
+        game_logs = playergamelogs(
+            Player_ID=player['id'],
+            timeout=45
+        )
         data = game_logs.get_dict()
         
         if 'resultSets' not in data or len(data['resultSets']) == 0 or len(data['resultSets'][0]['rowSet']) == 0:
-            return jsonify({"error": "No game logs available for the player."}), 404
+            return {"error": "No game logs available for the player."}, 404
         
         game_log_rows = data['resultSets'][0]['rowSet']
         headers = data['resultSets'][0]['headers']
@@ -559,122 +831,65 @@ def get_last_5_games():
         # Limit to last 5 games
         last_5_games = games[:5]
         
-        # Cache result
-        set_to_cache(cache_key, last_5_games, expiration=21600)  # 6 hours
-        
-        return jsonify(last_5_games)
+        return last_5_games
     except Exception as e:
         logger.error(f"Error fetching game logs: {str(e)}")
-        return jsonify({"error": str(e)}), 400
+        return {"error": str(e)}, 400
 
-# Route for top players stats with robust error handling
+# Route for top players stats with robust error handling and caching
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
-    cache_key = "top_players_stats"
+    # Get the season parameter, defaulting to 'all' if not specified
+    season_filter = request.args.get('season', 'all')
+    
+    # Generate cache key based on season filter
+    cache_key = f"top_players_stats:{season_filter}"
     cached_stats = get_from_cache(cache_key)
     
     if cached_stats:
         return jsonify(cached_stats)
     
-    # Get the season parameter, defaulting to 'all' if not specified
-    season_filter = request.args.get('season', 'all')
+    # Check which players are already cached
+    cached_players = {}
+    players_to_fetch = []
     
-    # List to hold the top players' stats
-    top_players_stats = []
-    error_players = []
-    
-    # Static list of top players
     for player_name in top_players:
-        # Search for player based on the name
-        player = find_player_by_name(player_name)
+        stats_key = f"player_stats:{player_name.lower()}"
+        if season_filter != 'all':
+            stats_key = f"{stats_key}:{season_filter}"
         
-        if not player:
-            logger.warning(f"Player not found: {player_name}")
-            error_players.append({"player_name": player_name, "error": "Player not found"})
-            continue
-        
-        try:
-            # Fetch career stats using player ID
-            career = PlayerCareerStats(player_id=player['id'])
-            data = career.get_dict()
-            
-            # Validate data structure
-            if 'resultSets' not in data or not data['resultSets'] or 'rowSet' not in data['resultSets'][0]:
-                logger.error(f"Invalid API response format for {player_name}")
-                error_players.append({"player_name": player_name, "error": "Invalid API response"})
-                continue
-                
-            result_set = data['resultSets'][0]
-            headers = result_set['headers']
-            rows = result_set['rowSet']
-            
-            if not rows:
-                logger.warning(f"No stats found for {player_name}")
-                error_players.append({"player_name": player_name, "error": "No stats available"})
-                continue
-            
-            # Convert all rows to dictionaries with robust error handling
-            all_stats = []
-            for row in rows:
-                # Ensure row has the same length as headers
-                if len(row) != len(headers):
-                    # Pad or truncate row to match headers
-                    if len(row) < len(headers):
-                        row = row + [None] * (len(headers) - len(row))
-                    else:
-                        row = row[:len(headers)]
-                
-                # Create stats dictionary with proper types
-                stats_dict = dict(zip(headers, row))
-                
-                # Apply robust formatting
-                formatted_stats = format_stats_in_order(stats_dict)
-                all_stats.append(formatted_stats)
-            
-            # If specific season is requested (and not 'all'), filter for that season
-            if season_filter != 'all':
-                filtered_stats = [stat for stat in all_stats if stat.get('SEASON_ID') == season_filter]
-                
-                if filtered_stats:
-                    top_players_stats.append({
-                        "player_name": player_name,
-                        "player_id": player['id'],
-                        "stats": filtered_stats
-                    })
-                else:
-                    logger.warning(f"No stats found for {player_name} in season {season_filter}")
-                    error_players.append({
-                        "player_name": player_name, 
-                        "error": f"No stats for season {season_filter}"
-                    })
-            else:
-                # Return all seasons
-                top_players_stats.append({
+        player_stats = get_from_cache(stats_key)
+        if player_stats:
+            player = find_player_by_name(player_name)
+            if player:
+                cached_players[player_name] = {
                     "player_name": player_name,
                     "player_id": player['id'],
-                    "stats": all_stats
-                })
-                
-            # Log a sample for debugging
-            if all_stats and len(all_stats) > 0:
-                logger.info(f"Sample display_stats for {player_name}: {all_stats[0].get('display_stats')}")
-        
-        except Exception as e:
-            logger.error(f"Error fetching player stats for {player_name}: {str(e)}")
-            error_players.append({"player_name": player_name, "error": str(e)})
+                    "stats": player_stats
+                }
+        else:
+            players_to_fetch.append(player_name)
     
-    # Add error players to the response if any
-    response = {"players": top_players_stats}
-    if error_players:
-        response["errors"] = error_players
+    # If all players are cached, build and return the full response
+    if not players_to_fetch:
+        response = {"players": list(cached_players.values())}
+        # Cache for 1 hour
+        set_to_cache(cache_key, response, expiration=3600)
+        return jsonify(response)
     
-    # Cache the result
-    if top_players_stats:
-        # Don't cache if specific season requested, as the cache key doesn't include the season
-        if season_filter == 'all':
-            set_to_cache(cache_key, response, expiration=3600)  # 1 hour
+    # Schedule background fetch for missing players
+    if players_to_fetch:
+        batch_fetch_player_stats.delay(players_to_fetch)
     
-    return jsonify(response)
+    # Return partial data with pending players
+    response = {
+        "status": "partial",
+        "players": list(cached_players.values()),
+        "pending": players_to_fetch,
+        "message": "Some player stats are being fetched in the background. Please try again in a few moments for complete results."
+    }
+    
+    return jsonify(response), 202
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])
@@ -683,9 +898,15 @@ def health_check():
     if not player_id_cache:
         initialize_app()
         
-    # Check NBA API connectivity by making a simple request
+    # Check NBA API connectivity by making a very simple request
     nba_api_status = "unknown"
     try:
+        # Rate limit this check
+        nba_api_limiter.wait()
+        
+        # Set random user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
         # Try to get a quick response from the API
         response = ScoreBoard()
         if response:
@@ -693,11 +914,21 @@ def health_check():
     except Exception:
         nba_api_status = "disconnected"
         
+    # Check Redis status
+    redis_status = "connected" if redis_client.ping() else "disconnected"
+    
+    # Get cache stats
+    cache_stats = {
+        "memory_cache_size": len(_cache),
+        "player_cache_size": len(player_id_cache),
+    }
+    
     return jsonify({
         "status": "healthy", 
         "timestamp": time.time(),
-        "cache_size": len(_cache),
-        "nba_api_status": nba_api_status
+        "cache": cache_stats,
+        "nba_api_status": nba_api_status,
+        "redis_status": redis_status
     }), 200
 
 if __name__ == '__main__':
