@@ -9,10 +9,13 @@ from flask_cors import CORS
 from nba_api.stats.static import players
 from requests.exceptions import Timeout, RequestException
 
-app = Flask(__name__)
-CORS(app)  # Allow cross-origin requests
+# Set up logging for Heroku
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Static list of top 10 players
+app = Flask(__name__)
+CORS(app)
+
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
@@ -26,61 +29,48 @@ top_players = [
     "Jayson Tatum",
 ]
 
-# Helper function to remove accents from characters
 def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-# Retry logic for API calls
 def fetch_with_retry(player_id, retries=3, backoff_factor=2):
-    """
-    Fetch player career stats with retries and exponential backoff in case of timeouts.
-    """
     for attempt in range(retries):
         try:
-            # Attempt to fetch career stats
             career = PlayerCareerStats(player_id=player_id)
-            data = career.get_dict()  # Get the data
-            return data  # Return the data if successful
+            data = career.get_dict()
+            return data
         except (Timeout, RequestException) as e:
-            # Handle timeouts or request-related exceptions
             if attempt < retries - 1:
                 sleep_time = backoff_factor ** attempt
-                print(f"Timeout occurred. Retrying in {sleep_time} seconds...")
+                logger.warning(f"Timeout occurred. Retrying in {sleep_time} seconds...")
                 time.sleep(sleep_time)
             else:
-                print(f"Failed to fetch player stats after {retries} attempts.")
-                raise e  # Re-raise the exception if max retries are reached
+                logger.error(f"Failed to fetch player stats after {retries} attempts.")
+                raise e
 
-# Function to search and return player by name
 def find_player_by_name(player_name):
     player_name_normalized = remove_accents(player_name.strip().lower())
-
-    all_players = players.get_players()  # Correctly using the function from the `players` module
+    all_players = players.get_players()
     for player in all_players:
         if remove_accents(player['full_name'].lower()) == player_name_normalized:
             return player
     return None
 
-# Route to serve the index.html page
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Route for fetching career stats for a player by name
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
-    player_name = request.args.get('player_name')  # Get player name from query parameter
+    player_name = request.args.get('player_name')
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
     player = find_player_by_name(player_name)
-    
     if not player:
-        return jsonify({"error": "Player not found"}), 404  # Error if player isn't found
+        return jsonify({"error": "Player not found"}), 404
 
     try:
-        # Fetch career stats using player ID
         data = fetch_with_retry(player['id'])
         result_set = data['resultSets'][0]
         headers = result_set['headers']
@@ -93,10 +83,9 @@ def get_player_stats():
         return jsonify(stats)
 
     except Exception as e:
-        print(f"Error occurred while fetching player stats: {str(e)}")
+        logger.error(f"Error occurred while fetching player stats: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
     try:
@@ -121,10 +110,9 @@ def get_today_games():
         return jsonify(game_data)
 
     except Exception as e:
-        print(f"Error occurred while fetching today games: {str(e)}")
+        logger.error(f"Error occurred while fetching today games: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for fetching active players list
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
     try:
@@ -139,10 +127,9 @@ def get_active_players():
         return jsonify(player_data)
 
     except Exception as e:
-        print(f"Error occurred while fetching active players: {str(e)}")
+        logger.error(f"Error occurred while fetching active players: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Route for fetching last 5 games for a player
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
     player_name = request.args.get('player_name')
@@ -150,7 +137,6 @@ def get_last_5_games():
         return jsonify({"error": "Player name is required"}), 400
 
     player = find_player_by_name(player_name)
-    
     if not player:
         return jsonify({"error": "Player not found"}), 404
 
@@ -182,10 +168,9 @@ def get_last_5_games():
         return jsonify(formatted_games)
 
     except Exception as e:
-        print(f"Error occurred while fetching last 5 games: {str(e)}")
+        logger.error(f"Error occurred while fetching last 5 games: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
     top_players_stats = []
@@ -217,11 +202,10 @@ def get_top_players_stats():
                 })
 
         except Exception as e:
-            print(f"Error fetching player stats for {player_name}: {str(e)}")
+            logger.error(f"Error fetching player stats for {player_name}: {str(e)}")
 
     return jsonify(top_players_stats)
 
-# Run the app on Heroku or locally
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Use Heroku's dynamic port or 5000 locally
     app.run(debug=False, host='0.0.0.0', port=port)  # Use production mode on Heroku
