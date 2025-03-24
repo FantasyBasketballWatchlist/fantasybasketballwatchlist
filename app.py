@@ -1,15 +1,18 @@
 import os
 import unicodedata
+import time
+import logging
 from flask import Flask, render_template, jsonify, request
 from nba_api.stats.endpoints import PlayerCareerStats, playergamelogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
-from nba_api.stats.static import players  # Correctly importing players module from nba_api.stats.static
+from nba_api.stats.static import players
+from requests.exceptions import Timeout, RequestException
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
-# Static list of top 10 players (you can customize this list)
+# Static list of top 10 players
 top_players = [
     "LeBron James",
     "Giannis Antetokounmpo",
@@ -28,15 +31,31 @@ def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
+# Retry logic for API calls
+def fetch_with_retry(player_id, retries=3, backoff_factor=2):
+    """
+    Fetch player career stats with retries and exponential backoff in case of timeouts.
+    """
+    for attempt in range(retries):
+        try:
+            # Attempt to fetch career stats
+            career = PlayerCareerStats(player_id=player_id)
+            data = career.get_dict()  # Get the data
+            return data  # Return the data if successful
+        except (Timeout, RequestException) as e:
+            # Handle timeouts or request-related exceptions
+            if attempt < retries - 1:
+                sleep_time = backoff_factor ** attempt
+                print(f"Timeout occurred. Retrying in {sleep_time} seconds...")
+                time.sleep(sleep_time)
+            else:
+                print(f"Failed to fetch player stats after {retries} attempts.")
+                raise e  # Re-raise the exception if max retries are reached
+
 # Function to search and return player by name
 def find_player_by_name(player_name):
-    # Normalize the player name to handle cases like accents and case sensitivity
     player_name_normalized = remove_accents(player_name.strip().lower())
 
-    # Check if players is a module and print its type (for debugging purposes)
-    print(f"Type of players module: {type(players)}")
-
-    # Search for players using the `nba_api` search function
     all_players = players.get_players()  # Correctly using the function from the `players` module
     for player in all_players:
         if remove_accents(player['full_name'].lower()) == player_name_normalized:
@@ -48,14 +67,13 @@ def find_player_by_name(player_name):
 def home():
     return render_template('index.html')
 
-# Route for fetching career stats for a player by name (not ID)
+# Route for fetching career stats for a player by name
 @app.route('/api/player_stats', methods=['GET'])
 def get_player_stats():
     player_name = request.args.get('player_name')  # Get player name from query parameter
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
-    # Search for player based on the name
     player = find_player_by_name(player_name)
     
     if not player:
@@ -63,8 +81,7 @@ def get_player_stats():
 
     try:
         # Fetch career stats using player ID
-        career = PlayerCareerStats(player_id=player['id'])
-        data = career.get_dict()
+        data = fetch_with_retry(player['id'])
         result_set = data['resultSets'][0]
         headers = result_set['headers']
         rows = result_set['rowSet']
@@ -72,28 +89,25 @@ def get_player_stats():
         if not rows:
             return jsonify({"error": "Player not found or no stats available."}), 404
 
-        stats = [dict(zip(headers, row)) for row in rows]  # Return the player's stats
+        stats = [dict(zip(headers, row)) for row in rows]
         return jsonify(stats)
 
     except Exception as e:
-        print(f"Error occurred while fetching player stats: {str(e)}")  # Debugging log
-        return jsonify({"error": str(e)}), 400  # Handle other potential errors
+        print(f"Error occurred while fetching player stats: {str(e)}")
+        return jsonify({"error": str(e)}), 400
 
 # Route for fetching today's NBA scoreboard
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
     try:
-        # Fetch today's NBA scoreboard data
         games = ScoreBoard()
         data = games.get_dict()
 
-        # Extract games list
         game_list = data['scoreboard']['games']
 
         if not game_list:
             return jsonify({"error": "No live games available."}), 404
 
-        # Format the game data
         game_data = []
         for game in game_list:
             game_data.append({
@@ -107,47 +121,41 @@ def get_today_games():
         return jsonify(game_data)
 
     except Exception as e:
-        print(f"Error occurred while fetching today games: {str(e)}")  # Debugging log
+        print(f"Error occurred while fetching today games: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for fetching active players list (for frontend autocomplete)
+# Route for fetching active players list
 @app.route('/api/active_players', methods=['GET'])
 def get_active_players():
     try:
-        # Fetch the full list of players (active and inactive)
-        all_players = players.get_players()  # Correctly using the function from the `players` module
+        all_players = players.get_players()
 
         if not all_players:
-            return jsonify({"error": "No players found."}), 500  # If no players are found
+            return jsonify({"error": "No players found."}), 500
 
-        # Filter out only active players
         active_players = [player for player in all_players if player['is_active']]
-
-        # Simplify the response with just player ID and name (or any other data you want)
         player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
 
-        return jsonify(player_data)  # Return the player data as JSON
+        return jsonify(player_data)
 
     except Exception as e:
-        print(f"Error occurred while fetching active players: {str(e)}")  # Debugging log
+        print(f"Error occurred while fetching active players: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Route for fetching last 5 games for a player
 @app.route('/api/last_5_games', methods=['GET'])
 def get_last_5_games():
-    player_name = request.args.get('player_name')  # Get player name from query parameter
+    player_name = request.args.get('player_name')
     if not player_name:
         return jsonify({"error": "Player name is required"}), 400
 
-    # Search for player based on the name
     player = find_player_by_name(player_name)
     
     if not player:
-        return jsonify({"error": "Player not found"}), 404  # Player not found in the list
+        return jsonify({"error": "Player not found"}), 404
 
     try:
-        # Fetch game logs using the player ID
-        game_logs = playergamelogs(Player_ID=player['id'])  # Correctly using PlayerID as parameter
+        game_logs = playergamelogs(Player_ID=player['id'])
         data = game_logs.get_dict()
 
         if 'resultSets' not in data or len(data['resultSets']) == 0 or len(data['resultSets'][0]['rowSet']) == 0:
@@ -156,7 +164,6 @@ def get_last_5_games():
         game_log_rows = data['resultSets'][0]['rowSet']
         headers = data['resultSets'][0]['headers']
 
-        # Process and return the last 5 games
         games = [dict(zip(headers, row)) for row in game_log_rows]
         last_5_games = games[:5]
 
@@ -178,38 +185,32 @@ def get_last_5_games():
         print(f"Error occurred while fetching last 5 games: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
-# Route for fetching stats for the static top 10 players, with filtering for 2024-25 season only
+# Route for fetching stats for the static top 10 players
 @app.route('/api/player_stats/top_players', methods=['GET'])
 def get_top_players_stats():
-    # List to hold the top players' stats
     top_players_stats = []
 
-    # Static list of top players, no need to iterate over all players to find them
     for player_name in top_players:
-        # Search for player based on the name
         player = find_player_by_name(player_name)
 
         if not player:
-            continue  # If player not found in the list, skip to the next one
+            continue
 
         try:
-            # Fetch career stats using player ID
-            career = PlayerCareerStats(player_id=player['id'])
-            data = career.get_dict()
+            data = fetch_with_retry(player['id'])
             result_set = data['resultSets'][0]
             headers = result_set['headers']
             rows = result_set['rowSet']
 
             if not rows:
-                continue  # Skip if no stats found for this player
+                continue
 
-            # Filter for the 2024-25 season stats only
             stats_2024_25 = [
                 dict(zip(headers, row)) for row in rows if row[headers.index('SEASON_ID')] == '2024-25'
             ]
 
             if stats_2024_25:
-                season_stats = stats_2024_25[0]  # Assuming one entry per player for 2024-25 season
+                season_stats = stats_2024_25[0]
                 top_players_stats.append({
                     "player_name": player_name,
                     "stats": season_stats
@@ -220,6 +221,7 @@ def get_top_players_stats():
 
     return jsonify(top_players_stats)
 
+# Run the app on Heroku or locally
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Use Heroku's dynamic port or 5000 locally
-    app.run(debug=True, host='0.0.0.0', port=port)  # Bind to dynamic port for Heroku
+    app.run(debug=False, host='0.0.0.0', port=port)  # Use production mode on Heroku
