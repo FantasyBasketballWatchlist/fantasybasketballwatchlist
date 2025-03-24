@@ -2,7 +2,7 @@ import os
 import unicodedata
 import redis
 import json
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request
 from nba_api.stats.endpoints import PlayerCareerStats, playergamelogs
 from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
@@ -52,12 +52,6 @@ NBAStatsHTTP.nba_response.headers = {
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
-
-# Create the static folder if it doesn't exist
-os.makedirs(os.path.join(app.root_path, 'static'), exist_ok=True)
-
-# Create the static/js folder if it doesn't exist
-os.makedirs(os.path.join(app.root_path, 'static', 'js'), exist_ok=True)
 
 # Get the Redis URL from the environment variable (Heroku Redis URL)
 redis_url = os.getenv("REDIS_URL")
@@ -187,7 +181,7 @@ def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-# Format stats in a consistent order
+# Format stats in a consistent order - this function was missing from your original code
 def format_stats_in_order(stats_dict):
     # Create a formatted stats dictionary with primary display stats
     try:
@@ -542,56 +536,98 @@ def initialize_app():
                 args=[player_name],
                 countdown=i * 5  # Stagger by 5 seconds per player
             )
-    
-    # Create the data.js file for client-side data.find functionality
-    create_data_js_file()
 
-# Function to create data.js file with client-side data.find functionality
-def create_data_js_file():
-    data_js_content = """// data.js - Client-side data utilities for NBA stats application
-// This file provides a data object with find functionality for the frontend
+# Cache decorator for API endpoints
+def cached_endpoint(expiration=3600):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Generate cache key from function name and request arguments
+            cache_key = f"{f.__name__}:{request.url}"
+            
+            # Check cache
+            cached_response = get_from_cache(cache_key)
+            if cached_response:
+                return jsonify(cached_response)
+            
+            # Call the original function
+            result = f(*args, **kwargs)
+            
+            # Cache the result if it's a successful response
+            if isinstance(result, tuple):
+                response, status_code = result
+                if 200 <= status_code < 300:
+                    set_to_cache(cache_key, response, expiration=expiration)
+                return jsonify(response), status_code
+            else:
+                set_to_cache(cache_key, result, expiration=expiration)
+                return jsonify(result)
+            
+        return decorated_function
+    return decorator
 
-// Main data object to store fetched data and provide search functionality
+# Function to get data.find JavaScript
+def get_data_find_script():
+    """Return the JavaScript for data.find functionality that works with the existing index.html"""
+    return """
+<script>
+// Data object with find functionality
 const data = {
-  // Internal storage for player data
+  // Storage for player data and stats
   _players: [],
-  _gameData: [],
   _stats: {},
   _loaded: false,
+  
+  // Store highest BPV value for calculations
+  _highestBPV: 0,
 
-  // Method to initialize data from API
+  // Initialize data by loading from API
   async initialize() {
     if (this._loaded) return true;
     
     try {
-      // Fetch active players first
-      const playersResponse = await fetch('/api/active_players');
-      if (playersResponse.ok) {
-        this._players = await playersResponse.json();
-      }
+      // Use the same API URLs as in the original code
+      const apiBaseUrl = 'https://mynewapp000-bf74bc70f33f.herokuapp.com/api';
       
-      // Try to fetch today's games
-      try {
-        const gamesResponse = await fetch('/api/today_games');
-        if (gamesResponse.ok) {
-          this._gameData = await gamesResponse.json();
+      // Get active players (use the existing players if already loaded)
+      if (activePlayers && activePlayers.length > 0) {
+        this._players = activePlayers;
+      } else {
+        const playersResponse = await fetch(`${apiBaseUrl}/active_players`);
+        if (playersResponse.ok) {
+          this._players = await playersResponse.json();
+          // Update the global activePlayers variable to maintain compatibility
+          activePlayers = this._players;
         }
-      } catch (e) {
-        console.warn('Could not fetch games data:', e);
       }
       
-      // Try to fetch top players stats
+      // Load top players stats and calculate highest BPV
       try {
-        const topPlayersResponse = await fetch('/api/player_stats/top_players');
+        const topPlayersResponse = await fetch(`${apiBaseUrl}/player_stats/top_players`);
         if (topPlayersResponse.ok) {
           const topPlayersData = await topPlayersResponse.json();
+          
           if (topPlayersData.players) {
-            // Store top players' stats in the stats cache
+            // Process player stats
             topPlayersData.players.forEach(playerData => {
               if (playerData.player_name && playerData.stats) {
                 this._stats[playerData.player_name.toLowerCase()] = playerData.stats;
+                
+                // Calculate BPV to find highest
+                const season = playerData.stats.find(s => s.SEASON_ID === "2024-25");
+                if (season) {
+                  const playerBPV = calculateBPV(season);
+                  if (playerBPV > this._highestBPV) {
+                    this._highestBPV = playerBPV;
+                  }
+                }
               }
             });
+            
+            // Update the global highestBPV variable for compatibility
+            if (this._highestBPV > 0) {
+              highestBPV = this._highestBPV;
+            }
           }
         }
       } catch (e) {
@@ -599,7 +635,7 @@ const data = {
       }
       
       this._loaded = true;
-      console.log('Data initialized successfully');
+      console.log('Data system initialized with', this._players.length, 'players');
       return true;
     } catch (error) {
       console.error('Error initializing data:', error);
@@ -607,93 +643,39 @@ const data = {
     }
   },
   
-  // Find method to search through different data collections
-  find(collection, query = {}) {
-    // Validate inputs
-    if (!collection || typeof collection !== 'string') {
-      console.error('Collection name must be a string');
-      return [];
-    }
-    
-    if (typeof query !== 'object') {
-      console.error('Query must be an object');
-      return [];
-    }
-    
-    // Initialize data if not already done
+  // Find method for players and stats collections
+  find(collection) {
     if (!this._loaded) {
-      console.warn('Data not initialized. Call data.initialize() first.');
+      this.initialize();
       return [];
     }
     
-    // Select the appropriate data collection
-    let dataCollection;
-    switch(collection.toLowerCase()) {
-      case 'players':
-        dataCollection = this._players;
-        break;
-      case 'games':
-        dataCollection = this._gameData;
-        break;
-      case 'stats':
-        dataCollection = Object.values(this._stats).flat();
-        break;
-      default:
-        console.error(`Unknown collection: ${collection}`);
-        return [];
+    if (collection === 'players') {
+      return this._players;
+    } else if (collection === 'stats') {
+      return Object.values(this._stats).flat();
     }
     
-    // If no query is provided or empty query, return all data
-    if (!dataCollection || Object.keys(query).length === 0) {
-      return Array.isArray(dataCollection) ? [...dataCollection] : [];
-    }
-    
-    // Filter the collection based on query parameters
-    return dataCollection.filter(item => {
-      if (!item) return false;
-      
-      return Object.keys(query).every(key => {
-        // Handle nested properties with dot notation (e.g., "display_stats.PTS")
-        if (key.includes('.')) {
-          const parts = key.split('.');
-          let value = item;
-          
-          // Navigate through nested objects
-          for (const part of parts) {
-            if (value === null || value === undefined || typeof value !== 'object') {
-              return false;
-            }
-            value = value[part];
-          }
-          
-          // Compare the value
-          return this._compareValues(value, query[key]);
-        }
-        
-        // Handle regular properties
-        return this._compareValues(item[key], query[key]);
-      });
-    });
+    return [];
   },
   
-  // Helper method to fetch a player's stats by name
+  // Get player stats by name
   async fetchPlayerStats(playerName) {
     if (!playerName) return null;
     
-    // Check if we already have the stats cached
+    // Check cache first
     const lowercaseName = playerName.toLowerCase();
     if (this._stats[lowercaseName]) {
       return this._stats[lowercaseName];
     }
     
     try {
-      // Fetch from API
-      const response = await fetch(`/api/player_stats?player_name=${encodeURIComponent(playerName)}`);
+      // Use the same API URL as in the original code
+      const apiUrl = 'https://mynewapp000-bf74bc70f33f.herokuapp.com/api/player_stats';
+      const response = await fetch(`${apiUrl}?player_name=${encodeURIComponent(playerName)}`);
       const data = await response.json();
       
-      // Handle in-progress responses
       if (data.status === 'in_progress') {
-        console.log(data.message);
         return null;
       }
       
@@ -706,102 +688,508 @@ const data = {
     }
   },
   
-  // Find a player by name (exact or partial match)
+  // Enhanced version of fetchPlayerStats that also updates the UI
+  // This can be used to replace the original fetchPlayerStats function
+  async fetchAndDisplayPlayerStats(playerName) {
+    document.getElementById("spinner").style.display = "block";
+
+    if (!playerName) {
+      document.getElementById("loadingMessage").textContent = "Player name is required.";
+      document.getElementById("spinner").style.display = "none";
+      return;
+    }
+
+    try {
+      // Get stats using existing data.fetchPlayerStats or from cache
+      const stats = await this.fetchPlayerStats(playerName);
+
+      document.getElementById("spinner").style.display = "none";
+      document.getElementById("loadingMessage").style.display = "none";
+
+      const tableBody = document.getElementById("playerStatsTable").getElementsByTagName("tbody")[0];
+      tableBody.innerHTML = '';
+
+      if (!stats || stats.error) {
+        document.getElementById("watchlist").innerHTML = "<p>No results found for the player.</p>";
+        return;
+      }
+
+      const latestSeason = stats.find((season) => season.SEASON_ID === "2024-25");
+      if (!latestSeason) {
+        document.getElementById("watchlist").innerHTML = "<p>No data found for the 2024-25 season.</p>";
+        return;
+      }
+
+      console.log("Latest season stats:", latestSeason);
+
+      const bpv = calculateBPV(latestSeason);
+      console.log("Calculated BPV:", bpv);
+
+      const bpvPercentage = (bpv / highestBPV) * 100;
+
+      document.getElementById("bpv-display").textContent = `BPV: ${bpv.toFixed(2)}`;
+      // Truncate all decimal points
+      let truncatedBpvPercentage = Math.trunc(bpvPercentage);
+      document.getElementById("hci-display").textContent = `Heat Check Index: ${truncatedBpvPercentage}`;
+
+      const row = tableBody.insertRow();
+      row.innerHTML = ` 
+        <td>${formatStat(latestSeason.PTS / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.REB / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.AST / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.BLK / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.STL / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.TOV / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.FGA / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.FGM / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.FTM / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.FTA / latestSeason.GP)}</td>
+        <td>${formatStat(latestSeason.FG_PCT * 100)}%</td>
+      `;
+    } catch (error) {
+      console.error("Error fetching player data:", error);
+      document.getElementById("loadingMessage").textContent = "Failed to load player stats.";
+      document.getElementById("spinner").style.display = "none";
+    }
+  },
+// Find player by name
   findPlayerByName(name) {
     if (!name) return null;
     
-    const normalizedName = name.toLowerCase().trim();
+    const normalizedName = normalizeString(name);
     
     // Try exact match first
     const exactMatch = this._players.find(player => 
-      player.name && player.name.toLowerCase() === normalizedName
+      normalizeString(player.name) === normalizedName
     );
     
     if (exactMatch) return exactMatch;
     
     // Try partial match
     return this._players.find(player => 
-      player.name && player.name.toLowerCase().includes(normalizedName)
+      normalizeString(player.name).includes(normalizedName)
     );
   },
   
-  // Helper method to compare values with support for regex and comparison operators
-  _compareValues(actual, expected) {
-    // Handle undefined or null values
-    if (actual === undefined || actual === null) {
-      return expected === undefined || expected === null;
-    }
+  // Get array of player suggestions based on partial name
+  getPlayerSuggestions(partialName) {
+    if (!partialName) return [];
     
-    // Handle regular expressions
-    if (expected instanceof RegExp) {
-      return expected.test(String(actual));
-    }
-    
-    // Handle comparison objects with operators like $gt, $lt, etc.
-    if (typeof expected === 'object' && expected !== null) {
-      // MongoDB-like query operators
-      if ('$gt' in expected) {
-        return actual > expected.$gt;
-      }
-      if ('$gte' in expected) {
-        return actual >= expected.$gte;
-      }
-      if ('$lt' in expected) {
-        return actual < expected.$lt;
-      }
-      if ('$lte' in expected) {
-        return actual <= expected.$lte;
-      }
-      if ('$ne' in expected) {
-        return actual !== expected.$ne;
-      }
-      if ('$in' in expected && Array.isArray(expected.$in)) {
-        return expected.$in.includes(actual);
-      }
-      
-      // Deep equality check for objects
-      return JSON.stringify(actual) === JSON.stringify(expected);
-    }
-    
-    // Simple equality for primitive values
-    return actual === expected;
+    const normalizedQuery = normalizeString(partialName);
+    return this._players.filter(player => 
+      normalizeString(player.name).includes(normalizedQuery)
+    );
   }
 };
 
-// Initialize data automatically
+// Initialize data when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-  data.initialize().then(() => {
-    console.log('Data system initialized and ready to use');
-    // Dispatch an event to notify any listeners that data is ready
-    document.dispatchEvent(new CustomEvent('data-ready'));
-  });
+  // Initialize the data object
+  data.initialize();
+  
+  // You can optionally update the search event listeners to use data.find
+  // This keeps the original code working while adding the new functionality
+  const searchBtn = document.getElementById("search-btn");
+  if (searchBtn) {
+    // Add an alternative event listener
+    searchBtn.addEventListener("click", function(e) {
+      // Do nothing if the original event was handled
+      if (e.processed) return;
+      
+      const playerName = document.getElementById('player-search').value.trim();
+      if (playerName) {
+        // Use our enhanced function instead
+        data.fetchAndDisplayPlayerStats(playerName);
+        document.getElementById('autocomplete-container').innerHTML = '';
+      } else {
+        document.getElementById("watchlist").innerHTML = "<p>Please enter a player name to search.</p>";
+      }
+    });
+  }
 });
-
-// Examples of how to use data.find:
-/*
-// Find all players
-const allPlayers = data.find('players');
-
-// Find players by partial name match
-const lebronPlayers = data.find('players', { name: /lebron/i });
-
-// Find games where home team scored more than 100 points
-const highScoringGames = data.find('games', { home_score: { $gt: 100 } });
-
-// Find stats with specific criteria
-const goodShooters = data.find('stats', { 'display_stats.FG%': { $gte: 50 } });
-*/
+</script>
 """
+
+# Home route
+@app.route('/')
+def home():
+    # Initialize on first request
+    if not player_id_cache:
+        initialize_app()
     
-    # File path for data.js
-    file_path = os.path.join(app.root_path, 'static', 'js', 'data.js')
+    # Get the original HTML content
+    html_content = render_template('index.html')
     
-    # Write the content to the file
+    # Insert data.find script just before the closing </body> tag
+    data_find_script = get_data_find_script()
+    if '</body>' in html_content:
+        modified_html = html_content.replace('</body>', f'{data_find_script}\n</body>')
+    else:
+        # If no </body> tag, just append it at the end
+        modified_html = html_content + data_find_script
+    
+    return modified_html
+
+# Route for player stats with robust error handling and caching
+@app.route('/api/player_stats', methods=['GET'])
+def get_player_stats():
+    player_name = request.args.get('player_name')  # Get player name from query parameter
+    if not player_name:
+        return jsonify({"error": "Player name is required"}), 400
+    
+    # Get optional season filter
+    season_filter = request.args.get('season')
+    
+    # Generate cache key based on player name and optional season
+    cache_key = f"player_stats:{player_name.lower()}"
+    if season_filter:
+        cache_key = f"{cache_key}:{season_filter}"
+    
+    # Check cache first
+    cached_stats = get_from_cache(cache_key)
+    
+    if cached_stats:
+        return jsonify(cached_stats)
+    
+    # Search for player based on the name
+    player = find_player_by_name(player_name)
+    
+    if not player:
+        return jsonify({"error": "Player not found"}), 404
+    
+    # Check if task is already in progress
+    in_progress_key = f"task_in_progress:{player_name.lower()}"
+    if get_from_cache(in_progress_key):
+        return jsonify({
+            "status": "in_progress",
+            "message": f"Stats for {player_name} are being fetched. Please try again in a few moments."
+        }), 202
+    
     try:
-        with open(file_path, 'w') as f:
-            f.write(data_js_content)
-        logger.info(f"Created data.js file at {file_path}")
-        return True
+        # Set in-progress flag
+        set_to_cache(in_progress_key, True, expiration=60)
+        
+        # Try to get from cache without season filter first
+        base_cache_key = f"player_stats:{player_name.lower()}"
+        base_cached_stats = get_from_cache(base_cache_key)
+        
+        if base_cached_stats:
+            # If we have base stats and need to filter by season
+            if season_filter:
+                filtered_stats = [stat for stat in base_cached_stats if stat.get('SEASON_ID') == season_filter]
+                if filtered_stats:
+                    # Cache the filtered result
+                    set_to_cache(cache_key, filtered_stats, expiration=86400)
+                    return jsonify(filtered_stats)
+            else:
+                # Return unfiltered stats
+                return jsonify(base_cached_stats)
+        
+        # If we get here, we need to fetch from the API
+        # Schedule background task and return a 202 response
+        fetch_player_stats_in_background.delay(player_name)
+        
+        return jsonify({
+            "status": "in_progress",
+            "message": f"Stats for {player_name} are being fetched in the background. Please try again in a few moments."
+        }), 202
     except Exception as e:
-        logger.error(f"Error creating data.js file: {str(e)}")
-        return False
+        logger.error(f"Error fetching stats for {player_name}: {str(e)}")
+        # Clear in-progress flag on error
+        set_to_cache(in_progress_key, None, expiration=1)
+        
+        # Try to schedule a background task to fetch it
+        fetch_player_stats_in_background.delay(player_name)
+        
+        # Return a more informative error
+        return jsonify({
+            "error": "Stats temporarily unavailable",
+            "message": "We're fetching this player's stats in the background. Please try again in a moment."
+        }), 202
+
+# Route for batch player stats
+@app.route('/api/batch_player_stats', methods=['POST'])
+def get_batch_player_stats():
+    data = request.json
+    if not data or 'player_names' not in data:
+        return jsonify({"error": "player_names array is required"}), 400
+    
+    player_names = data['player_names']
+    if not isinstance(player_names, list) or not player_names:
+        return jsonify({"error": "player_names must be a non-empty array"}), 400
+    
+    # Season filter (optional)
+    season_filter = data.get('season')
+    
+    # Limit batch size to prevent abuse
+    if len(player_names) > 20:
+        return jsonify({"error": "Maximum 20 players allowed per batch"}), 400
+    
+    # Check which players are already cached
+    cached_results = {}
+    players_to_fetch = []
+    
+    for name in player_names:
+        # Generate cache key
+        cache_key = f"player_stats:{name.lower()}"
+        if season_filter:
+            cache_key = f"{cache_key}:{season_filter}"
+        
+        # Check cache
+        cached_stats = get_from_cache(cache_key)
+        if cached_stats:
+            cached_results[name] = cached_stats
+        else:
+            players_to_fetch.append(name)
+    
+    # If all players are cached, return immediately
+    if not players_to_fetch:
+        return jsonify({"status": "complete", "results": cached_results})
+    
+    # Check which players exist
+    player_lookup = {}
+    not_found = []
+    
+    for name in players_to_fetch:
+        player = find_player_by_name(name)
+        if player:
+            player_lookup[name] = player
+        else:
+            not_found.append(name)
+    
+    # Schedule background task for players that need fetching
+    if player_lookup:
+        players_to_fetch = list(player_lookup.keys())
+        batch_fetch_player_stats.delay(players_to_fetch)
+    
+    # Return partial results
+    return jsonify({
+        "status": "partial",
+        "results": cached_results,
+        "pending": players_to_fetch,
+        "not_found": not_found,
+        "message": "Some player stats are being fetched in the background. Please try again in a few moments for complete results."
+    }), 202
+
+# Route for today's games with caching
+@app.route('/api/today_games', methods=['GET'])
+@cached_endpoint(expiration=300)  # Cache for 5 minutes
+def get_today_games():
+    try:
+        # Fetch today's NBA scoreboard data with rate limiting
+        nba_api_limiter.wait()
+        
+        # Randomly select user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
+        games = ScoreBoard()
+        data = games.get_dict()
+        
+        # Extract games list
+        game_list = data['scoreboard']['games']
+        
+        if not game_list:
+            return {"error": "No live games available."}, 404
+        
+        # Format the game data
+        game_data = []
+        for game in game_list:
+            game_data.append({
+                "home_team": game['homeTeam']['teamName'],
+                "away_team": game['awayTeam']['teamName'],
+                "home_score": game['homeTeam']['score'],
+                "away_score": game['awayTeam']['score'],
+                "status": game['gameStatusText']
+            })
+        
+        return game_data
+    except Exception as e:
+        logger.error(f"Error fetching games: {str(e)}")
+        return {"error": str(e)}, 400
+
+# Route for active players with longer caching
+@app.route('/api/active_players', methods=['GET'])
+@cached_endpoint(expiration=86400)  # Cache for 24 hours
+def get_active_players():
+    try:
+        # Get all players with caching
+        all_players = get_all_players()
+        
+        if not all_players:
+            return {"error": "No players found."}, 500
+        
+        # Filter out only active players
+        active_players = [player for player in all_players if player['is_active']]
+        
+        # Simplify the response with just player ID and name
+        player_data = [{"id": player["id"], "name": player["full_name"]} for player in active_players]
+        
+        return player_data
+    except Exception as e:
+        logger.error(f"Error fetching active players: {str(e)}")
+        return {"error": str(e)}, 500
+
+# Route for last 5 games with ordered stats
+@app.route('/api/last_5_games', methods=['GET'])
+@cached_endpoint(expiration=21600)  # Cache for 6 hours
+def get_last_5_games():
+    player_name = request.args.get('player_name')
+    if not player_name:
+        return {"error": "Player name is required"}, 400
+    
+    # Search for player based on the name
+    player = find_player_by_name(player_name)
+    
+    if not player:
+        return {"error": "Player not found"}, 404
+    
+    try:
+        # Apply rate limiting
+        nba_api_limiter.wait()
+        
+        # Set random user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
+        # Fetch game logs with increased timeout
+        game_logs = playergamelogs(
+            Player_ID=player['id'],
+            timeout=45
+        )
+        data = game_logs.get_dict()
+        
+        if 'resultSets' not in data or len(data['resultSets']) == 0 or len(data['resultSets'][0]['rowSet']) == 0:
+            return {"error": "No game logs available for the player."}, 404
+        
+        game_log_rows = data['resultSets'][0]['rowSet']
+        headers = data['resultSets'][0]['headers']
+        
+        # Process and return the last 5 games
+        games = []
+        for row in game_log_rows:
+            # Convert row to dict
+            game_dict = dict(zip(headers, row))
+            
+            # Add formatted display stats
+            formatted_game = format_stats_in_order(game_dict)
+            
+            # Create a simplified view with just the key info
+            game_summary = {
+                "date": game_dict.get("GAME_DATE", "N/A"),
+                "home_team": game_dict.get("HOME_TEAM_NAME", game_dict.get("HOME_TEAM_ID", "N/A")),
+                "away_team": game_dict.get("VISITOR_TEAM_NAME", game_dict.get("VISITOR_TEAM_ID", "N/A")),
+                "home_score": game_dict.get("HOME_TEAM_SCORE", "N/A"),
+                "away_score": game_dict.get("VISITOR_TEAM_SCORE", "N/A"),
+                "outcome": game_dict.get("WL", "N/A"),
+                "display_stats": formatted_game["display_stats"] if "display_stats" in formatted_game else {}
+            }
+            games.append(game_summary)
+        
+        # Limit to last 5 games
+        last_5_games = games[:5]
+        
+        return last_5_games
+    except Exception as e:
+        logger.error(f"Error fetching game logs: {str(e)}")
+        return {"error": str(e)}, 400
+
+# Route for top players stats with robust error handling and caching
+@app.route('/api/player_stats/top_players', methods=['GET'])
+def get_top_players_stats():
+    # Get the season parameter, defaulting to 'all' if not specified
+    season_filter = request.args.get('season', 'all')
+    
+    # Generate cache key based on season filter
+    cache_key = f"top_players_stats:{season_filter}"
+    cached_stats = get_from_cache(cache_key)
+    
+    if cached_stats:
+        return jsonify(cached_stats)
+    
+    # Check which players are already cached
+    cached_players = {}
+    players_to_fetch = []
+    
+    for player_name in top_players:
+        stats_key = f"player_stats:{player_name.lower()}"
+        if season_filter != 'all':
+            stats_key = f"{stats_key}:{season_filter}"
+        
+        player_stats = get_from_cache(stats_key)
+        if player_stats:
+            player = find_player_by_name(player_name)
+            if player:
+                cached_players[player_name] = {
+                    "player_name": player_name,
+                    "player_id": player['id'],
+                    "stats": player_stats
+                }
+        else:
+            players_to_fetch.append(player_name)
+    
+    # If all players are cached, build and return the full response
+    if not players_to_fetch:
+        response = {"players": list(cached_players.values())}
+        # Cache for 1 hour
+        set_to_cache(cache_key, response, expiration=3600)
+        return jsonify(response)
+    
+    # Schedule background fetch for missing players
+    if players_to_fetch:
+        batch_fetch_player_stats.delay(players_to_fetch)
+    
+    # Return partial data with pending players
+    response = {
+        "status": "partial",
+        "players": list(cached_players.values()),
+        "pending": players_to_fetch,
+        "message": "Some player stats are being fetched in the background. Please try again in a few moments for complete results."
+    }
+    
+    return jsonify(response), 202
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    # Initialize on health check too
+    if not player_id_cache:
+        initialize_app()
+        
+    # Check NBA API connectivity by making a very simple request
+    nba_api_status = "unknown"
+    try:
+        # Rate limit this check
+        nba_api_limiter.wait()
+        
+        # Set random user agent
+        NBAStatsHTTP.nba_response.headers['User-Agent'] = random.choice(user_agents)
+        
+        # Try to get a quick response from the API
+        response = ScoreBoard()
+        if response:
+            nba_api_status = "connected"
+    except Exception:
+        nba_api_status = "disconnected"
+        
+    # Check Redis status
+    redis_status = "connected" if redis_client.ping() else "disconnected"
+    
+    # Get cache stats
+    cache_stats = {
+        "memory_cache_size": len(_cache),
+        "player_cache_size": len(player_id_cache),
+    }
+    
+    return jsonify({
+        "status": "healthy", 
+        "timestamp": time.time(),
+        "cache": cache_stats,
+        "nba_api_status": nba_api_status,
+        "redis_status": redis_status
+    }), 200
+
+if __name__ == '__main__':
+    # Initialize on startup
+    initialize_app()
+    
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
