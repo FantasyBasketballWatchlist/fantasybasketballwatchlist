@@ -8,6 +8,7 @@ from nba_api.live.nba.endpoints import ScoreBoard
 from flask_cors import CORS
 from nba_api.stats.static import players
 from requests.exceptions import Timeout, RequestException
+import json
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -63,6 +64,14 @@ def find_player_by_name(player_name):
             return player
     return None
 
+# Helper function to check if the response is valid JSON
+def is_valid_json(response):
+    try:
+        json_data = response.json()  # Try to parse the JSON
+        return True
+    except json.JSONDecodeError:
+        return False
+
 # Route to serve the index.html page
 @app.route('/')
 def home():
@@ -116,6 +125,9 @@ def get_today_games():
     try:
         games = ScoreBoard()
         data = games.get_dict()
+
+        if 'scoreboard' not in data or 'games' not in data['scoreboard']:
+            return jsonify({"error": "No games data available."}), 404
 
         game_list = data['scoreboard']['games']
 
@@ -212,6 +224,9 @@ def get_top_players_stats():
 
         try:
             data = fetch_with_retry(player['id'])
+            if not is_valid_json(data):
+                continue  # Skip invalid data
+
             result_set = data['resultSets'][0]
             headers = result_set['headers']
             rows = result_set['rowSet']
