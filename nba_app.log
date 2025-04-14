@@ -1,0 +1,15 @@
+2025-03-30 22:07:31,582 - WARNING -  * Debugger is active!
+2025-03-30 22:07:31,586 - INFO -  * Debugger PIN: 138-121-022
+2025-03-30 22:07:40,656 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:40] "GET /api/active_players HTTP/1.1" 200 -
+2025-03-30 22:07:40,748 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:40] "GET /api/player_stats?player_name=LeBron%20James HTTP/1.1" 200 -
+2025-03-30 22:07:40,806 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:40] "GET /api/player_stats?player_name=Giannis%20Antetokounmpo HTTP/1.1" 200 -
+2025-03-30 22:07:41,245 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Shai%20Gilgeous-Alexander HTTP/1.1" 200 -
+2025-03-30 22:07:41,365 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Jayson%20Tatum HTTP/1.1" 200 -
+2025-03-30 22:07:41,413 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Victor%20Wembanyama HTTP/1.1" 200 -
+2025-03-30 22:07:41,462 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Anthony%20Davis HTTP/1.1" 200 -
+2025-03-30 22:07:41,498 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Cade%20Cunningham HTTP/1.1" 200 -
+2025-03-30 22:07:41,543 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:41] "GET /api/player_stats?player_name=Tyrese%20Haliburton HTTP/1.1" 200 -
+2025-03-30 22:07:43,753 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:43] "GET /api/player_stats?player_name=LeBron%20James HTTP/1.1" 200 -
+2025-03-30 22:07:45,865 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:45] "GET /api/player_stats?player_name=LeBron%20James HTTP/1.1" 200 -
+2025-03-30 22:07:53,767 - INFO - 127.0.0.1 - - [30/Mar/2025 22:07:53] "GET /api/player_stats?player_name=LeBron%20James HTTP/1.1" 200 -
+2025-03-30 22:08:19,704 - INFO -  * Detected change in 'C:\\Users\\17576\\OneDrive\\Desktop\\fantasy basketball\\fantasybasketballwatchlist\\app.py', reloading
