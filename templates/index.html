@@ -348,7 +348,7 @@
   </div>
 
   <script>
-    const apiUrl = 'http://127.0.0.1:5000/api/player_comprehensive_data';
+    const apiUrl = 'http://127.0.0.1:8080/api/player_comprehensive_data';
 let activePlayers = [];
 
 const formatStat = (stat) => {
@@ -357,7 +357,7 @@ const formatStat = (stat) => {
 
 async function fetchActivePlayers() {
   try {
-    const response = await fetch('http://127.0.0.1:5000/api/active_players');
+    const response = await fetch('http://127.0.0.1:8080/api/active_players');
     const players = await response.json();
     activePlayers = players;
   } catch (error) {
@@ -653,7 +653,7 @@ console.log(`Career GP% for ${playerName}: ${careerGPPercentage.toFixed(2)}%`);
 // Fetch career stats and calculate career game-playing percentage
 async function calculateCareerGPPercentage(playerName) {
   try {
-    const response = await fetch(`http://127.0.0.1:5000/api/career_stats?player_name=${encodeURIComponent(playerName)}`);
+    const response = await fetch(`http://127.0.0.1:8080/api/career_stats?player_name=${encodeURIComponent(playerName)}`);
     if (!response.ok) {
       console.error('Failed to fetch career stats');
       return null;
@@ -710,7 +710,7 @@ async function calculateCareerGPPercentage(playerName) {
     
     if (!playerGames) {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/last_5_games?player_name=${encodeURIComponent(playerName)}`);
+        const response = await fetch(`http://127.0.0.1:8080/api/last_5_games?player_name=${encodeURIComponent(playerName)}`);
         if (!response.ok) {
           return rawSeasonBPV; // Return rawSeasonBPV if fetch fails
         }

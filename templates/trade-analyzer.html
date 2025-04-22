@@ -885,7 +885,7 @@ h2 {
   </div>
 
   <script>
-    const apiUrl = 'http://127.0.0.1:5000/api/player_comprehensive_data';
+    const apiUrl = 'http://127.0.0.1:8080/api/player_comprehensive_data';
     let activePlayers = [];
     let team1Players = [];
     let team2Players = [];
@@ -918,7 +918,7 @@ h2 {
 
     async function fetchActivePlayers() {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/active_players');
+        const response = await fetch('http://127.0.0.1:8080/api/active_players');
         const players = await response.json();
         activePlayers = players;
       } catch (error) {
@@ -991,7 +991,7 @@ async function fetchPlayerStats(playerName) {
       data = comprehensiveDataCache[playerName];
     } else {
       // Use the comprehensive data endpoint instead of multiple separate calls
-      const response = await fetch(`http://127.0.0.1:5000/api/player_comprehensive_data?player_name=${encodeURIComponent(playerName)}`);
+      const response = await fetch(`http://127.0.0.1:8080/api/player_comprehensive_data?player_name=${encodeURIComponent(playerName)}`);
       data = await response.json();
       
       // Cache the comprehensive data
@@ -1172,7 +1172,7 @@ async function calculateBPV(seasonStats, playerName, last5Games = null) {
     // If no team game dates yet, fetch from the comprehensive data endpoint
     if (teamGameDates.length === 0 && teamAbbr) {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/player_comprehensive_data?player_name=${encodeURIComponent(playerName)}`);
+        const response = await fetch(`http://127.0.0.1:8080/api/player_comprehensive_data?player_name=${encodeURIComponent(playerName)}`);
         const data = await response.json();
         
         if (data.team_data && data.team_data.last_5_games) {
@@ -1189,7 +1189,7 @@ async function calculateBPV(seasonStats, playerName, last5Games = null) {
     // If no last 5 games data is provided, make the API call
     if (!playerGames) {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/last_5_games?player_name=${encodeURIComponent(playerName)}`);
+        const response = await fetch(`http://127.0.0.1:8080/api/last_5_games?player_name=${encodeURIComponent(playerName)}`);
         if (!response.ok) {
           return rawSeasonBPV; // Return rawSeasonBPV if fetch fails
         }
