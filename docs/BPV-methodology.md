@@ -253,6 +253,8 @@ A rookie's real games are blended with **10 games** of that baseline, which was 
 
 **Players who haven't played an NBA game yet** (newly drafted rookies) get the baseline for their pick range, availability at the league average, and a *"projection only"* label. The first version gave them 0. Since 2026-10-17, before the season, rookies ESPN projects are blended 37.5% with ESPN's per-game projection and take their games from ESPN (× 0.86), the same rule as veterans; see the rookie test below.
 
+**Players who missed all of last season** (e.g. a torn Achilles) but are on a roster and played 20+ games the season before start from that season's FPTS per game, with the age adjustment and the usual ESPN blend and games before a season. Before 2026-10-17 they were left out of the rankings entirely (Haliburton, Lillard, Irving and VanVleet for 2026-27). This path has not been backtested.
+
 ## 13. Between seasons: age and roster competition matter, older seasons don't
 
 Before a season, BPV has to project each player's production from what he did before. We compared six ways of doing that on 1,151 player-seasons (players with 20+ games in both seasons and 15+ minutes per game). Each target season (2022-23 to 2025-26) was predicted with settings tuned only on the other three.

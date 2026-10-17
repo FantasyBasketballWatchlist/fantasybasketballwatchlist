@@ -372,6 +372,47 @@ def build(today=None):
                            .to_dict(orient="records"),
         })
 
+    # Players on a roster who missed all of the production season (e.g. a torn Achilles) but played 20+ games the
+    # season before: start from that season, age-adjusted, with the usual ESPN blend before a season.
+    # Not backtested: no test covered players returning from a full missed season.
+    listed = {r["id"] for r in rows}
+    try:
+        rostered = set(nba_data.rosters(target_season)["PLAYER_ID"])
+    except Exception:
+        rostered = set()
+    before = pg[seasons[-2]]
+    before = before[before["PLAYER_ID"].isin(rostered - listed)]
+    try:
+        ages_before = nba_data.player_ages(seasons[-2]).set_index("PLAYER_ID")["AGE"] + 1 if len(before) else None
+    except Exception:       # e.g. offline without that file: skip the age adjustment rather than the ratings
+        ages_before = None
+    for pid, g in before.groupby("PLAYER_ID"):
+        n, mpg = len(g), g["MIN"].mean()
+        if n < AGE_MIN_GAMES:
+            continue
+        production = g["FPTS"].mean()
+        note = f"missed all of {production_season}: {seasons[-2]} average"
+        if mpg >= AGE_MIN_MPG:
+            adjustment, age = _age_adjustment(ages_before, pid)
+            production += adjustment
+            note += f", {adjustment:+.1f} for age {age:.0f}" if age is not None else ""
+        availability = float(avail.get(pid, league_p))
+        if pid in espn:
+            production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn[pid][0]
+            availability = min(1.0, ESPN_GAMES_SCALE * espn[pid][1] / SEASON_GAMES)
+            note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn[pid][0]:.1f})"
+        team = roster_team.get(pid, "FA") if roster_team is not None else g["TEAM_ABBREVIATION"].iloc[-1]
+        rows.append({
+            "id": int(pid), "name": g["PLAYER_NAME"].iloc[-1], "team": team, "games": 0, "minutes": None,
+            "season_fpts": None, "recent_fpts": None, "recent_minutes": None,
+            "minutes_change_fpts": None, "efficiency_change_fpts": None,
+            "production": float(production), "production_note": note,
+            "range": None, "availability": availability,
+            "espn_fpg": espn[pid][0] if pid in espn else None, "espn_games": espn[pid][1] if pid in espn else None,
+            "games_missed": 0, "games_missed_long": 0, "rookie": False,
+            "per_game": None, "last_games": [],
+        })
+
     # Drafted players with no NBA games yet (upcoming rookies, or rookies who haven't debuted).
     listed = {r["id"] for r in rows}
     upcoming_year = nba_data.season_start_year(target_season)

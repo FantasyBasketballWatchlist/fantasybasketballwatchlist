@@ -20,6 +20,8 @@
     .clock.mine { border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
     .clock.mine .who { color: var(--orange); }
     .clock .until { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+    .my-pick { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 10px; color: var(--muted); font-size: .85rem; }
+    .my-pick select { background: var(--bg-2); border: 1px solid var(--orange); color: var(--text); font: inherit; font-weight: 700; border-radius: 8px; padding: 4px 8px; cursor: pointer; }
     .clock.done .who { color: var(--good); }
     .actions { display: flex; gap: 8px; margin-top: 14px; }
     .actions button { flex: 1; }
@@ -161,6 +163,7 @@
 
       <aside class="side">
         <div class="card panel clock" id="clock">
+          <label class="my-pick">You draft <select id="set-slot" aria-label="Your draft position"></select> of <span id="slot-of">10</span></label>
           <div class="pick" id="clock-pick">Round 1 · Pick 1</div>
           <div class="who" id="clock-who">Team 1</div>
           <div class="until" id="clock-until"></div>
@@ -189,7 +192,6 @@
           <h3><span class="dot"></span>League</h3>
           <div class="settings" style="margin-top:10px">
             <label>Teams <input type="number" id="set-teams" min="2" max="20"></label>
-            <label>Your pick <input type="number" id="set-slot" min="1"></label>
             <label>Rounds <input type="number" id="set-rounds" min="1" max="30"></label>
             <label class="wide">Starting lineup (G = PG/SG, F = SF/PF, UTIL = anyone)
               <input type="text" id="set-lineup" spellcheck="false"></label>
@@ -527,7 +529,9 @@
       document.getElementById('set-teams').value = state.teams;
       document.getElementById('set-rounds').value = state.rounds;
       const slot = document.getElementById('set-slot');
-      slot.value = state.slot; slot.max = state.teams;
+      slot.innerHTML = Array.from({ length: state.teams }, (_, i) => `<option value="${i + 1}">#${i + 1}</option>`).join('');
+      slot.value = state.slot;
+      document.getElementById('slot-of').textContent = state.teams;
       document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
       document.querySelectorAll('#pos-seg button').forEach(b => b.classList.toggle('on', b.dataset.p === state.posFilter));
     }
