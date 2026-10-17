@@ -79,3 +79,20 @@ A known injury also affects teammates: in season they get a production boost; be
 ## Deploying
 
 The `Procfile` runs the app with gunicorn. stats.nba.com often blocks or times out requests from cloud hosts (Heroku, AWS and others; see nba_api issues #182 and #320). A hosted copy may need a proxy (`nba_api` endpoints accept `proxy=`), or you can upload a pre-filled `data/cache/`.
+
+## The live site
+
+hoopothesis.cc runs on Render with `NBA_OFFLINE=1`: stats.nba.com doesn't answer cloud servers, so the site reads
+`data/live/` and never calls the NBA. `refresh.py` keeps that folder current. A Windows scheduled task
+("Hoopothesis data refresh") runs it at 8 AM and 6 PM. Each run:
+
+1. Rebuilds the ratings with fresh data and copies the files the site reads into `data/live/`.
+2. Logs and scores the in-season checks (`analysis/live_checks.py`, results in `data/tracking/` and on the home page):
+   weekly projections vs a simple benchmark, injury-report play chances vs who actually played, and preseason
+   projections for rookies and players returning from a missed season vs ESPN. A part doing worse than its
+   benchmark on a fair sample is flagged; nothing changes the model by itself.
+3. Checks before publishing: sanity checks on the ratings, and a full offline copy of the site run against
+   `data/live/` exactly as the server will. If anything fails it doesn't publish, so the live site keeps working data.
+4. Commits, pushes, triggers a Render deploy, and confirms hoopothesis.cc is serving the new data.
+
+Problems show up as a Windows notification and in `data/refresh.log`.

@@ -135,7 +135,7 @@
     function addPlayer(t, p) {
       const team = state.teams[t];
       if (team.ids.includes(p.id)) return;
-      if (team.ids.length >= MAX_PLAYERS) { notes[t] = `Teams are limited to ${MAX_PLAYERS} players.`; render(); return; }
+      if (team.ids.length >= MAX_PLAYERS) { notes[t] = `Teams are limited to ${MAX_PLAYERS} players.`; render([t]); return; }
       const from = state.teams.findIndex(x => x.ids.includes(p.id));
       if (from >= 0) {
         state.teams[from].ids = state.teams[from].ids.filter(id => id !== p.id);
@@ -143,7 +143,7 @@
       } else delete notes[t];
       team.ids.push(p.id);
       focusTeam = t;
-      save(); render();
+      save(); render(from >= 0 ? [t, from] : [t]);
     }
 
     function renderStandings(rows) {
@@ -191,13 +191,8 @@
         <tbody>${rows}</tbody></table></div>`;
     }
 
-    function render() {
-      const rows = state.teams.map((team, t) => ({ t, team, s: scoreTeam(team) }));
-      renderStandings(rows);
-      document.getElementById('add-team').disabled = state.teams.length >= MAX_TEAMS;
-      document.getElementById('repl').textContent = fmt(meta.replacement_level);
-      const el = document.getElementById('teams');
-      el.innerHTML = rows.map(({ t, team, s }) => `
+    function cardHtml(t, team, s) {
+      return `
         <div class="card team" data-t="${t}" style="--c:${COLORS[t % COLORS.length]}">
           <div class="team-head">
             <input class="team-name" value="${escapeHtml(team.name)}" maxlength="40" aria-label="Team name">
@@ -219,12 +214,35 @@
             <span class="holes">${team.ids.length && s.fill.open.length ? `Open starting spots: ${escapeHtml(s.fill.open.join(', '))}` : ''}</span>
             <button class="btn small ghost danger remove-team" ${state.teams.length <= 1 ? 'disabled' : ''}>Remove team</button>
           </div>
-        </div>`).join('');
-      el.querySelectorAll('.team').forEach(card => {
-        const t = +card.dataset.t, input = card.querySelector('.search input');
-        wireAutocomplete(input, card.querySelector('.suggestions'), () => players, p => addPlayer(t, p), 6);
-        if (t === focusTeam) input.focus();
-      });
+        </div>`;
+    }
+
+    function wireCard(card) {
+      const t = +card.dataset.t, input = card.querySelector('.search input');
+      wireAutocomplete(input, card.querySelector('.suggestions'), () => players, p => addPlayer(t, p), 6);
+      if (t === focusTeam) input.focus();
+    }
+
+    // only: indexes of the teams that changed (their cards are redrawn); omit to redraw every card.
+    function render(only) {
+      const rows = state.teams.map((team, t) => ({ t, team, s: scoreTeam(team) }));
+      renderStandings(rows);
+      document.getElementById('add-team').disabled = state.teams.length >= MAX_TEAMS;
+      document.getElementById('repl').textContent = fmt(meta.replacement_level);
+      const el = document.getElementById('teams');
+      if (only) {
+        [...new Set(only)].forEach(t => {
+          const old = el.querySelector(`.team[data-t="${t}"]`);
+          if (!old || !rows[t]) return;
+          old.insertAdjacentHTML('afterend', cardHtml(t, rows[t].team, rows[t].s));
+          const card = old.nextElementSibling;
+          old.remove();
+          wireCard(card);
+        });
+      } else {
+        el.innerHTML = rows.map(({ t, team, s }) => cardHtml(t, team, s)).join('');
+        el.querySelectorAll('.team').forEach(wireCard);
+      }
       focusTeam = null;
     }
 
@@ -242,7 +260,7 @@
       const rm = e.target.closest('.remove');
       if (rm) {
         state.teams[t].ids = state.teams[t].ids.filter(id => id !== +rm.dataset.id);
-        delete notes[t]; save(); render();
+        delete notes[t]; save(); render([t]);
       } else if (e.target.closest('.remove-team')) {
         armed(e.target.closest('.remove-team'), 'Sure?', () => { state.teams.splice(t, 1); notes = {}; save(); render(); });
       }
@@ -251,7 +269,7 @@
       if (!e.target.classList.contains('team-name')) return;
       const t = +e.target.closest('.team').dataset.t;
       state.teams[t].name = e.target.value.trim() || `Team ${t + 1}`;
-      save(); render();
+      save(); render([t]);
     });
     document.getElementById('add-team').addEventListener('click', () => {
       if (state.teams.length >= MAX_TEAMS) return;

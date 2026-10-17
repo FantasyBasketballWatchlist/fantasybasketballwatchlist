@@ -172,7 +172,8 @@ OVERRIDES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"
 # season (replaced until opening night) and one in-season snapshot a week, so the record builds itself.
 SNAPSHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "snapshots")
 SNAPSHOT_COLUMNS = ["rank", "name", "id", "team", "games", "production", "availability", "bpv", "value_over_replacement",
-                    "range_low", "range_high", "playoff_games", "production_note", "injury_note", "rookie", "target_season"]
+                    "range_low", "range_high", "playoff_games", "production_note", "injury_note", "rookie", "target_season",
+                    "espn_fpg", "espn_games"]
 AUTO_SNAPSHOT_DAYS = 7
 PRESEASON_PRIOR_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "preseason")
 CACHE_SECONDS = 30 * 60
@@ -808,14 +809,47 @@ def _roster_crowding(season_games, target_season, out_share=None):
     return team_of.to_dict(), crowding.to_dict()
 
 
-_cache = {"at": 0, "value": None}
-_cache_lock = threading.Lock()
+_cache = {"at": 0, "value": None, "rebuilding": False}
+_cache_lock = threading.Lock()      # guards _cache
+_build_lock = threading.Lock()      # one build at a time
+
+
+def _rebuild():
+    with _build_lock:
+        value = build()
+    with _cache_lock:
+        _cache.update(value=value, at=time.time(), rebuilding=False)
+    return value
+
+
+def _rebuild_in_background():
+    try:
+        _rebuild()
+    except Exception:
+        with _cache_lock:           # keep serving the old ratings; try again on a later request
+            _cache.update(rebuilding=False, at=time.time() - CACHE_SECONDS + 60)
 
 
 def get():
-    """Cached (players, meta)."""
+    """Cached (players, meta). Only the very first call waits for a build; after that, stale ratings are
+    served while a fresh build runs in the background, so no visitor waits for a rebuild."""
     with _cache_lock:
-        if _cache["value"] is None or time.time() - _cache["at"] > CACHE_SECONDS:
-            _cache["value"] = build()
-            _cache["at"] = time.time()
-        return _cache["value"]
+        value, stale = _cache["value"], time.time() - _cache["at"] > CACHE_SECONDS
+        if value is not None and stale and not _cache["rebuilding"]:
+            _cache["rebuilding"] = True
+            threading.Thread(target=_rebuild_in_background, daemon=True).start()
+    if value is not None:
+        return value
+    with _build_lock:               # first call: build once, other first callers wait for the same build
+        with _cache_lock:
+            if _cache["value"] is not None:
+                return _cache["value"]
+        value = build()
+    with _cache_lock:
+        _cache.update(value=value, at=time.time())
+    return value
+
+
+def version():
+    """When the cached ratings were built (changes after every rebuild)."""
+    return _cache["at"]

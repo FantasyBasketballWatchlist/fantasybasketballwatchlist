@@ -415,6 +415,21 @@
         }).join('') + '</tbody>';
     }
 
+    // Long lists: draw the first rows now (what's on screen) and the rest in idle-time batches, so a pick
+    // doesn't build ~650 rows in one go. A newer paint cancels the batches of an older one.
+    let paintToken = 0;
+    function paintRows(tbody, rowsHtml, first = 80, batch = 120) {
+      const token = ++paintToken;
+      tbody.innerHTML = rowsHtml.slice(0, first).join('');
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 16));
+      const more = (start) => idle(() => {
+        if (token !== paintToken || start >= rowsHtml.length) return;
+        tbody.insertAdjacentHTML('beforeend', rowsHtml.slice(start, start + batch).join(''));
+        more(start + batch);
+      });
+      more(first);
+    }
+
     function render() {
       const taken = takenIds();
       const now = currentPick();
@@ -464,7 +479,7 @@
         && (pf === 'ALL' || posOf(p.id).includes(pf)));
       const cutoffAt = (!q && pf === 'ALL' && until) ? until : null;   // index in the available list where your next pick lands
       let availIndex = 0;
-      if (players.length) document.querySelector('#avail tbody').innerHTML = rows.length ? rows.map(p => {
+      if (players.length) paintRows(document.querySelector('#avail tbody'), rows.length ? rows.map(p => {
         const n = taken.get(p.id), tier = tierOf(p.rank);
         const isCut = n == null && cutoffAt != null && availIndex++ === cutoffAt;
         const notes = [p.injury_note, p.rookie ? 'rookie' : ''].filter(Boolean).join(' · ');
@@ -477,7 +492,7 @@
           <td class="r hide-sm">${fmt(p.production)}</td>
           <td class="hide-sm"><div class="mini" style="--c: var(--good)"><div class="meter"><i style="--v:${p.availability ?? 0}"></i></div><span>${pct(p.availability)}</span></div></td>
           <td class="hide-sm"><span class="badge tier-${tier.key}">${tier.label}</span></td></tr>`;
-      }).join('') : '<tr><td colspan="7" class="empty">No players match.</td></tr>';
+      }) : ['<tr><td colspan="7" class="empty">No players match.</td></tr>']);
 
       // your team
       const mine = Object.entries(state.picks).filter(([n]) => teamOf(+n) === state.slot)

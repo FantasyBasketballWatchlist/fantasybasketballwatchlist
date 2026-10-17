@@ -1,7 +1,10 @@
 import datetime
+import functools
+import hashlib
 import json
 import math
 import os
+import threading
 
 from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
 from werkzeug.exceptions import HTTPException
@@ -12,6 +15,68 @@ from analysis import accuracy_tracker
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True    # pick up template edits without a restart
+# Static files are fingerprinted (?v=<hash>, below), so browsers can keep them for a year.
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 365 * 24 * 3600
+ROOT = os.path.dirname(os.path.abspath(__file__))
+TRACKING_SUMMARY = os.path.join(ROOT, "data", "tracking", "summary.json")
+_static_hashes = {}
+
+
+@app.url_defaults
+def _fingerprint_static(endpoint, values):
+    if endpoint == "static" and "filename" in values:
+        name = values["filename"]
+        if name not in _static_hashes:
+            try:
+                with open(os.path.join(app.static_folder, name), "rb") as f:
+                    _static_hashes[name] = hashlib.md5(f.read()).hexdigest()[:10]
+            except OSError:
+                _static_hashes[name] = None
+        if _static_hashes[name]:
+            values["v"] = _static_hashes[name]
+
+
+def _warm_up():
+    """Build the ratings as soon as the server starts, so the first visitor doesn't wait for it."""
+    try:
+        ratings.get()
+    except Exception:
+        app.logger.exception("warm-up build failed")
+
+
+threading.Thread(target=_warm_up, daemon=True).start()
+
+_responses, _responses_lock = {}, threading.Lock()
+
+
+def cached_json(view):
+    """Reuse a route's JSON until the ratings are rebuilt (same URL, same answer)."""
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        ratings.get()                                   # may start a background rebuild
+        key = (request.path, request.query_string, ratings.version())
+        with _responses_lock:
+            hit = _responses.get(key)
+        if hit is not None:
+            body, status = hit
+            return app.response_class(body, status=status, mimetype="application/json")
+        response = app.make_response(view(*args, **kwargs))
+        if response.status_code in (200, 400, 404):
+            with _responses_lock:
+                if len(_responses) > 2000 or any(k[2] != key[2] for k in list(_responses)[:1]):
+                    _responses.clear()                  # new ratings (or too many entries): start over
+                _responses[key] = (response.get_data(), response.status_code)
+        return response
+    return wrapper
+
+
+def _data_version():
+    """Stamp written by refresh.py whenever it publishes new data (None when running locally)."""
+    try:
+        with open(os.path.join(nba_data.CACHE_DIR, "VERSION"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
 
 WAIVER_LIST_SIZE = 15
 
@@ -121,9 +186,10 @@ def api_noindex(response):
 
 
 @app.route("/api/meta")
+@cached_json
 def get_meta():
     _, meta = ratings.get()
-    return jsonify(_clean(meta))
+    return jsonify(_clean({**meta, "data_version": _data_version()}))
 
 
 ACCURACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "accuracy.json")
@@ -131,18 +197,39 @@ ACCURACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
 
 @app.route("/api/accuracy")
 def get_accuracy():
-    """Saved snapshots scored against actual results (rescored automatically every few hours)."""
-    try:
-        accuracy_tracker.refresh()
-    except Exception:
-        app.logger.exception("accuracy scoring failed")
-    if not os.path.exists(ACCURACY_PATH):
-        return jsonify({"updated": None, "snapshots": []})
-    with open(ACCURACY_PATH, encoding="utf-8") as f:
-        return jsonify(json.load(f))
+    """Saved snapshots scored against actual results (rescored in the background every few hours),
+    plus the in-season checks refresh.py runs (data/tracking/summary.json)."""
+    _rescore_accuracy_in_background()
+    out = {"updated": None, "snapshots": []}
+    if os.path.exists(ACCURACY_PATH):
+        with open(ACCURACY_PATH, encoding="utf-8") as f:
+            out = json.load(f)
+    if os.path.exists(TRACKING_SUMMARY):
+        with open(TRACKING_SUMMARY, encoding="utf-8") as f:
+            out["live_checks"] = json.load(f)
+    return jsonify(out)
+
+
+_rescoring = threading.Event()
+
+
+def _rescore_accuracy_in_background():
+    if _rescoring.is_set():
+        return
+    _rescoring.set()
+
+    def work():
+        try:
+            accuracy_tracker.refresh()
+        except Exception:
+            app.logger.exception("accuracy scoring failed")
+        finally:
+            _rescoring.clear()
+    threading.Thread(target=work, daemon=True).start()
 
 
 @app.route("/api/players")
+@cached_json
 def get_players():
     """Search list: every player with a rating."""
     players, _ = ratings.get()
@@ -150,6 +237,7 @@ def get_players():
 
 
 @app.route("/api/player")
+@cached_json
 def get_player():
     players, meta = ratings.get()
     player_id = request.args.get("id", type=int)
@@ -160,6 +248,7 @@ def get_player():
 
 
 @app.route("/api/rankings")
+@cached_json
 def get_rankings():
     players, meta = ratings.get()
     limit = request.args.get("limit", default=200, type=int)
@@ -169,6 +258,7 @@ def get_rankings():
 
 
 @app.route("/api/positions")
+@cached_json
 def get_positions():
     """player id -> ESPN position eligibility ("PG/SG"), for players ESPN lists."""
     players, meta = ratings.get()
@@ -184,6 +274,7 @@ def get_positions():
 
 
 @app.route("/api/trade")
+@cached_json
 def analyze_trade():
     """Compare two sides of a trade by value over replacement.
 
@@ -210,6 +301,7 @@ def analyze_trade():
 
 
 @app.route("/api/waiver")
+@cached_json
 def waiver_signals():
     """Players whose last 5 games differ from their season, split by why.
 

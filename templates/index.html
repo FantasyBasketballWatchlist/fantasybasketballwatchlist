@@ -67,6 +67,12 @@
         <tbody></tbody>
       </table>
     </div>
+    <div class="card table-wrap" id="live-checks" style="margin-top:14px" hidden>
+      <table class="data">
+        <thead><tr><th>In-season check</th><th class="r">Sample</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
     <p class="footer-note">
       BPV = expected fantasy points per game, counting the games a player is likely to miss (and the free agent you can
@@ -103,12 +109,35 @@
         <small style="color:var(--dim)"> · ranking ${fmt(h.bpv.ranking, 3)} vs ${fmt(h.espn.ranking, 3)}, ${h.common_players} players</small>`;
     }
 
+    // Parts of BPV that could only be tested once the season started, scored by refresh.py as games finish.
+    function renderLiveChecks(lc) {
+      if (!lc) return;
+      const good = (a, b) => `style="color:${a <= b ? 'var(--good)' : 'var(--bad)'}"`;
+      const rows = [];
+      (lc.flags || []).forEach(f => rows.push(`<tr><td colspan="3" style="color:var(--bad);white-space:normal">⚠ ${escapeHtml(f)}</td></tr>`));
+      const w = lc.weekly;
+      if (w && w.status === 'scored') rows.push(`<tr><td>Weekly projections</td><td class="r">${w.weeks_scored} week${w.weeks_scored === 1 ? '' : 's'}</td>
+        <td><span ${good(w.model_error, w.benchmark_error)}>${fmt(w.model_error)} FPTS error</span> vs ${fmt(w.benchmark_error)} for season average × games left
+        <small style="color:var(--dim)">(better in ${w.weeks_model_better} of ${w.weeks_scored})</small></td></tr>`);
+      const inj = lc.injury;
+      if (inj && inj.status === 'scored') Object.entries(inj.by_status).forEach(([st, v]) => rows.push(`<tr><td>Injury report: ${escapeHtml(st)}</td>
+        <td class="r">${v.n}</td><td><span ${good(Math.abs(v.predicted - v.actual), 0.1)}>predicted ${pct(v.predicted)} to play</span>, ${pct(v.actual)} did</td></tr>`));
+      const pre = lc.preseason;
+      if (pre && pre.status === 'scored') Object.entries(pre.groups).filter(([, g]) => g.players).forEach(([name, g]) => rows.push(`<tr>
+        <td>Preseason: ${escapeHtml(name)}</td><td class="r">${g.players}</td>
+        <td><span ${good(g.bpv_error, g.espn_error)}>${fmt(g.bpv_error)} FPTS/game error</span> vs ESPN ${fmt(g.espn_error)}</td></tr>`));
+      if (!rows.length) return;
+      document.querySelector('#live-checks tbody').innerHTML = rows.join('');
+      document.getElementById('live-checks').hidden = false;
+    }
+
     async function loadAccuracy() {
       const note = document.getElementById('accuracy-note');
       try {
         const res = await fetch('/api/accuracy');
         if (!res.ok) throw new Error('bad response');
         const data = await res.json();
+        renderLiveChecks(data.live_checks);
         const scored = data.snapshots.filter(s => s.status === 'scored' && s.per_game);
         if (!scored.length) {
           note.textContent = data.snapshots.length
