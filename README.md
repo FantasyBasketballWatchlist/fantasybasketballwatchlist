@@ -17,7 +17,7 @@ python app.py
 
 Then open http://127.0.0.1:8080. On Windows you can double-click `runthis.bat`.
 
-Before each season, BPV blends in ESPN's public preseason projections (per game and projected games), which beat both BPV and ESPN alone in testing. During the season the site also reads the NBA's official injury report (every 15 minutes on game days) to show each player's status, chance of playing and this week's expected points, and to estimate how much of the rest of the season an injured player will miss. That needs Java installed; without Java everything else still works.
+Before each season, BPV blends in ESPN's public preseason projections (per game and projected games), which beat both BPV and ESPN alone in testing. During the season the site also reads the NBA's official injury report (every 15 minutes on game days) to show each player's status, chance of playing and this week's expected points, and to estimate how much of the rest of the season an injured player will miss. That needs Java and `pip install -r requirements-extra.txt` (which also installs the analysis-script packages); without them everything else still works.
 
 The first load downloads season game logs from stats.nba.com, which takes a few seconds. They're cached in `data/cache/`: completed seasons permanently, the current season for 6 hours.
 

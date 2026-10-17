@@ -3,9 +3,3 @@ gunicorn==23.0.0
 nba_api==1.11.4
 pandas>=2.2
 numpy>=2.0
-# In season: reads the official NBA injury report (also needs Java installed). Without it the site still works.
-nbainjuries>=1.1.1
-# Only needed for the analysis scripts: the PDF report (report_*.py) and the Cox test (test_cox.py)
-reportlab>=4.0
-matplotlib>=3.8
-lifelines>=0.30
