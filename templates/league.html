@@ -13,6 +13,8 @@
   <style>
     .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
     .controls label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: .8rem; flex: 1; min-width: 240px; }
+    .controls label.team-count { flex: 0 0 auto; min-width: 0; }
+    .controls select { background: var(--bg-2); border: 1px solid var(--orange); color: var(--text); font: inherit; font-weight: 700; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
     .controls input, .team-name {
       background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 10px; padding: 9px 12px; outline: none;
     }
@@ -58,7 +60,7 @@
   <main class="page">
     <section class="hero">
       <h1>League <span class="accent">Teams</span></h1>
-      <p>Add up to 20 teams and their players to see every team's adjusted value and where it ranks.</p>
+      <p>Set up 4 to 20 teams and add their players to see every team's adjusted value and where it ranks.</p>
       <p class="notice" id="season-notice">Loading NBA data...</p>
     </section>
 
@@ -66,11 +68,13 @@
       <div class="controls">
         <label>Starting lineup (G = PG/SG, F = SF/PF, UTIL = anyone)
           <input type="text" id="set-lineup" spellcheck="false"></label>
+        <label class="team-count">Teams
+          <select id="set-teams" aria-label="Number of teams"></select></label>
         <div class="buttons">
-          <button class="btn small" id="add-team">Add team</button>
           <button class="btn small ghost danger" id="reset">Clear all</button>
         </div>
       </div>
+      <div class="note" id="count-note"></div>
     </div>
 
     <div class="section-title"><h2>Standings</h2><small>Ranked by team score</small></div>
@@ -93,10 +97,11 @@
   <script src="{{ url_for('static', filename='common.js') }}"></script>
   <script>
     const STORE = 'bpv-league-v1';
-    const MAX_TEAMS = 20, MAX_PLAYERS = 25;
+    const MIN_TEAMS = 4, MAX_TEAMS = 20, DEFAULT_TEAMS = 10, MAX_PLAYERS = 25;
+    const newTeams = (n, from = 0) => Array.from({ length: n }, (_, i) => ({ name: `Team ${from + i + 1}`, ids: [] }));
     const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
     const COLORS = ['var(--orange)', 'var(--t-starter)', 'var(--t-allstar)', 'var(--t-roster)', 'var(--t-super)', 'var(--bad)', 'var(--ice)', 'var(--blue)'];
-    let state = { teams: [{ name: 'Team 1', ids: [] }, { name: 'Team 2', ids: [] }], lineup: DEFAULT_LINEUP };
+    let state = { teams: newTeams(DEFAULT_TEAMS), lineup: DEFAULT_LINEUP };
     let players = [], byId = new Map(), meta = {}, positions = {};
     let notes = {}, focusTeam = null;
 
@@ -106,6 +111,7 @@
         const s = JSON.parse(localStorage.getItem(STORE));
         if (s && Array.isArray(s.teams) && s.teams.length) state = { ...state, ...s };
       } catch (e) {}
+      if (state.teams.length < MIN_TEAMS) state.teams.push(...newTeams(MIN_TEAMS - state.teams.length, state.teams.length));
     }
 
     const lineupSlots = () => state.lineup.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
@@ -212,7 +218,7 @@
           </div>
           <div class="team-foot">
             <span class="holes">${team.ids.length && s.fill.open.length ? `Open starting spots: ${escapeHtml(s.fill.open.join(', '))}` : ''}</span>
-            <button class="btn small ghost danger remove-team" ${state.teams.length <= 1 ? 'disabled' : ''}>Remove team</button>
+            <button class="btn small ghost danger remove-team" ${state.teams.length <= MIN_TEAMS ? 'disabled' : ''}>Remove team</button>
           </div>
         </div>`;
     }
@@ -227,7 +233,7 @@
     function render(only) {
       const rows = state.teams.map((team, t) => ({ t, team, s: scoreTeam(team) }));
       renderStandings(rows);
-      document.getElementById('add-team').disabled = state.teams.length >= MAX_TEAMS;
+      document.getElementById('set-teams').value = state.teams.length;
       document.getElementById('repl').textContent = fmt(meta.replacement_level);
       const el = document.getElementById('teams');
       if (only) {
@@ -271,17 +277,31 @@
       state.teams[t].name = e.target.value.trim() || `Team ${t + 1}`;
       save(); render([t]);
     });
-    document.getElementById('add-team').addEventListener('click', () => {
-      if (state.teams.length >= MAX_TEAMS) return;
-      let n = state.teams.length + 1;
-      while (state.teams.some(x => x.name === `Team ${n}`)) n++;
-      state.teams.push({ name: `Team ${n}`, ids: [] });
-      focusTeam = state.teams.length - 1;
+    // Teams 4-20. Fewer teams removes empty teams from the end; it won't delete a team that has players.
+    document.getElementById('set-teams').addEventListener('change', e => {
+      const n = +e.target.value, note = document.getElementById('count-note');
+      note.textContent = '';
+      if (n > state.teams.length) {
+        const from = state.teams.length;
+        state.teams.push(...newTeams(n - from, from).map((t, i) => {
+          let k = from + i + 1;
+          while (state.teams.some(x => x.name === `Team ${k}`)) k++;
+          return { ...t, name: `Team ${k}` };
+        }));
+      } else if (n < state.teams.length) {
+        const cut = state.teams.slice(n).filter(t => t.ids.length);
+        if (cut.length) {
+          note.textContent = `${cut.map(t => t.name).join(', ')} still ${cut.length === 1 ? 'has' : 'have'} players. Clear them or use "Remove team" on the team you want gone.`;
+          e.target.value = state.teams.length;
+          return;
+        }
+        state.teams.length = n;
+        notes = {};
+      }
       save(); render();
-      document.querySelector(`.team[data-t="${state.teams.length - 1}"]`)?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     });
     document.getElementById('reset').addEventListener('click', e => armed(e.currentTarget, 'Sure?', () => {
-      state = { teams: [{ name: 'Team 1', ids: [] }, { name: 'Team 2', ids: [] }], lineup: state.lineup };
+      state = { teams: newTeams(state.teams.length), lineup: state.lineup };
       notes = {}; save(); render();
     }));
     document.getElementById('set-lineup').addEventListener('change', e => {
@@ -294,6 +314,8 @@
     async function load() {
       restore();
       document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
+      document.getElementById('set-teams').innerHTML = Array.from({ length: MAX_TEAMS - MIN_TEAMS + 1 },
+        (_, i) => `<option value="${i + MIN_TEAMS}">${i + MIN_TEAMS}</option>`).join('');
       render();
       try {
         const [response, posResponse] = await Promise.all([fetch('/api/rankings?limit=2000'), fetch('/api/positions').catch(() => null)]);

@@ -33,7 +33,7 @@
     .btn.ghost:hover { box-shadow: none; border-color: var(--orange); }
     .btn.danger.armed { background: var(--bad); color: #2a0707; }
 
-    .settings { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .settings { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
     .settings label { font-size: .75rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
     .settings input { width: 100%; padding: 7px 8px; color: var(--text); background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; font: inherit; }
     .settings input:focus { outline: none; border-color: var(--orange); }
@@ -166,7 +166,7 @@
 
       <aside class="side">
         <div class="card panel clock" id="clock">
-          <label class="my-pick">You draft <select id="set-slot" aria-label="Your draft position"></select> of <span id="slot-of">10</span></label>
+          <label class="my-pick">You draft <select id="set-slot" aria-label="Your draft position"></select> of <select id="set-teams" aria-label="Number of teams"></select> teams</label>
           <div class="pick" id="clock-pick">Round 1 · Pick 1</div>
           <div class="who" id="clock-who">Team 1</div>
           <div class="until" id="clock-until"></div>
@@ -194,7 +194,6 @@
         <div class="card panel">
           <h3><span class="dot"></span>League</h3>
           <div class="settings" style="margin-top:10px">
-            <label>Teams <input type="number" id="set-teams" min="2" max="20"></label>
             <label>Rounds <input type="number" id="set-rounds" min="1" max="30"></label>
             <label class="wide">Starting lineup (G = PG/SG, F = SF/PF, UTIL = anyone)
               <input type="text" id="set-lineup" spellcheck="false"></label>
@@ -219,10 +218,11 @@
       The dashed line marks how many picks happen before your next turn: players above it will probably be gone if the
       other teams draft by BPV. Real drafters don't, so treat it as a rough guide. The draft is saved in this browser,
       so a refresh won't lose it.<br><br>
-      Positions are ESPN's eligibility. The suggested pick is the best BPV left unless you're about to run out of picks
-      for a starting spot, or a player within 1 BPV fills a scarce position you need. In backtests, adjusting player
-      value by position didn't improve rankings, so position mainly matters for filling a legal lineup. These tips
-      are rules of thumb and haven't been backtested.
+      Positions are ESPN's eligibility; a player listed at two positions can start at either. The suggested pick plays out
+      the rest of the draft for each candidate (other teams taking the best BPV left) and picks the one that leaves your
+      starting lineup (PG, SG, SF, PF, C, G, F, 3 UTIL by default) worth the most, so it takes a position early only
+      when waiting would leave that spot empty or weak. In backtests, adjusting player value by position didn't improve
+      rankings, and these draft tips haven't been backtested, so treat them as a guide.
     </p>
   </main>
 
@@ -233,10 +233,9 @@
     // picks: pick number (1-based) -> player id. history: pick numbers in the order they were made, for Undo.
     const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
     const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
+    const MIN_TEAMS = 4, MAX_TEAMS = 20;
     // Best BPV at a position this much above what's likely left by your next pick = scarce; this little = plenty.
     const SCARCE_DROP = 2.0, PLENTY_DROP = 0.5;
-    // Take a lower-ranked player who fills a scarce need only if he's within this much BPV of the best one left.
-    const NEED_TOLERANCE = 1.0;
     let positions = {}, positionSource = null;
     let state = { teams: 10, slot: 1, rounds: 13, lineup: DEFAULT_LINEUP, posFilter: 'ALL', picks: {}, history: [] };
 
@@ -246,6 +245,8 @@
       try {
         const s = JSON.parse(localStorage.getItem(STORE));
         if (s && s.picks) { state = { ...state, ...s }; hadSaved = true; }
+        state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
+        state.slot = Math.min(state.slot, state.teams);
       } catch (e) {}
     }
 
@@ -316,17 +317,15 @@
       const gap = until ? until : (picksUntilMine((now ?? 0) + 1) ?? state.teams);
       const look = outlook(available, gap);
       const levelOf = Object.fromEntries(look.map(o => [o.p, o]));
-      const fillsNeed = (id) => fillLineup([...mineIds, id]).openSpecific.length < fill.openSpecific.length;
       const needPositions = POSITIONS.filter(p => fill.openSpecific.some(s => fits(s, [p])));
       const alerts = [];
       let pick = available[0] || null, why = 'Best BPV left.';
+      if (hasPos && now != null && myLeft > 0 && pick) ({ pick, why } = lookAhead(available, mineIds, now));
 
       if (hasPos && now != null && myLeft > 0) {
         const urgent = fill.openSpecific.length > 0 && fill.openSpecific.length >= myLeft;
         if (urgent) {
           alerts.push({ cls: 'urgent', text: `You have ${myLeft} pick${myLeft === 1 ? '' : 's'} left and ${fill.openSpecific.length} starting spot${fill.openSpecific.length === 1 ? '' : 's'} (${fill.openSpecific.join(', ')}) only certain positions can fill. Draft for position now.` });
-          const filler = available.find(x => fillsNeed(x.id));
-          if (filler) { pick = filler; why = `Fills your open ${fill.openSpecific.join('/')} spot before you run out of picks.`; }
         } else if (fill.openSpecific.length && mineIds.length >= 3) {
           alerts.push({ cls: '', text: `Lineup still needs: ${fill.openSpecific.join(', ')}.` });
         }
@@ -337,19 +336,98 @@
           scarce.set(k, { ...o, ps: [...(scarce.get(k)?.ps || []), p] });
         });
         scarce.forEach(o => alerts.push({ cls: 'warn', text: `${o.ps.join('/')} is drying up: best now ${fmt(o.now.bpv)} BPV (${o.now.name}), about ${fmt(o.next.bpv)} by your next pick.` }));
-        const plenty = look.filter(o => o.level === 'plenty').map(o => o.p);
+        const repl = replacementBpv();
+        const filling = pick && pick !== available[0] ? posOf(pick.id) : [];   // don't call a position you're told to take "plenty"
+        const plenty = look.filter(o => o.level === 'plenty' && o.now && o.now.bpv >= repl && !filling.includes(o.p)).map(o => o.p);
+        const thin = needPositions.filter(p => levelOf[p].now && levelOf[p].now.bpv < repl);
+        if (thin.length) alerts.push({ cls: 'warn', text: `Thin at ${thin.join(', ')}: the best left (${thin.map(p => `${levelOf[p].now.name}, ${fmt(levelOf[p].now.bpv)}`).join('; ')}) is below a typical free agent (${fmt(repl)} BPV).` });
         if (plenty.length && !urgent) alerts.push({ cls: 'ok', text: `Plenty of ${plenty.join(', ')} left: little is lost by waiting on ${plenty.length === 1 ? 'it' : 'them'}.` });
 
-        if (!urgent && pick && !fillsNeed(pick.id)) {
-          const alt = available.find(x => x.bpv >= pick.bpv - NEED_TOLERANCE && fillsNeed(x.id)
-            && posOf(x.id).some(p => needPositions.includes(p) && levelOf[p].level === 'scarce'));
-          if (alt) { pick = alt; why = `Within ${NEED_TOLERANCE} BPV of the best player left and fills a scarce need (${posOf(alt.id).join('/')}).`; }
-        } else if (!urgent && pick && fill.openSpecific.length) {
-          why = `Best BPV left, and fills an open ${posOf(pick.id).join('/')} need.`;
-        }
       }
       if (!hasPos) alerts.push({ cls: '', text: 'Position data unavailable right now, so these tips use BPV only.' });
       return { pick, why, alerts, look, fill, needPositions };
+    }
+
+    // Suggested pick: for each candidate, play out the rest of the draft (other teams take the best BPV left, as the
+    // Projected standings assume; at your later picks you take whoever adds most to your lineup) and keep the
+    // candidate whose final starting lineup is worth the most. A starting spot you couldn't fill is filled by the best
+    // player actually left at that position after the draft (a real free agent: if centers ran out, a weak center),
+    // not by an average free agent; bench BPV only breaks ties. So it takes the best player unless that would leave a
+    // starting spot you can't fill well later. Multi-position players can move between slots.
+    const LOOKAHEAD_CANDIDATES = 10, LOOKAHEAD_OPTIONS = 8, BENCH_TIEBREAK = 0.02;
+    let lookCache = { key: null, value: null };
+
+    function replacementBpv() {
+      const idx = Math.min(players.length, state.teams * state.rounds) - 1;
+      return players.slice().sort((a, b) => b.bpv - a.bpv)[idx]?.bpv ?? 0;
+    }
+
+    function teamScore(ids, repl) {
+      const v = lineupValue(ids, repl);
+      return v.value + BENCH_TIEBREAK * v.bench;
+    }
+
+    // Candidates worth simulating: the best few by BPV plus the best player left at each position.
+    function shortlist(pool, n) {
+      const out = pool.slice(0, n);
+      POSITIONS.forEach(p => { const x = pool.find(q => posOf(q.id).includes(p)); if (x && !out.includes(x)) out.push(x); });
+      return out;
+    }
+
+    // Final lineup value: your starters, plus the best leftover player who fits each spot you couldn't fill
+    // (most specific spots first: C before F before UTIL).
+    const SPECIFICITY = { G: 1, F: 1, UTIL: 2 };
+    function finalValue(ids, leftover) {
+      const fill = fillLineup(ids);
+      let value = 0;
+      fill.slotOf.forEach((slot, id) => { value += byId.get(id)?.bpv ?? 0; });
+      const used = new Set();
+      fill.open.slice().sort((a, b) => (SPECIFICITY[a] ?? 0) - (SPECIFICITY[b] ?? 0)).forEach(slot => {
+        const fa = leftover.find(p => !used.has(p.id) && fits(slot, posOf(p.id)));
+        if (fa) { used.add(fa.id); value += fa.bpv; }
+      });
+      const bench = ids.filter(id => !fill.slotOf.has(id)).reduce((s, id) => s + (byId.get(id)?.bpv ?? 0), 0);
+      return { value, score: value + BENCH_TIEBREAK * bench };
+    }
+
+    function playOut(roster, pool, from, repl) {
+      roster = roster.slice(); pool = pool.slice();
+      for (let n = from; n <= totalPicks() && pool.length; n++) {
+        if (n in state.picks) continue;
+        if (teamOf(n) !== state.slot) { pool.shift(); continue; }        // another team: best BPV left
+        let best = null, bestScore = -Infinity;
+        for (const x of shortlist(pool, LOOKAHEAD_OPTIONS)) {
+          const sc = teamScore([...roster, x.id], repl);
+          if (sc > bestScore + 1e-9) { best = x; bestScore = sc; }
+        }
+        roster.push(best.id); pool.splice(pool.indexOf(best), 1);
+      }
+      return { roster, leftover: pool };
+    }
+
+    function lookAhead(available, mineIds, now) {
+      const key = JSON.stringify([state.picks, state.slot, state.teams, state.rounds, state.lineup, players.length]);
+      if (lookCache.key === key) return lookCache.value;
+      const repl = replacementBpv();
+      const pool = available.slice().sort((a, b) => b.bpv - a.bpv);
+      const results = shortlist(pool, LOOKAHEAD_CANDIDATES).map(c => {
+        const end = playOut([...mineIds, c.id], pool.filter(x => x !== c), now + 1, repl);
+        return { c, ...finalValue(end.roster, end.leftover) };
+      });
+      const top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
+      const bestBpv = results.find(r => r.c === pool[0]);
+      const before = fillLineup(mineIds), after = fillLineup([...mineIds, top.c.id]);
+      let why;
+      if (top.c === pool[0]) {
+        why = before.openSpecific.length && after.openSpecific.length < before.openSpecific.length
+          ? `Best BPV left, and fills your open ${posOf(top.c.id).join('/')} need.` : 'Best BPV left.';
+      } else {
+        const gain = top.value - bestBpv.value;
+        why = `Fills a ${posOf(top.c.id).join('/')} need: playing out the rest of the draft, your starting lineup ends ${fmt(gain)} BPV `
+          + `better than if you take ${pool[0].name} (${fmt(pool[0].bpv - top.c.bpv)} BPV more on his own) now.`;
+      }
+      lookCache = { key, value: { pick: top.c, why } };
+      return lookCache.value;
     }
 
     // ---------- team evaluation
@@ -532,7 +610,7 @@
 
     function readSettings() {
       const clamp = (v, lo, hi, d) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d;
-      state.teams = clamp(+document.getElementById('set-teams').value, 2, 20, state.teams);
+      state.teams = clamp(+document.getElementById('set-teams').value, MIN_TEAMS, MAX_TEAMS, state.teams);
       state.rounds = clamp(+document.getElementById('set-rounds').value, 1, 30, state.rounds);
       state.slot = clamp(+document.getElementById('set-slot').value, 1, state.teams, state.slot);
       const lineup = document.getElementById('set-lineup').value.split(',').map(s => s.trim().toUpperCase())
@@ -544,12 +622,13 @@
       writeSettings(); save(); render();
     }
     function writeSettings() {
-      document.getElementById('set-teams').value = state.teams;
+      const teams = document.getElementById('set-teams');
+      teams.innerHTML = Array.from({ length: MAX_TEAMS - MIN_TEAMS + 1 }, (_, i) => `<option value="${i + MIN_TEAMS}">${i + MIN_TEAMS}</option>`).join('');
+      teams.value = state.teams;
       document.getElementById('set-rounds').value = state.rounds;
       const slot = document.getElementById('set-slot');
       slot.innerHTML = Array.from({ length: state.teams }, (_, i) => `<option value="${i + 1}">#${i + 1}</option>`).join('');
       slot.value = state.slot;
-      document.getElementById('slot-of').textContent = state.teams;
       document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
       document.querySelectorAll('#pos-seg button').forEach(b => b.classList.toggle('on', b.dataset.p === state.posFilter));
     }
@@ -612,6 +691,7 @@
         players = data.players.slice().sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
         byId = new Map(players.map(p => [p.id, p]));
         if (!hadSaved) { state.teams = data.meta.league_teams || 10; state.rounds = data.meta.roster_size || 13; }
+        state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
         const m = data.meta;
         document.getElementById('season-notice').textContent = m.mode === 'in-season'
           ? `${m.season} season in progress: rankings are rest-of-season BPV`
