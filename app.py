@@ -64,6 +64,11 @@ def draft_tracker():
     return render_template("draft.html")
 
 
+@app.route("/league")
+def league():
+    return render_template("league.html")
+
+
 @app.route("/api/meta")
 def get_meta():
     _, meta = ratings.get()

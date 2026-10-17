@@ -228,7 +228,6 @@
     // picks: pick number (1-based) -> player id. history: pick numbers in the order they were made, for Undo.
     const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
     const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
-    const SLOT_FITS = { PG: ['PG'], SG: ['SG'], SF: ['SF'], PF: ['PF'], C: ['C'], G: ['PG', 'SG'], F: ['SF', 'PF'] };
     // Best BPV at a position this much above what's likely left by your next pick = scarce; this little = plenty.
     const SCARCE_DROP = 2.0, PLENTY_DROP = 0.5;
     // Take a lower-ranked player who fills a scarce need only if he's within this much BPV of the best one left.
@@ -284,25 +283,11 @@
     // ---------- positions
     const posOf = (id) => positions[id] ? positions[id].split('/') : [];
     const lineupSlots = () => state.lineup.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
-    const fits = (slot, ps) => slot === 'UTIL' || (SLOT_FITS[slot] || []).some(x => ps.includes(x));
+    const fits = slotFits;
 
-    // Put players into starting slots (best BPV first; augmenting paths so a dual-position player can move over).
+    // Put players into starting slots (best BPV first).
     function fillLineup(ids) {
-      const slots = lineupSlots(), owner = Array(slots.length).fill(null);
-      const sorted = ids.slice().sort((a, b) => (byId.get(b)?.bpv ?? 0) - (byId.get(a)?.bpv ?? 0));
-      const tryPlace = (id, seen) => {
-        const ps = posOf(id);
-        for (let i = 0; i < slots.length; i++) {
-          if (seen.has(i) || !fits(slots[i], ps)) continue;
-          seen.add(i);
-          if (owner[i] == null || tryPlace(owner[i], seen)) { owner[i] = id; return true; }
-        }
-        return false;
-      };
-      sorted.forEach(id => tryPlace(id, new Set()));
-      const slotOf = new Map(owner.map((id, i) => [id, slots[i]]).filter(([id]) => id != null));
-      const open = slots.filter((_, i) => owner[i] == null);
-      return { slotOf, open, openSpecific: open.filter(s => s !== 'UTIL') };
+      return fillSlots(ids, lineupSlots(), posOf, id => byId.get(id)?.bpv ?? 0);
     }
 
     // For each position: best available now, and best likely left after `gap` picks by other teams (taking best BPV).
@@ -531,7 +516,7 @@
       state.rounds = clamp(+document.getElementById('set-rounds').value, 1, 30, state.rounds);
       state.slot = clamp(+document.getElementById('set-slot').value, 1, state.teams, state.slot);
       const lineup = document.getElementById('set-lineup').value.split(',').map(s => s.trim().toUpperCase())
-        .filter(s => s === 'UTIL' || s in SLOT_FITS);
+        .filter(s => s === 'UTIL' || s in LINEUP_FITS);
       state.lineup = lineup.length ? lineup.join(',') : DEFAULT_LINEUP;
       // Picks beyond the new draft length would be invisible, so return those players to the pool.
       for (const n of Object.keys(state.picks)) if (+n > totalPicks()) delete state.picks[n];

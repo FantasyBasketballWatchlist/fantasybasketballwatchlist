@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <style>
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+    .controls label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: .8rem; flex: 1; min-width: 240px; }
+    .controls input, .team-name {
+      background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 10px; padding: 9px 12px; outline: none;
+    }
+    .controls input:focus, .team-name:focus { border-color: var(--orange); }
+    .controls .buttons { display: flex; gap: 8px; }
+    .btn.small { padding: 9px 14px; font-size: .8rem; border-radius: 10px; }
+    .btn.ghost { background: var(--bg-2); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    .btn.ghost:hover { box-shadow: none; border-color: var(--orange); }
+    .btn.danger.armed { background: var(--bad); color: #2a0707; }
+
+    .teams { margin-top: 18px; }
+    .team { padding: 18px; border-top: 3px solid var(--c); min-width: 0; }
+    .team-head { display: flex; align-items: center; gap: 10px; }
+    .team-name { flex: 1; min-width: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 4px 10px; background: transparent; border-color: transparent; }
+    .team-name:hover { border-color: var(--border); }
+    .team-score { text-align: right; line-height: 1.05; }
+    .team-score .num { font-size: 1.9rem; font-weight: 700; color: var(--c); }
+    .team-score small { display: block; color: var(--muted); font-size: .7rem; letter-spacing: .8px; text-transform: uppercase; }
+    .team .search { margin: 12px 0 8px; max-width: none; }
+    .team .search input { padding: 10px 14px; font-size: .92rem; }
+    .team table.data { font-size: .88rem; }
+    .team table.data th, .team table.data td { padding: 8px 8px; }
+    .slot { display: inline-block; min-width: 38px; text-align: center; font-size: .7rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+      background: rgba(255, 122, 26, .14); color: var(--orange-2); }
+    .slot.bench { background: rgba(148, 163, 184, .1); color: var(--dim); }
+    .pos { color: var(--dim); font-size: .72rem; margin-left: 6px; font-weight: 500; }
+    .remove { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+    .remove:hover { color: var(--bad); background: rgba(248, 113, 113, .12); }
+    .empty { color: var(--dim); font-size: .9rem; padding: 8px 2px; }
+    .note { color: var(--orange-2); font-size: .82rem; min-height: 1em; }
+    .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+    .totals div { background: rgba(255, 255, 255, .03); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; }
+    .totals label { display: block; color: var(--muted); font-size: .7rem; }
+    .totals b { font-family: 'Barlow Condensed', sans-serif; font-size: 1.2rem; }
+    .team-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
+    .holes { color: var(--muted); font-size: .8rem; }
+    @media (max-width: 760px) { .totals { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  {% set active = 'league' %}{% include '_nav.html' %}
+
+  <main class="page">
+    <section class="hero">
+      <h1>League <span class="accent">Teams</span></h1>
+      <p>Add up to 20 teams and their players to see every team's adjusted value and where it ranks.</p>
+      <p class="notice" id="season-notice">Loading NBA data...</p>
+    </section>
+
+    <div class="card panel">
+      <div class="controls">
+        <label>Starting lineup (G = PG/SG, F = SF/PF, UTIL = anyone)
+          <input type="text" id="set-lineup" spellcheck="false"></label>
+        <div class="buttons">
+          <button class="btn small" id="add-team">Add team</button>
+          <button class="btn small ghost danger" id="reset">Clear all</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Standings</h2><small>Ranked by team score</small></div>
+    <div class="card table-wrap"><table class="data" id="standings"></table></div>
+    <p class="help" style="color:var(--dim);font-size:.82rem;margin-top:8px">
+      <b>Team score</b> = BPV of the team's best starting lineup, with empty starting spots (and starters worse than a
+      free agent) counted as a free agent (a replacement-level player, <span id="repl">N/A</span> BPV). <b>BPV</b> is each player's adjusted value: expected
+      fantasy points per game after accounting for missed games, so a 10-point edge in team score is about 10 points a day.
+      <b>Over repl.</b> = BPV above what a free agent gives.
+    </p>
+
+    <div class="grid-2 teams" id="teams"></div>
+
+    <p class="footer-note">
+      Teams are saved in this browser, so a refresh won't lose them. A player can be on only one team; adding him to another
+      team moves him. Positions are ESPN's eligibility. This is BPV's opinion only; in backtests, BPV on its own didn't beat ESPN's rankings.
+    </p>
+  </main>
+
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    const STORE = 'bpv-league-v1';
+    const MAX_TEAMS = 20, MAX_PLAYERS = 25;
+    const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
+    const COLORS = ['var(--orange)', 'var(--t-starter)', 'var(--t-allstar)', 'var(--t-roster)', 'var(--t-super)', 'var(--bad)', 'var(--ice)', 'var(--blue)'];
+    let state = { teams: [{ name: 'Team 1', ids: [] }, { name: 'Team 2', ids: [] }], lineup: DEFAULT_LINEUP };
+    let players = [], byId = new Map(), meta = {}, positions = {};
+    let notes = {}, focusTeam = null;
+
+    function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+    function restore() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STORE));
+        if (s && Array.isArray(s.teams) && s.teams.length) state = { ...state, ...s };
+      } catch (e) {}
+    }
+
+    const lineupSlots = () => state.lineup.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    // Without ESPN positions, let anyone fill any slot rather than leaving every specific slot empty.
+    const posOf = (id) => positions[id] ? positions[id].split('/') : (Object.keys(positions).length ? [] : ['PG', 'SG', 'SF', 'PF', 'C']);
+    const bpvOf = (id) => byId.get(id)?.bpv ?? 0;
+    const sum = (ids, f) => ids.reduce((s, id) => s + (f(byId.get(id)) ?? 0), 0);
+    const inSeason = () => meta.mode === 'in-season';
+
+    // Team score: BPV of the best starting lineup. Empty starting spots, and starters worse than a free agent,
+    // count at replacement level (the manager would pick one up).
+    function scoreTeam(team) {
+      const ids = team.ids.filter(id => byId.has(id));
+      const fill = fillSlots(ids, lineupSlots(), posOf, bpvOf);
+      const starters = [...fill.slotOf.keys()];
+      const repl = meta.replacement_level ?? 0;
+      return {
+        fill, starters,
+        score: starters.reduce((s, id) => s + Math.max(bpvOf(id), repl), 0) + fill.open.length * repl,
+        total: sum(ids, p => p.bpv),
+        vor: sum(ids, p => p.value_over_replacement),
+        bench: ids.filter(id => !fill.slotOf.has(id)).reduce((s, id) => s + bpvOf(id), 0),
+        week: sum(starters, p => p.week_fpts),
+      };
+    }
+
+    function addPlayer(t, p) {
+      const team = state.teams[t];
+      if (team.ids.includes(p.id)) return;
+      if (team.ids.length >= MAX_PLAYERS) { notes[t] = `Teams are limited to ${MAX_PLAYERS} players.`; render(); return; }
+      const from = state.teams.findIndex(x => x.ids.includes(p.id));
+      if (from >= 0) {
+        state.teams[from].ids = state.teams[from].ids.filter(id => id !== p.id);
+        notes[t] = `Moved ${p.name} from ${state.teams[from].name}.`;
+      } else delete notes[t];
+      team.ids.push(p.id);
+      focusTeam = t;
+      save(); render();
+    }
+
+    function renderStandings(rows) {
+      const el = document.getElementById('standings');
+      const avg = rows.length ? rows.reduce((s, r) => s + r.s.score, 0) / rows.length : 0;
+      el.innerHTML = `<thead><tr><th>#</th><th>Team</th><th class="r">Players</th><th class="r">Team score</th><th class="r">vs avg</th>
+        <th class="r hide-sm">Total BPV</th><th class="r hide-sm">Over repl.</th>${inSeason() ? '<th class="r hide-sm" title="Projected points from the starters this week">This week</th>' : ''}
+        <th class="hide-sm">Open starting spots</th></tr></thead><tbody>`
+        + rows.slice().sort((a, b) => b.s.score - a.s.score).map((r, i) => {
+          const d = r.s.score - avg;
+          return `<tr><td><span class="rank-pill" style="--c:${i === 0 ? 'var(--t-super)' : 'var(--t-waiver)'}">${i + 1}</span></td>
+            <td class="name" style="color:${COLORS[r.t % COLORS.length]}">${escapeHtml(r.team.name)}</td>
+            <td class="r">${r.team.ids.length}</td>
+            <td class="r"><span class="num">${fmt(r.s.score)}</span></td>
+            <td class="r"><span class="delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${fmt(d)}</span></td>
+            <td class="r hide-sm">${fmt(r.s.total)}</td><td class="r hide-sm">${fmt(r.s.vor)}</td>
+            ${inSeason() ? `<td class="r hide-sm">${fmt(r.s.week, 0)}</td>` : ''}
+            <td class="hide-sm">${r.team.ids.length ? (r.s.fill.openSpecific.length ? escapeHtml(r.s.fill.openSpecific.join(', ')) : '<span style="color:var(--good)">none</span>') : '–'}</td></tr>`;
+        }).join('') + '</tbody>';
+    }
+
+    function playerRows(team, s) {
+      if (!team.ids.length) return '<p class="empty">No players yet. Search above to add some.</p>';
+      // Starters in lineup order, then the bench by BPV.
+      const slots = lineupSlots();
+      const starters = s.starters.slice().sort((a, b) => slots.indexOf(s.fill.slotOf.get(a)) - slots.indexOf(s.fill.slotOf.get(b)));
+      const bench = team.ids.filter(id => !s.fill.slotOf.has(id)).sort((a, b) => bpvOf(b) - bpvOf(a));
+      const week = inSeason();
+      const rows = [...starters, ...bench].map(id => {
+        const p = byId.get(id), slot = s.fill.slotOf.get(id);
+        const remove = `<button class="remove" data-id="${id}" title="Remove">×</button>`;
+        if (!p) return `<tr><td><span class="slot bench">–</span></td><td class="name">Unknown player<small>no longer in the rankings</small></td><td colspan="${week ? 4 : 3}"></td><td>${remove}</td></tr>`;
+        const inj = p.injury_note ? ` <span class="chip inj" title="${escapeHtml(p.injury_note)}">injury</span>` : '';
+        return `<tr><td><span class="slot${slot ? '' : ' bench'}">${slot || 'BN'}</span></td>
+          <td class="name">${escapeHtml(p.name)}${positions[id] ? `<span class="pos">${positions[id]}</span>` : ''}${inj} ${formChip(p.recent_fpts, p.season_fpts)}
+            <small>${escapeHtml(p.team || '')} · #${p.rank ?? '—'}</small></td>
+          <td class="r"><span class="num">${fmt(p.bpv)}</span></td>
+          <td class="r" title="Fantasy points per game when playing">${fmt(p.production)}</td>
+          <td class="r" title="Share of games expected to play">${pct(p.availability)}</td>
+          ${week ? `<td class="r hide-sm">${p.week_fpts == null ? 'N/A' : `${Math.round(p.week_fpts)} (${p.week_games})`}</td>` : ''}
+          <td>${remove}</td></tr>`;
+      }).join('');
+      return `<div class="table-wrap"><table class="data"><thead><tr><th>Slot</th><th>Player</th><th class="r">BPV</th>
+        <th class="r">FPTS/G</th><th class="r">Avail.</th>${week ? '<th class="r hide-sm">This week (G)</th>' : ''}<th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`;
+    }
+
+    function render() {
+      const rows = state.teams.map((team, t) => ({ t, team, s: scoreTeam(team) }));
+      renderStandings(rows);
+      document.getElementById('add-team').disabled = state.teams.length >= MAX_TEAMS;
+      document.getElementById('repl').textContent = fmt(meta.replacement_level);
+      const el = document.getElementById('teams');
+      el.innerHTML = rows.map(({ t, team, s }) => `
+        <div class="card team" data-t="${t}" style="--c:${COLORS[t % COLORS.length]}">
+          <div class="team-head">
+            <input class="team-name" value="${escapeHtml(team.name)}" maxlength="40" aria-label="Team name">
+            <div class="team-score"><span class="num">${fmt(s.score)}</span><small>Team score</small></div>
+          </div>
+          <div class="search">
+            <input type="text" placeholder="Add a player..." autocomplete="off" aria-label="Add a player to ${escapeHtml(team.name)}">
+            <div class="suggestions"></div>
+          </div>
+          <div class="note">${escapeHtml(notes[t] || '')}</div>
+          ${playerRows(team, s)}
+          <div class="totals">
+            <div><label>Total BPV</label><b>${fmt(s.total)}</b></div>
+            <div><label>Over repl.</label><b>${fmt(s.vor)}</b></div>
+            <div><label>Bench BPV</label><b>${fmt(s.bench)}</b></div>
+            <div><label>Players</label><b>${team.ids.length}</b></div>
+          </div>
+          <div class="team-foot">
+            <span class="holes">${team.ids.length && s.fill.open.length ? `Open starting spots: ${escapeHtml(s.fill.open.join(', '))}` : ''}</span>
+            <button class="btn small ghost danger remove-team" ${state.teams.length <= 1 ? 'disabled' : ''}>Remove team</button>
+          </div>
+        </div>`).join('');
+      el.querySelectorAll('.team').forEach(card => {
+        const t = +card.dataset.t, input = card.querySelector('.search input');
+        wireAutocomplete(input, card.querySelector('.suggestions'), () => players, p => addPlayer(t, p), 6);
+        if (t === focusTeam) input.focus();
+      });
+      focusTeam = null;
+    }
+
+    // Two-click confirm instead of a browser dialog.
+    function armed(button, label, action) {
+      if (button.classList.contains('armed')) { action(); return; }
+      button.classList.add('armed'); button.dataset.label = button.textContent; button.textContent = label;
+      setTimeout(() => { if (button.isConnected) { button.classList.remove('armed'); button.textContent = button.dataset.label; } }, 3000);
+    }
+
+    document.getElementById('teams').addEventListener('click', e => {
+      const card = e.target.closest('.team');
+      if (!card) return;
+      const t = +card.dataset.t;
+      const rm = e.target.closest('.remove');
+      if (rm) {
+        state.teams[t].ids = state.teams[t].ids.filter(id => id !== +rm.dataset.id);
+        delete notes[t]; save(); render();
+      } else if (e.target.closest('.remove-team')) {
+        armed(e.target.closest('.remove-team'), 'Sure?', () => { state.teams.splice(t, 1); notes = {}; save(); render(); });
+      }
+    });
+    document.getElementById('teams').addEventListener('change', e => {
+      if (!e.target.classList.contains('team-name')) return;
+      const t = +e.target.closest('.team').dataset.t;
+      state.teams[t].name = e.target.value.trim() || `Team ${t + 1}`;
+      save(); render();
+    });
+    document.getElementById('add-team').addEventListener('click', () => {
+      if (state.teams.length >= MAX_TEAMS) return;
+      let n = state.teams.length + 1;
+      while (state.teams.some(x => x.name === `Team ${n}`)) n++;
+      state.teams.push({ name: `Team ${n}`, ids: [] });
+      focusTeam = state.teams.length - 1;
+      save(); render();
+      document.querySelector(`.team[data-t="${state.teams.length - 1}"]`)?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+    });
+    document.getElementById('reset').addEventListener('click', e => armed(e.currentTarget, 'Sure?', () => {
+      state = { teams: [{ name: 'Team 1', ids: [] }, { name: 'Team 2', ids: [] }], lineup: state.lineup };
+      notes = {}; save(); render();
+    }));
+    document.getElementById('set-lineup').addEventListener('change', e => {
+      const lineup = e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s === 'UTIL' || s in LINEUP_FITS);
+      state.lineup = lineup.length ? lineup.join(',') : DEFAULT_LINEUP;
+      e.target.value = state.lineup.split(',').join(', ');
+      save(); render();
+    });
+
+    async function load() {
+      restore();
+      document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
+      render();
+      try {
+        const [response, posResponse] = await Promise.all([fetch('/api/rankings?limit=2000'), fetch('/api/positions').catch(() => null)]);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        try { positions = posResponse && posResponse.ok ? (await posResponse.json()).positions || {} : {}; } catch (e) { positions = {}; }
+        players = data.players.slice().sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
+        byId = new Map(players.map(p => [p.id, p]));
+        meta = data.meta;
+        document.getElementById('season-notice').textContent = meta.mode === 'in-season'
+          ? `${meta.season} season in progress: values are rest-of-season BPV`
+          : `Preseason values for ${meta.target_season}`;
+      } catch (error) {
+        document.getElementById('season-notice').textContent = 'Could not load NBA data. Make sure app.py is running, then refresh.';
+      }
+      render();
+    }
+    load();
+  </script>
+</body>
+</html>

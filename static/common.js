@@ -37,6 +37,30 @@ function countUp(el, to, digits = 1, ms = 700) {
   requestAnimationFrame(step);
 }
 
+// Starting lineups. G = PG/SG, F = SF/PF, UTIL = anyone.
+const LINEUP_FITS = { PG: ['PG'], SG: ['SG'], SF: ['SF'], PF: ['PF'], C: ['C'], G: ['PG', 'SG'], F: ['SF', 'PF'] };
+const slotFits = (slot, ps) => slot === 'UTIL' || (LINEUP_FITS[slot] || []).some(x => ps.includes(x));
+
+// Put players into starting slots, highest value first (augmenting paths so a dual-position player can move over).
+// posOf(id) -> ['PG', 'SG'], valueOf(id) -> number. Returns the slot each starter fills and the slots left open.
+function fillSlots(ids, slots, posOf, valueOf) {
+  const owner = Array(slots.length).fill(null);
+  const sorted = ids.slice().sort((a, b) => valueOf(b) - valueOf(a));
+  const tryPlace = (id, seen) => {
+    const ps = posOf(id);
+    for (let i = 0; i < slots.length; i++) {
+      if (seen.has(i) || !slotFits(slots[i], ps)) continue;
+      seen.add(i);
+      if (owner[i] == null || tryPlace(owner[i], seen)) { owner[i] = id; return true; }
+    }
+    return false;
+  };
+  sorted.forEach(id => tryPlace(id, new Set()));
+  const slotOf = new Map(owner.map((id, i) => [id, slots[i]]).filter(([id]) => id != null));
+  const open = slots.filter((_, i) => owner[i] == null);
+  return { slotOf, open, openSpecific: open.filter(s => s !== 'UTIL') };
+}
+
 // Autocomplete with arrow keys. onPick(player) is called with the chosen player.
 function wireAutocomplete(input, list, getPlayers, onPick, limit = 8) {
   let items = [], sel = -1;
