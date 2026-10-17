@@ -7,3 +7,4 @@ venv/
 data/cache/
 .render_deploy_hook
 .last_verified_code
+.last_deployed_code

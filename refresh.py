@@ -42,6 +42,10 @@ ROUTES = ["/api/meta", "/api/players", "/api/rankings", "/api/positions", "/api/
 PAGES = ["/", "/draft", "/league", "/trade-analyzer", "/waiver-wires"]
 DEPLOY_WAIT_SECONDS = 10 * 60
 LAST_VERIFIED_FILE = os.path.join(ROOT, ".last_verified_code")       # commit whose code last passed the container
+LAST_DEPLOYED_FILE = os.path.join(ROOT, ".last_deployed_code")       # commit last confirmed live on hoopothesis.cc
+# What the server runs (or reads to build): a change here must pass the container test and gets deployed.
+SERVER_PATHS = ["app.py", "ratings.py", "bpv.py", "nba_data.py", "analysis/__init__.py", "analysis/accuracy_tracker.py",
+                "templates", "static", "requirements.txt", ".python-version", "Procfile", "deploy"]
 DOCKER_CANDIDATES = ["docker", os.path.expandvars("%LOCALAPPDATA%/Programs/DockerDesktop/resources/bin/docker.exe")]
 CONTAINER_PORT = 18080
 
@@ -160,12 +164,12 @@ def _docker():
 
 
 def code_changed():
-    """True if anything outside data/ changed since the commit that last passed the container check."""
+    """True if the server's code changed since the commit that last passed the container check."""
     try:
         with open(LAST_VERIFIED_FILE, encoding="utf-8") as f:
             last = f.read().strip()
-        committed = git("diff", "--name-only", last, "HEAD", "--", ".", ":(exclude)data").strip()
-        uncommitted = git("status", "--porcelain", "--", ".", ":(exclude)data").strip()
+        committed = git("diff", "--name-only", last, "HEAD", "--", *SERVER_PATHS).strip()
+        uncommitted = git("status", "--porcelain", "--", *SERVER_PATHS).strip()
         return bool(committed or uncommitted)
     except (OSError, subprocess.CalledProcessError):
         return True
@@ -226,12 +230,26 @@ def deploy_hook():
     return url
 
 
+def code_undeployed():
+    """True if the server's code changed since the commit last confirmed live."""
+    try:
+        with open(LAST_DEPLOYED_FILE, encoding="utf-8") as f:
+            last = f.read().strip()
+        return bool(git("diff", "--name-only", last, "HEAD", "--", *SERVER_PATHS).strip())
+    except (OSError, subprocess.CalledProcessError):
+        return True
+
+
 def publish():
-    """Commit and push the data if it changed; returns the new data version, or None if nothing changed."""
+    """Commit and push the data, and deploy, if the data or the code changed; returns the new data version
+    (stamped so verify_live can tell the new deploy is serving), or None if there was nothing to publish."""
     git("add", "-A", "--", *COMMIT_PATHS)
-    if not git("diff", "--cached", "--name-only", "--", *COMMIT_PATHS).strip():
-        log("no data changes; nothing to publish")
+    data_changed = bool(git("diff", "--cached", "--name-only", "--", *COMMIT_PATHS).strip())
+    if not data_changed and not code_undeployed():
+        log("no data or code changes; nothing to publish")
         return None
+    if not data_changed:
+        log("no data changes, but the code changed since the last deploy: deploying it")
     version = datetime.datetime.now().isoformat(timespec="seconds")
     with open(VERSION_FILE, "w", encoding="utf-8") as f:
         f.write(version)
@@ -308,6 +326,8 @@ def main():
                     notify("Published, but the live site has a problem: " + "; ".join(problems))
                     return 1
                 log(f"live site is serving data version {version}")
+                with open(LAST_DEPLOYED_FILE, "w", encoding="utf-8") as f:
+                    f.write(git("rev-parse", "HEAD").strip())
     except Exception as e:
         notify(f"Refresh failed: {type(e).__name__}: {e}")
         raise
