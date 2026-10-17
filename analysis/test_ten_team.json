@@ -1,0 +1,594 @@
+{
+  "design_A": {
+    "2021-22": {
+      "M1 season FPTS/game": {
+        "total13": 20320.16,
+        "best10": 19821.626,
+        "league_wins_best10": 0.005
+      },
+      "M2 80/20": {
+        "total13": 24070.529,
+        "best10": 21625.206,
+        "league_wins_best10": 0.001
+      },
+      "M3 x career GP%": {
+        "total13": 25086.114,
+        "best10": 23087.65,
+        "league_wins_best10": 0.077
+      },
+      "M5 80/20 x career GP%": {
+        "total13": 24614.999,
+        "best10": 22618.557,
+        "league_wins_best10": 0.047
+      },
+      "Last season total FPTS": {
+        "total13": 24541.634,
+        "best10": 22640.933,
+        "league_wins_best10": 0.004
+      },
+      "BPV (replacement-level)": {
+        "total13": 24215.899,
+        "best10": 22388.949,
+        "league_wins_best10": 0.004
+      },
+      "BPV + age": {
+        "total13": 24879.758,
+        "best10": 22786.608,
+        "league_wins_best10": 0.055
+      },
+      "BPV + age + crowding": {
+        "total13": 25580.95,
+        "best10": 23087.026,
+        "league_wins_best10": 0.16
+      },
+      "BPV + ESPN hybrid (app)": {
+        "total13": 29790.15,
+        "best10": 25796.284,
+        "league_wins_best10": 0.563
+      },
+      "ESPN projections": {
+        "total13": 26761.697,
+        "best10": 23479.227,
+        "league_wins_best10": 0.084
+      }
+    },
+    "2023-24": {
+      "M1 season FPTS/game": {
+        "total13": 30677.002,
+        "best10": 26832.478,
+        "league_wins_best10": 0.136
+      },
+      "M2 80/20": {
+        "total13": 27549.414,
+        "best10": 24923.802,
+        "league_wins_best10": 0.006
+      },
+      "M3 x career GP%": {
+        "total13": 30224.971,
+        "best10": 25537.633,
+        "league_wins_best10": 0.028
+      },
+      "M5 80/20 x career GP%": {
+        "total13": 29559.845,
+        "best10": 24760.845,
+        "league_wins_best10": 0.0
+      },
+      "Last season total FPTS": {
+        "total13": 28950.529,
+        "best10": 25977.868,
+        "league_wins_best10": 0.026
+      },
+      "BPV (replacement-level)": {
+        "total13": 30512.937,
+        "best10": 27258.681,
+        "league_wins_best10": 0.255
+      },
+      "BPV + age": {
+        "total13": 26317.41,
+        "best10": 23589.936,
+        "league_wins_best10": 0.009
+      },
+      "BPV + age + crowding": {
+        "total13": 28248.472,
+        "best10": 24906.633,
+        "league_wins_best10": 0.061
+      },
+      "BPV + ESPN hybrid (app)": {
+        "total13": 31547.123,
+        "best10": 27138.787,
+        "league_wins_best10": 0.295
+      },
+      "ESPN projections": {
+        "total13": 32356.058,
+        "best10": 27314.725,
+        "league_wins_best10": 0.184
+      }
+    },
+    "2024-25": {
+      "M1 season FPTS/game": {
+        "total13": 25993.66,
+        "best10": 23121.68,
+        "league_wins_best10": 0.018
+      },
+      "M2 80/20": {
+        "total13": 24150.202,
+        "best10": 21067.901,
+        "league_wins_best10": 0.0
+      },
+      "M3 x career GP%": {
+        "total13": 29418.72,
+        "best10": 26388.95,
+        "league_wins_best10": 0.138
+      },
+      "M5 80/20 x career GP%": {
+        "total13": 27464.662,
+        "best10": 23641.173,
+        "league_wins_best10": 0.0
+      },
+      "Last season total FPTS": {
+        "total13": 29874.635,
+        "best10": 25954.82,
+        "league_wins_best10": 0.101
+      },
+      "BPV (replacement-level)": {
+        "total13": 27797.567,
+        "best10": 23957.139,
+        "league_wins_best10": 0.011
+      },
+      "BPV + age": {
+        "total13": 28836.361,
+        "best10": 25398.346,
+        "league_wins_best10": 0.09
+      },
+      "BPV + age + crowding": {
+        "total13": 30246.419,
+        "best10": 26119.509,
+        "league_wins_best10": 0.139
+      },
+      "BPV + ESPN hybrid (app)": {
+        "total13": 29876.351,
+        "best10": 26113.762,
+        "league_wins_best10": 0.237
+      },
+      "ESPN projections": {
+        "total13": 30252.514,
+        "best10": 26794.126,
+        "league_wins_best10": 0.266
+      }
+    },
+    "2025-26": {
+      "M1 season FPTS/game": {
+        "total13": 24679.532,
+        "best10": 23037.528,
+        "league_wins_best10": 0.071
+      },
+      "M2 80/20": {
+        "total13": 26140.252,
+        "best10": 23318.912,
+        "league_wins_best10": 0.1
+      },
+      "M3 x career GP%": {
+        "total13": 25213.2,
+        "best10": 22584.36,
+        "league_wins_best10": 0.016
+      },
+      "M5 80/20 x career GP%": {
+        "total13": 27340.031,
+        "best10": 24104.563,
+        "league_wins_best10": 0.084
+      },
+      "Last season total FPTS": {
+        "total13": 21206.944,
+        "best10": 19885.082,
+        "league_wins_best10": 0.0
+      },
+      "BPV (replacement-level)": {
+        "total13": 26154.738,
+        "best10": 22868.004,
+        "league_wins_best10": 0.023
+      },
+      "BPV + age": {
+        "total13": 25909.749,
+        "best10": 23664.932,
+        "league_wins_best10": 0.165
+      },
+      "BPV + age + crowding": {
+        "total13": 26554.774,
+        "best10": 23493.486,
+        "league_wins_best10": 0.104
+      },
+      "BPV + ESPN hybrid (app)": {
+        "total13": 27188.164,
+        "best10": 24716.453,
+        "league_wins_best10": 0.342
+      },
+      "ESPN projections": {
+        "total13": 27622.854,
+        "best10": 24238.922,
+        "league_wins_best10": 0.095
+      }
+    }
+  },
+  "design_B": {
+    "2021-22": {
+      "M1 season FPTS/game": {
+        "gain_total13": -7286.4,
+        "gain_best10": -4687.5,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.04444444444444444
+      },
+      "M2 80/20": {
+        "gain_total13": -5563.0,
+        "gain_best10": -2964.1,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.14444444444444446
+      },
+      "M3 x career GP%": {
+        "gain_total13": -3019.7,
+        "gain_best10": -1097.8,
+        "seats_better_best10": 4,
+        "share_of_espn_teams_beaten_best10": 0.4222222222222222
+      },
+      "M5 80/20 x career GP%": {
+        "gain_total13": -3584.9,
+        "gain_best10": -1663.0,
+        "seats_better_best10": 1,
+        "share_of_espn_teams_beaten_best10": 0.3222222222222223
+      },
+      "Last season total FPTS": {
+        "gain_total13": -2714.6,
+        "gain_best10": -1135.7,
+        "seats_better_best10": 3,
+        "share_of_espn_teams_beaten_best10": 0.4333333333333334
+      },
+      "BPV (replacement-level)": {
+        "gain_total13": -4531.8,
+        "gain_best10": -1932.9,
+        "seats_better_best10": 2,
+        "share_of_espn_teams_beaten_best10": 0.24444444444444446
+      },
+      "BPV + age": {
+        "gain_total13": -5389.0,
+        "gain_best10": -2790.1,
+        "seats_better_best10": 1,
+        "share_of_espn_teams_beaten_best10": 0.2
+      },
+      "BPV + age + crowding": {
+        "gain_total13": -4622.2,
+        "gain_best10": -2294.1,
+        "seats_better_best10": 2,
+        "share_of_espn_teams_beaten_best10": 0.23333333333333334
+      },
+      "BPV + ESPN hybrid (app)": {
+        "gain_total13": -1042.9,
+        "gain_best10": -255.6,
+        "seats_better_best10": 5,
+        "share_of_espn_teams_beaten_best10": 0.44444444444444436
+      },
+      "ESPN projections": {
+        "gain_total13": 0.0,
+        "gain_best10": 0.0,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.4999999999999999
+      }
+    },
+    "2023-24": {
+      "M1 season FPTS/game": {
+        "gain_total13": 308.6,
+        "gain_best10": 2230.3,
+        "seats_better_best10": 8,
+        "share_of_espn_teams_beaten_best10": 0.9
+      },
+      "M2 80/20": {
+        "gain_total13": -1937.3,
+        "gain_best10": 364.4,
+        "seats_better_best10": 6,
+        "share_of_espn_teams_beaten_best10": 0.5
+      },
+      "M3 x career GP%": {
+        "gain_total13": -2835.3,
+        "gain_best10": -2302.9,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.1
+      },
+      "M5 80/20 x career GP%": {
+        "gain_total13": -1619.9,
+        "gain_best10": -1648.7,
+        "seats_better_best10": 1,
+        "share_of_espn_teams_beaten_best10": 0.21111111111111117
+      },
+      "Last season total FPTS": {
+        "gain_total13": -1102.8,
+        "gain_best10": 599.4,
+        "seats_better_best10": 7,
+        "share_of_espn_teams_beaten_best10": 0.6222222222222221
+      },
+      "BPV (replacement-level)": {
+        "gain_total13": -557.9,
+        "gain_best10": 1070.3,
+        "seats_better_best10": 8,
+        "share_of_espn_teams_beaten_best10": 0.7333333333333333
+      },
+      "BPV + age": {
+        "gain_total13": -825.0,
+        "gain_best10": 1524.2,
+        "seats_better_best10": 9,
+        "share_of_espn_teams_beaten_best10": 0.888888888888889
+      },
+      "BPV + age + crowding": {
+        "gain_total13": -1469.1,
+        "gain_best10": 880.1,
+        "seats_better_best10": 7,
+        "share_of_espn_teams_beaten_best10": 0.6777777777777778
+      },
+      "BPV + ESPN hybrid (app)": {
+        "gain_total13": -729.6,
+        "gain_best10": 444.2,
+        "seats_better_best10": 7,
+        "share_of_espn_teams_beaten_best10": 0.5999999999999999
+      },
+      "ESPN projections": {
+        "gain_total13": 0.0,
+        "gain_best10": 0.0,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.5
+      }
+    },
+    "2024-25": {
+      "M1 season FPTS/game": {
+        "gain_total13": -6372.6,
+        "gain_best10": -5678.4,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.0
+      },
+      "M2 80/20": {
+        "gain_total13": -3572.7,
+        "gain_best10": -3815.3,
+        "seats_better_best10": 1,
+        "share_of_espn_teams_beaten_best10": 0.04444444444444444
+      },
+      "M3 x career GP%": {
+        "gain_total13": -568.5,
+        "gain_best10": -312.5,
+        "seats_better_best10": 2,
+        "share_of_espn_teams_beaten_best10": 0.4
+      },
+      "M5 80/20 x career GP%": {
+        "gain_total13": -298.1,
+        "gain_best10": -509.5,
+        "seats_better_best10": 4,
+        "share_of_espn_teams_beaten_best10": 0.33333333333333337
+      },
+      "Last season total FPTS": {
+        "gain_total13": -360.7,
+        "gain_best10": -357.2,
+        "seats_better_best10": 4,
+        "share_of_espn_teams_beaten_best10": 0.3666666666666667
+      },
+      "BPV (replacement-level)": {
+        "gain_total13": -3255.6,
+        "gain_best10": -3368.9,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.1222222222222222
+      },
+      "BPV + age": {
+        "gain_total13": -1751.8,
+        "gain_best10": -2055.6,
+        "seats_better_best10": 3,
+        "share_of_espn_teams_beaten_best10": 0.28888888888888886
+      },
+      "BPV + age + crowding": {
+        "gain_total13": -1196.0,
+        "gain_best10": -1345.0,
+        "seats_better_best10": 4,
+        "share_of_espn_teams_beaten_best10": 0.31111111111111106
+      },
+      "BPV + ESPN hybrid (app)": {
+        "gain_total13": -8.7,
+        "gain_best10": -73.4,
+        "seats_better_best10": 7,
+        "share_of_espn_teams_beaten_best10": 0.4999999999999999
+      },
+      "ESPN projections": {
+        "gain_total13": 0.0,
+        "gain_best10": 0.0,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.4999999999999999
+      }
+    },
+    "2025-26": {
+      "M1 season FPTS/game": {
+        "gain_total13": -2013.2,
+        "gain_best10": -673.9,
+        "seats_better_best10": 4,
+        "share_of_espn_teams_beaten_best10": 0.33333333333333337
+      },
+      "M2 80/20": {
+        "gain_total13": -4378.1,
+        "gain_best10": -3038.8,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.14444444444444446
+      },
+      "M3 x career GP%": {
+        "gain_total13": -6316.6,
+        "gain_best10": -5065.1,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.02222222222222222
+      },
+      "M5 80/20 x career GP%": {
+        "gain_total13": -2543.0,
+        "gain_best10": -1719.0,
+        "seats_better_best10": 3,
+        "share_of_espn_teams_beaten_best10": 0.23333333333333334
+      },
+      "Last season total FPTS": {
+        "gain_total13": -5466.1,
+        "gain_best10": -4418.8,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.05555555555555556
+      },
+      "BPV (replacement-level)": {
+        "gain_total13": -4109.6,
+        "gain_best10": -3882.3,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.11111111111111113
+      },
+      "BPV + age": {
+        "gain_total13": -4858.1,
+        "gain_best10": -3559.6,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.08888888888888888
+      },
+      "BPV + age + crowding": {
+        "gain_total13": -2628.4,
+        "gain_best10": -2269.7,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.22222222222222218
+      },
+      "BPV + ESPN hybrid (app)": {
+        "gain_total13": -990.1,
+        "gain_best10": -1151.4,
+        "seats_better_best10": 3,
+        "share_of_espn_teams_beaten_best10": 0.2555555555555556
+      },
+      "ESPN projections": {
+        "gain_total13": 0.0,
+        "gain_best10": 0.0,
+        "seats_better_best10": 0,
+        "share_of_espn_teams_beaten_best10": 0.5
+      }
+    }
+  },
+  "pool": {
+    "2021-22": {
+      "players": 420,
+      "with_espn_projection": 289
+    },
+    "2023-24": {
+      "players": 400,
+      "with_espn_projection": 295
+    },
+    "2024-25": {
+      "players": 395,
+      "with_espn_projection": 336
+    },
+    "2025-26": {
+      "players": 409,
+      "with_espn_projection": 332
+    }
+  },
+  "summary_A": {
+    "M1 season FPTS/game": {
+      "best10_mean": 23203.328,
+      "league_win_rate": 0.057499999999999996,
+      "seasons_top_best10": 0
+    },
+    "M2 80/20": {
+      "best10_mean": 22733.95525,
+      "league_win_rate": 0.026750000000000003,
+      "seasons_top_best10": 0
+    },
+    "M3 x career GP%": {
+      "best10_mean": 24399.648250000002,
+      "league_win_rate": 0.06475,
+      "seasons_top_best10": 0
+    },
+    "M5 80/20 x career GP%": {
+      "best10_mean": 23781.284499999998,
+      "league_win_rate": 0.03275,
+      "seasons_top_best10": 0
+    },
+    "Last season total FPTS": {
+      "best10_mean": 23614.67575,
+      "league_win_rate": 0.03275,
+      "seasons_top_best10": 0
+    },
+    "BPV (replacement-level)": {
+      "best10_mean": 24118.19325,
+      "league_win_rate": 0.07325000000000001,
+      "seasons_top_best10": 0
+    },
+    "BPV + age": {
+      "best10_mean": 23859.9555,
+      "league_win_rate": 0.07975,
+      "seasons_top_best10": 0
+    },
+    "BPV + age + crowding": {
+      "best10_mean": 24401.663500000002,
+      "league_win_rate": 0.11599999999999999,
+      "seasons_top_best10": 0
+    },
+    "BPV + ESPN hybrid (app)": {
+      "best10_mean": 25941.3215,
+      "league_win_rate": 0.35924999999999996,
+      "seasons_top_best10": 2
+    },
+    "ESPN projections": {
+      "best10_mean": 25456.75,
+      "league_win_rate": 0.15725,
+      "seasons_top_best10": 2
+    }
+  },
+  "summary_B": {
+    "M1 season FPTS/game": {
+      "gain_best10_mean": -2202.375,
+      "gain_total13_mean": -3840.9,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.3194444444444444
+    },
+    "M2 80/20": {
+      "gain_best10_mean": -2363.45,
+      "gain_total13_mean": -3862.775,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.20833333333333334
+    },
+    "M3 x career GP%": {
+      "gain_best10_mean": -2194.575,
+      "gain_total13_mean": -3185.025,
+      "seasons_gain_positive": 0,
+      "espn_teams_beaten": 0.23611111111111113
+    },
+    "M5 80/20 x career GP%": {
+      "gain_best10_mean": -1385.05,
+      "gain_total13_mean": -2011.4750000000001,
+      "seasons_gain_positive": 0,
+      "espn_teams_beaten": 0.275
+    },
+    "Last season total FPTS": {
+      "gain_best10_mean": -1328.075,
+      "gain_total13_mean": -2411.05,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.36944444444444446
+    },
+    "BPV (replacement-level)": {
+      "gain_best10_mean": -2028.45,
+      "gain_total13_mean": -3113.725,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.30277777777777776
+    },
+    "BPV + age": {
+      "gain_best10_mean": -1720.275,
+      "gain_total13_mean": -3205.9750000000004,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.36666666666666664
+    },
+    "BPV + age + crowding": {
+      "gain_best10_mean": -1257.175,
+      "gain_total13_mean": -2478.9249999999997,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.3611111111111111
+    },
+    "BPV + ESPN hybrid (app)": {
+      "gain_best10_mean": -259.05,
+      "gain_total13_mean": -692.825,
+      "seasons_gain_positive": 1,
+      "espn_teams_beaten": 0.44999999999999996
+    },
+    "ESPN projections": {
+      "gain_best10_mean": 0.0,
+      "gain_total13_mean": 0.0,
+      "seasons_gain_positive": 0,
+      "espn_teams_beaten": 0.49999999999999994
+    }
+  }
+}

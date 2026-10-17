@@ -1,0 +1,64 @@
+{
+  "2018-19": {
+    "players": 265,
+    "per_game_error": {
+      "BPV": 4.321576824917067,
+      "ESPN": 4.507108650752867,
+      "Hybrid": 4.124556738091377,
+      "players": 248
+    },
+    "rank_corr": {
+      "BPV": 0.6481927555536069,
+      "ESPN": 0.6632358474533706,
+      "Hybrid": 0.680950300583967
+    },
+    "total_error": {
+      "BPV": 521.593516281704,
+      "ESPN": 538.0208670916438,
+      "Hybrid": 509.70338167646827
+    },
+    "drafts": {
+      "BPV per game, ESPN games": 27517.4965,
+      "ESPN": 26028.935,
+      "BPV": 27524.4395,
+      "Hybrid": 27800.8545,
+      "ESPN per game, BPV games": 27534.547
+    },
+    "E1": true,
+    "E2": true,
+    "E3": true,
+    "E4": true
+  },
+  "2020-21": {
+    "players": 300,
+    "per_game_error": {
+      "BPV": 4.384577565775212,
+      "ESPN": 4.316044754889931,
+      "Hybrid": 4.176981465211788,
+      "players": 281
+    },
+    "rank_corr": {
+      "BPV": 0.7009054897519263,
+      "ESPN": 0.7290303777527533,
+      "Hybrid": 0.729072084399185
+    },
+    "total_error": {
+      "BPV": 406.2214150107655,
+      "ESPN": 463.36833333333334,
+      "Hybrid": 386.07522559948245
+    },
+    "drafts": {
+      "BPV per game, ESPN games": 23891.8635,
+      "ESPN": 23828.9445,
+      "BPV": 24024.5085,
+      "Hybrid": 23207.862,
+      "ESPN per game, BPV games": 24641.2575
+    },
+    "E1": true,
+    "E2": true,
+    "E3": true,
+    "E4": false
+  },
+  "confirmed": true,
+  "contradicted": false
+}

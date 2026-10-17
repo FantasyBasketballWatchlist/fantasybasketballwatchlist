@@ -1,0 +1,29 @@
+{
+  "updated": "2026-09-29T17:09",
+  "snapshots": [
+    {
+      "snapshot": "bpv_2026-09-26.csv",
+      "source": "bpv",
+      "date": "2026-09-26",
+      "season": "2026-27",
+      "players": 642,
+      "status": "no games yet"
+    },
+    {
+      "snapshot": "bpv_2026-09-29_pre_2026-27.csv",
+      "source": "bpv",
+      "date": "2026-09-29",
+      "season": "2026-27",
+      "players": 642,
+      "status": "no games yet"
+    },
+    {
+      "snapshot": "espn_2026-09-28_pre_2026-27.csv",
+      "source": "espn",
+      "date": "2026-09-28",
+      "season": "2026-27",
+      "players": 329,
+      "status": "no games yet"
+    }
+  ]
+}

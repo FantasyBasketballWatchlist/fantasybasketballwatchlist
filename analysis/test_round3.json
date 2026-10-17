@@ -1,0 +1,200 @@
+{
+  "P1": {
+    "n": 1151,
+    "share_with_preseason": 0.895742832319722,
+    "coefs_by_fold_up_down": [
+      "[np.float64(0.499), np.float64(0.066)]",
+      "[np.float64(0.511), np.float64(0.056)]",
+      "[np.float64(0.527), np.float64(0.054)]",
+      "[np.float64(0.704), np.float64(0.068)]"
+    ],
+    "mae_current": 4.334061146359451,
+    "mae_with_preseason": 4.314067647043949,
+    "minus_current": {
+      "diff": -0.019993499315501935,
+      "ci95": [
+        -0.06371750110944123,
+        0.02293122790747465
+      ]
+    },
+    "verdict": "tie",
+    "players_with_preseason": {
+      "diff": -0.02232057974019663,
+      "ci95": [
+        -0.07310656281665603,
+        0.028457403174829084
+      ]
+    }
+  },
+  "P3": {
+    "alphas_by_fold": [
+      0.2,
+      0.25
+    ],
+    "mae_scaled": 4.349329643709717,
+    "scaled_minus_additive_crowding": {
+      "diff": 0.015268497350265357,
+      "ci95": [
+        -0.013777769929118347,
+        0.04288135534893452
+      ]
+    },
+    "verdict": "tie"
+  },
+  "P1_rookies": {
+    "n": 191,
+    "slopes": [
+      0.235,
+      0.308,
+      0.332,
+      0.366
+    ],
+    "mae_draft_slot": 5.640689731877479,
+    "mae_with_preseason": 5.431820632109426,
+    "minus_current": {
+      "diff": -0.2088690997680517,
+      "ci95": [
+        -0.4034590126249762,
+        -0.0304875817997209
+      ]
+    },
+    "verdict": "better"
+  },
+  "P2": {
+    "n": 1366,
+    "by_type": {
+      "illness": {
+        "median": 0.365,
+        "mean": 0.402,
+        "size": 183
+      },
+      "serious": {
+        "median": 0.0,
+        "mean": 0.235,
+        "size": 291
+      },
+      "soreness": {
+        "median": 0.608,
+        "mean": 0.539,
+        "size": 286
+      },
+      "sprain": {
+        "median": 0.614,
+        "mean": 0.534,
+        "size": 355
+      },
+      "strain": {
+        "median": 0.667,
+        "mean": 0.58,
+        "size": 251
+      }
+    },
+    "mae_current_rule": 0.2814538111913096,
+    "mae_by_type": 0.259164887431508,
+    "minus_current": {
+      "diff": -0.02228892375980156,
+      "ci95": [
+        -0.03639162142759571,
+        -0.008946727627225119
+      ]
+    },
+    "verdict": "better"
+  },
+  "P4": {
+    "n_train": 19330,
+    "n_test": 4998,
+    "ratio_by_status": {
+      "available": 0.991,
+      "doubtful": 0.881,
+      "not_listed": 0.997,
+      "out_g_league": 0.329,
+      "out_health_protocols": 0.568,
+      "out_injury": 0.397,
+      "out_other": 1.037,
+      "out_personal": 0.606,
+      "out_rest": 0.834,
+      "out_serious": 0.091,
+      "out_suspension": 0.768,
+      "probable": 1.009,
+      "questionable": 0.942
+    },
+    "status_counts_test": {
+      "not_listed": 4238,
+      "out_injury": 405,
+      "available": 123,
+      "questionable": 73,
+      "out_rest": 52,
+      "out_serious": 52,
+      "probable": 23,
+      "out_personal": 8,
+      "out_suspension": 8,
+      "doubtful": 6,
+      "out_other": 6,
+      "out_g_league": 4
+    },
+    "mae_current": 33.02165046395725,
+    "mae_with_report": 30.69572558460236,
+    "minus_current": {
+      "diff": -2.325924879354895,
+      "ci95": [
+        -2.80379218286762,
+        -1.776771019636063
+      ]
+    },
+    "verdict": "better",
+    "listed_players_only": {
+      "diff": -15.254628441935902,
+      "ci95": [
+        -17.639665437684098,
+        -12.76635687735605
+      ]
+    },
+    "verdict_listed": "better"
+  },
+  "P5": {
+    "by_season": {
+      "2022-23": {
+        "q_league": 30686.32525999999,
+        "q_zero": 28596.226059999986,
+        "M5 80/20 x career GP%": 30613.27675999999,
+        "Last season total FPTS": 29390.34953999999,
+        "q_half": 30926.164579999986
+      },
+      "2023-24": {
+        "q_league": 31933.044999999987,
+        "q_zero": 31790.338615384604,
+        "M5 80/20 x career GP%": 32809.30407692307,
+        "Last season total FPTS": 31139.07838461537,
+        "q_half": 30254.693076923064
+      },
+      "2024-25": {
+        "q_league": 31015.880333333324,
+        "q_zero": 29271.94622666666,
+        "M5 80/20 x career GP%": 29751.950333333323,
+        "Last season total FPTS": 30395.635226666658,
+        "q_half": 30535.995733333326
+      },
+      "2025-26": {
+        "q_league": 29619.087462686555,
+        "q_zero": 28362.83326865671,
+        "M5 80/20 x career GP%": 27584.921268656708,
+        "Last season total FPTS": 24981.28126865671,
+        "q_half": 29329.346820895513
+      }
+    },
+    "average": {
+      "q_league": 30813.584514004964,
+      "q_zero": 29505.336042676994,
+      "M5 80/20 x career GP%": 30189.863109728274,
+      "Last season total FPTS": 28976.586104984683,
+      "q_half": 30261.550052787974
+    },
+    "wins": {
+      "q_league": 2,
+      "q_zero": 0,
+      "M5 80/20 x career GP%": 1,
+      "Last season total FPTS": 0,
+      "q_half": 1
+    }
+  }
+}

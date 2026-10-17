@@ -1,0 +1,9 @@
+{
+  "injuries": {
+    "_example_out_for_season": {"out_for_season": true},
+    "_example_short_absence": {"out_games": 10}
+  },
+  "role_changes": {
+    "_example_new_starter": {"since": "2026-01-15"}
+  }
+}

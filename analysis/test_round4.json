@@ -1,0 +1,62 @@
+{
+  "S1": {
+    "n": 1151,
+    "coefs_by_fold": [
+      "[np.float64(-0.0016), np.float64(-0.0554), np.float64(0.0137)]",
+      "[np.float64(0.0056), np.float64(-0.0306), np.float64(0.0077)]",
+      "[np.float64(0.0131), np.float64(-0.0739), np.float64(0.0128)]",
+      "[np.float64(0.0325), np.float64(-0.0357), np.float64(-0.0048)]"
+    ],
+    "minus_current": {
+      "diff": 0.002629710223557771,
+      "ci95": [
+        -0.015356397176374789,
+        0.020781115520711733
+      ]
+    },
+    "per_season": {
+      "2022-23": -0.009842671601616422,
+      "2023-24": 0.004879736206464915,
+      "2024-25": 0.018204853118767853,
+      "2025-26": -0.001975405455066811
+    },
+    "verdict": "tie"
+  },
+  "S2": {
+    "ast_yoy_corr": 0.5759565275438864,
+    "ast_effect_sd": 0.014346363050903269,
+    "blk_yoy_corr": 0.2991721614694528,
+    "blk_effect_sd": 0.005919622373960873,
+    "assists_per_home_game_for_1sd_arena_both_teams": 1.2040097712647087,
+    "team_changers_n": 431,
+    "team_changers_corr_arena_change_vs_assist_change": 0.019079266289918555
+  },
+  "S3": {
+    "n": 1036,
+    "error_by_disagreement_tercile": {
+      "low": {
+        "mean": 4.517,
+        "size": 345
+      },
+      "mid": {
+        "mean": 3.859,
+        "size": 345
+      },
+      "high": {
+        "mean": 4.232,
+        "size": 346
+      }
+    },
+    "coverage_single_band_by_tercile": {
+      "low": 0.791,
+      "mid": 0.809,
+      "high": 0.798
+    },
+    "coverage_tercile_bands_leave_one_season_out": {
+      "low": 0.789,
+      "mid": 0.789,
+      "high": 0.797
+    },
+    "corr_disagreement_vs_error": -0.0026252950505947724
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "n": 1101,
+  "weights_fpg": {
+    "2021-22": 0.35,
+    "2023-24": 0.35,
+    "2024-25": 0.4,
+    "2025-26": 0.35
+  },
+  "weights_games": {
+    "2021-22": 0.1,
+    "2023-24": 0.0,
+    "2024-25": 0.05,
+    "2025-26": 0.05
+  },
+  "mae_total": {
+    "bpv_fpg|bpv_gp": 501.7063188046612,
+    "bpv_fpg|espn_gp": 538.0897253018719,
+    "bpv_fpg|blend_gp": 501.88434416513286,
+    "espn_fpg|bpv_gp": 520.6491997924417,
+    "espn_fpg|espn_gp": 575.7184377838329,
+    "espn_fpg|blend_gp": 522.2282001305892,
+    "blend_fpg|bpv_gp": 502.645633002424,
+    "blend_fpg|espn_gp": 544.353925374694,
+    "blend_fpg|blend_gp": 503.21703088542256
+  },
+  "spearman_mean": {
+    "bpv_fpg|bpv_gp": 0.6643129190556709,
+    "bpv_fpg|espn_gp": 0.6806159189701448,
+    "bpv_fpg|blend_gp": 0.6657658231166044,
+    "espn_fpg|bpv_gp": 0.6530807181231112,
+    "espn_fpg|espn_gp": 0.6705923409779397,
+    "espn_fpg|blend_gp": 0.6547034282831558,
+    "blend_fpg|bpv_gp": 0.6684497495068215,
+    "blend_fpg|espn_gp": 0.6861076175745435,
+    "blend_fpg|blend_gp": 0.6703305937084459
+  },
+  "best_by_mae": "bpv_fpg|bpv_gp",
+  "best_minus_espn_mae": {
+    "diff": -74.0121189791717,
+    "ci95": [
+      -94.12850889365849,
+      -54.3910304832219
+    ]
+  },
+  "bpv_minus_espn_mae": {
+    "diff": -74.0121189791717,
+    "ci95": [
+      -92.57356104367031,
+      -54.63069198235817
+    ]
+  },
+  "best_by_spearman": "blend_fpg|espn_gp",
+  "best_spearman_minus_espn": {
+    "diff": 0.015515276596603789,
+    "ci95": [
+      0.00652900140692042,
+      0.02441370794708783
+    ]
+  },
+  "draft_sim": {
+    "2021-22": {
+      "blend_fpg|blend_gp": 25896.061,
+      "bpv_fpg|bpv_gp": 24335.058,
+      "espn_fpg|espn_gp": 24662.561,
+      "blend_fpg|bpv_gp": 23792.446,
+      "blend_fpg|espn_gp": 27858.3615
+    },
+    "2023-24": {
+      "blend_fpg|blend_gp": 30313.411,
+      "bpv_fpg|bpv_gp": 27433.395,
+      "espn_fpg|espn_gp": 31081.1845,
+      "blend_fpg|bpv_gp": 30232.5795,
+      "blend_fpg|espn_gp": 29444.625
+    },
+    "2024-25": {
+      "blend_fpg|blend_gp": 27524.095,
+      "bpv_fpg|bpv_gp": 28164.5245,
+      "espn_fpg|espn_gp": 28057.004,
+      "blend_fpg|bpv_gp": 27612.7795,
+      "blend_fpg|espn_gp": 29291.6965
+    },
+    "2025-26": {
+      "blend_fpg|blend_gp": 26055.3435,
+      "bpv_fpg|bpv_gp": 26094.189,
+      "espn_fpg|espn_gp": 26064.1245,
+      "blend_fpg|bpv_gp": 24938.4905,
+      "blend_fpg|espn_gp": 27498.588
+    }
+  },
+  "draft_sim_mean": {
+    "espn_fpg|espn_gp": 27466.218500000003,
+    "bpv_fpg|bpv_gp": 26506.791625,
+    "blend_fpg|bpv_gp": 26644.073875000002,
+    "blend_fpg|espn_gp": 28523.31775,
+    "blend_fpg|blend_gp": 27447.227625000003
+  },
+  "draft_sim_wins": {
+    "espn_fpg|espn_gp": 1,
+    "bpv_fpg|bpv_gp": 0,
+    "blend_fpg|bpv_gp": 0,
+    "blend_fpg|espn_gp": 3,
+    "blend_fpg|blend_gp": 0
+  }
+}

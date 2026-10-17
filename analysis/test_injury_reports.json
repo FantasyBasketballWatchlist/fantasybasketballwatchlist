@@ -1,0 +1,172 @@
+{
+  "unmatched_name_share": {
+    "2021-22": 0.1603097069216379,
+    "2022-23": 0.11753078052637524,
+    "2023-24": 0.12064798148624326,
+    "2024-25": 0.10783483822422875,
+    "2025-26": 0.11537182228557852
+  },
+  "I1_I2": {
+    "regulars_out_games_by_reason": {
+      "injury": 0.813,
+      "rest": 0.0598,
+      "g_league": 0.0447,
+      "health_protocols": 0.0356,
+      "personal": 0.0216,
+      "other": 0.017,
+      "suspension": 0.0084
+    },
+    "by_season": {
+      "2021-22": {
+        "g_league": 0.033,
+        "health_protocols": 0.161,
+        "injury": 0.715,
+        "other": 0.025,
+        "personal": 0.039,
+        "rest": 0.026,
+        "suspension": 0.001
+      },
+      "2022-23": {
+        "g_league": 0.029,
+        "health_protocols": 0.009,
+        "injury": 0.872,
+        "other": 0.009,
+        "personal": 0.023,
+        "rest": 0.048,
+        "suspension": 0.01
+      },
+      "2023-24": {
+        "g_league": 0.033,
+        "health_protocols": 0.0,
+        "injury": 0.876,
+        "other": 0.015,
+        "personal": 0.02,
+        "rest": 0.039,
+        "suspension": 0.017
+      },
+      "2024-25": {
+        "g_league": 0.059,
+        "health_protocols": 0.0,
+        "injury": 0.814,
+        "other": 0.027,
+        "personal": 0.015,
+        "rest": 0.081,
+        "suspension": 0.005
+      },
+      "2025-26": {
+        "g_league": 0.061,
+        "health_protocols": 0.0,
+        "injury": 0.816,
+        "other": 0.007,
+        "personal": 0.012,
+        "rest": 0.093,
+        "suspension": 0.011
+      }
+    },
+    "status_played_share": {
+      "Available": {
+        "mean": 0.789,
+        "size": 4349
+      },
+      "Doubtful": {
+        "mean": 0.017,
+        "size": 1087
+      },
+      "Out": {
+        "mean": 0.002,
+        "size": 43793
+      },
+      "Probable": {
+        "mean": 0.914,
+        "size": 2809
+      },
+      "Questionable": {
+        "mean": 0.493,
+        "size": 7955
+      }
+    },
+    "report_rows": 59993
+  },
+  "I3": {
+    "flags": {
+      "serious_n": 291,
+      "other_out_n": 1075,
+      "serious_mean_share_played_rest": 0.23471357759739955,
+      "serious_share_missing_80pct_plus": 0.6082474226804123,
+      "other_mean_share_played_rest": 0.5236882949125569,
+      "other_share_missing_80pct_plus": 0.22604651162790698
+    },
+    "lost_serious": {
+      "coef": 0.029276608437271933,
+      "all": {
+        "diff": -0.010138587874880981,
+        "ci95": [
+          -0.018060381258266103,
+          -0.0032587779655306147
+        ]
+      },
+      "affected": {
+        "diff": -0.2498128832298873,
+        "ci95": [
+          -0.3983351889800851,
+          -0.10562346673811472
+        ]
+      },
+      "n_affected_test": 211,
+      "verdict_all": "better",
+      "verdict_affected": "better"
+    },
+    "lost_any": {
+      "coef": 0.018959670356085364,
+      "all": {
+        "diff": -0.005072262497255939,
+        "ci95": [
+          -0.026301617293544965,
+          0.014604341125153922
+        ]
+      },
+      "affected": {
+        "diff": -0.019109197625531607,
+        "ci95": [
+          -0.10585887174003122,
+          0.063476396357121
+        ]
+      },
+      "n_affected_test": 1380,
+      "verdict_all": "tie",
+      "verdict_affected": "tie"
+    },
+    "own_availability_rest_of_season": {
+      "train_median_share_played": {
+        "False": 0.6153846153846154,
+        "True": 0.07317073170731707
+      },
+      "test_mae_flag_estimate": 0.25107756101782186,
+      "test_mae_assume_league_avg_0.74": 0.32028322114069296,
+      "n_test": 262
+    }
+  },
+  "I4": {
+    "n": 953,
+    "mae_current": 0.1657341925778181,
+    "mae_with_report_features": 0.1653206518890396,
+    "new_minus_current": {
+      "diff": -0.0004135406887785111,
+      "ci95": [
+        -0.0013716431062140858,
+        0.0005300441003705334
+      ]
+    },
+    "verdict": "tie",
+    "coefs_by_fold": [
+      "(np.float64(0.0), np.float64(0.6))",
+      "(np.float64(0.05), np.float64(0.3))",
+      "(np.float64(0.05), np.float64(0.6))"
+    ]
+  },
+  "I5": {
+    "rest_games_yoy_corr_25mpg": 0.2049236301331756,
+    "rest_pairs": 543,
+    "rest_games_mean_per_season_25mpg": 0.8360957642725598
+  }
+}

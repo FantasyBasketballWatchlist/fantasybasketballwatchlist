@@ -1,0 +1,150 @@
+{
+  "R1": {
+    "n_train": 20784,
+    "n_test": 5263,
+    "paddings_minutes": {
+      "PTS": 0,
+      "REB": 0,
+      "AST": 0,
+      "STL": 0,
+      "BLK": 0,
+      "TOV": 0,
+      "SHOOT": 0
+    },
+    "minutes_k_games": 0,
+    "mae_current_blend": 4.308028438508871,
+    "mae_padded": NaN,
+    "padded_minus_current": {
+      "diff": NaN,
+      "ci95": [
+        NaN,
+        NaN
+      ]
+    },
+    "verdict": "tie",
+    "first_20_games_only": {
+      "diff": NaN,
+      "ci95": [
+        NaN,
+        NaN
+      ]
+    },
+    "verdict_first_20": "tie"
+  },
+  "R2": {
+    "best_k_regular_star": [
+      8,
+      12
+    ],
+    "stars_test": 423,
+    "all": {
+      "diff": 0.0022130248181960327,
+      "ci95": [
+        -0.008596713349328218,
+        0.012620232980636265
+      ]
+    },
+    "stars_only": {
+      "diff": 0.02753463266705844,
+      "ci95": [
+        -0.10345308206439659,
+        0.14716990802958416
+      ]
+    },
+    "verdict": "tie",
+    "verdict_stars": "tie"
+  },
+  "R3": {
+    "slope": 0.9265683374594,
+    "intercept": 2.63484509742779,
+    "mean_error_train": 0.8619396774896309,
+    "mean_error_test": 0.45027714348864173,
+    "recalibrated_minus_current": {
+      "diff": -0.10292494413105752,
+      "ci95": [
+        -0.1725021333249185,
+        -0.01386923229533103
+      ]
+    },
+    "verdict": "better"
+  },
+  "R4": {
+    "bad": {
+      "n": 201,
+      "games_share_drop": 0.28480349152456486,
+      "fp_ratio_median": 1.1142015027605963,
+      "mpg_change": 0.4330820825760427
+    },
+    "middle": {
+      "n": 804,
+      "games_share_drop": 0.09019801550721088,
+      "fp_ratio_median": 1.000111000111,
+      "mpg_change": -0.7943311125763103
+    },
+    "top": {
+      "n": 115,
+      "games_share_drop": 0.08171449128947061,
+      "fp_ratio_median": 1.008406432748538,
+      "mpg_change": -1.1106429694040953
+    },
+    "bad_minus_middle_games_share_drop": {
+      "diff": 0.19460547601735398,
+      "ci95": [
+        0.14226030898937175,
+        0.2453761629531005
+      ]
+    },
+    "bad_veterans_28plus": {
+      "n": 42,
+      "games_share_drop": 0.43762712691453776,
+      "fp_ratio_median": 0.957815458748001
+    },
+    "top_minus_middle_games_share_drop": {
+      "diff": -0.008483524217740263,
+      "ci95": [
+        -0.05614295105496437,
+        0.03556517668892185
+      ]
+    },
+    "top_veterans_28plus": {
+      "n": 48,
+      "games_share_drop": 0.08788021038514567,
+      "fp_ratio_median": 1.019635039613898
+    }
+  },
+  "R5": {
+    "n": 294,
+    "slope_fpts_per_year_of_age": [
+      0.24,
+      0.25,
+      0.26,
+      0.34,
+      0.41,
+      0.41
+    ],
+    "mae_draft_slot": 5.483208814451391,
+    "mae_with_age": 5.466960484788995,
+    "new_minus_current": {
+      "diff": -0.01624832966239659,
+      "ci95": [
+        -0.0657890419132702,
+        0.03791236459518023
+      ]
+    },
+    "verdict": "tie"
+  },
+  "R6": {
+    "n_affected_train": 3286,
+    "n_affected_test": 594,
+    "flat_coef": 0.03433361153472931,
+    "usage_weighted_coef": 0.02982738356550468,
+    "usage_minus_flat": {
+      "diff": 0.08257084755135664,
+      "ci95": [
+        -0.004612744122555878,
+        0.16674199962995054
+      ]
+    },
+    "verdict": "tie"
+  }
+}

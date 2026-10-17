@@ -1,0 +1,159 @@
+{
+  "n": 24328,
+  "share_sat": 0.1658993752055245,
+  "share_listed_single": 0.13457744163104243,
+  "share_listed_team_aware": 0.2593719171325222,
+  "mae": {
+    "current": 31.281179552667215,
+    "A_team_aware": 29.462812040291762,
+    "B_sat_recently": 29.549453211824165,
+    "A+B": 29.05721439479885
+  },
+  "A_team_aware": {
+    "minus_current": {
+      "diff": -1.818367512375457,
+      "ci95": [
+        -2.0614972850509936,
+        -1.6158465573833154
+      ]
+    },
+    "per_season": {
+      "2021-22": -2.120678537025315,
+      "2022-23": -1.552792542361143,
+      "2023-24": -1.9401975982537683,
+      "2024-25": -1.8827624934625418,
+      "2025-26": -1.6001758246799465
+    },
+    "seasons_better": 5,
+    "verdict": "better"
+  },
+  "B_sat_recently": {
+    "minus_current": {
+      "diff": -1.731726340843051,
+      "ci95": [
+        -1.9176845246308025,
+        -1.521564162910819
+      ]
+    },
+    "per_season": {
+      "2021-22": -1.6365899459998956,
+      "2022-23": -1.7823780756158116,
+      "2023-24": -1.7582738053082403,
+      "2024-25": -1.7405978014322987,
+      "2025-26": -1.742214779864956
+    },
+    "seasons_better": 5,
+    "verdict": "better"
+  },
+  "A+B": {
+    "minus_current": {
+      "diff": -2.2239651578683604,
+      "ci95": [
+        -2.4641593210052215,
+        -2.0110067807487697
+      ]
+    },
+    "per_season": {
+      "2021-22": -2.504214206142463,
+      "2022-23": -2.063899335392652,
+      "2023-24": -2.297720386085176,
+      "2024-25": -2.2319902785784915,
+      "2025-26": -2.026516362565716
+    },
+    "seasons_better": 5,
+    "verdict": "better"
+  },
+  "A+B_minus_A": {
+    "diff": -0.4055976454929035,
+    "ci95": [
+      -0.49264671448971464,
+      -0.32673723607167254
+    ]
+  },
+  "factors_all_seasons": {
+    "current": {
+      "available": 0.981,
+      "doubtful": 0.88,
+      "not_listed": 0.993,
+      "out_g_league": 0.161,
+      "out_health_protocols": 0.568,
+      "out_injury": 0.377,
+      "out_other": 1.083,
+      "out_personal": 0.631,
+      "out_rest": 0.774,
+      "out_serious": 0.096,
+      "out_suspension": 0.831,
+      "probable": 1.005,
+      "questionable": 0.939
+    },
+    "A_team_aware": {
+      "available": 0.996,
+      "doubtful": 0.79,
+      "not_listed": 1.046,
+      "out_g_league": 0.169,
+      "out_health_protocols": 0.596,
+      "out_injury": 0.385,
+      "out_other": 1.091,
+      "out_personal": 0.666,
+      "out_rest": 0.79,
+      "out_serious": 0.097,
+      "out_suspension": 0.81,
+      "probable": 1.065,
+      "questionable": 0.929
+    },
+    "B_sat_recently": {
+      "available|sat0": 0.981,
+      "available|sat1": 0.993,
+      "doubtful|sat0": 0.874,
+      "doubtful|sat1": 0.887,
+      "not_listed|sat0": 1.049,
+      "not_listed|sat1": 0.433,
+      "out_g_league|sat1": 0.161,
+      "out_health_protocols|sat0": 0.337,
+      "out_health_protocols|sat1": 0.589,
+      "out_injury|sat0": 0.616,
+      "out_injury|sat1": 0.292,
+      "out_other|sat0": 1.669,
+      "out_other|sat1": 0.934,
+      "out_personal|sat0": 0.594,
+      "out_personal|sat1": 0.644,
+      "out_rest|sat0": 0.964,
+      "out_rest|sat1": 0.481,
+      "out_serious|sat0": 0.27,
+      "out_serious|sat1": 0.081,
+      "out_suspension|sat0": 0.973,
+      "out_suspension|sat1": 0.723,
+      "probable|sat0": 1.016,
+      "probable|sat1": 0.246,
+      "questionable|sat0": 0.98,
+      "questionable|sat1": 0.751
+    },
+    "A+B": {
+      "available|sat0": 0.995,
+      "available|sat1": 1.194,
+      "doubtful|sat0": 0.992,
+      "doubtful|sat1": 0.708,
+      "not_listed|sat0": 1.053,
+      "not_listed|sat1": 0.491,
+      "out_g_league|sat1": 0.169,
+      "out_health_protocols|sat0": 0.457,
+      "out_health_protocols|sat1": 0.609,
+      "out_injury|sat0": 0.657,
+      "out_injury|sat1": 0.322,
+      "out_other|sat0": 1.35,
+      "out_other|sat1": 1.028,
+      "out_personal|sat0": 0.615,
+      "out_personal|sat1": 0.675,
+      "out_rest|sat0": 1.057,
+      "out_rest|sat1": 0.469,
+      "out_serious|sat0": 0.347,
+      "out_serious|sat1": 0.079,
+      "out_suspension|sat0": 0.827,
+      "out_suspension|sat1": 0.803,
+      "probable|sat0": 1.07,
+      "probable|sat1": 0.759,
+      "questionable|sat0": 0.977,
+      "questionable|sat1": 0.8
+    }
+  }
+}

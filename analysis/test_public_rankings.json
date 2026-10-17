@@ -1,0 +1,514 @@
+{
+  "seasons": {
+    "2021-22": {
+      "lists": {
+        "espn_points": {
+          "listed": 200,
+          "matched": 198,
+          "unmatched_examples": [
+            "Enes Kanter",
+            "Kenyon Martin Jr."
+          ]
+        },
+        "fp_ecr": {
+          "listed": 341,
+          "matched": 336,
+          "unmatched_examples": [
+            "Nicolas Claxton",
+            "Enes Kanter",
+            "Kenyon Martin Jr.",
+            "Cameron Thomas",
+            "Nah'Shon Hyland"
+          ]
+        }
+      },
+      "top130": {
+        "BPV + ESPN blend (app)": 254861.0,
+        "BPV (no ESPN)": 252726.0,
+        "ESPN projections": 258794.0,
+        "espn_points": 249281.0,
+        "fp_ecr": 264605.0
+      },
+      "spearman_top150": {
+        "BPV + ESPN blend (app)": 0.5777065829990119,
+        "BPV (no ESPN)": 0.502049499448504,
+        "ESPN projections": 0.5610516462820708,
+        "espn_points": 0.5369329781765627,
+        "fp_ecr": 0.5483815624542249
+      },
+      "vs_espn_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": -255.6,
+          "seats_better": 5
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": -2294.1,
+          "seats_better": 2
+        },
+        "ESPN projections": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "espn_points": {
+          "gain_best10": -1581.7,
+          "seats_better": 3
+        },
+        "fp_ecr": {
+          "gain_best10": 173.5,
+          "seats_better": 6
+        }
+      }
+    },
+    "2023-24": {
+      "lists": {
+        "espn_points": {
+          "listed": 200,
+          "matched": 199,
+          "unmatched_examples": [
+            "Kenyon Martin Jr."
+          ]
+        },
+        "fp_adp_avg": {
+          "listed": 253,
+          "matched": 245,
+          "unmatched_examples": [
+            "Aleksandar Vezenkov",
+            "Kenyon Martin Jr.",
+            "Paul Zipser",
+            "Wang Zhelin",
+            "Marcus Zegarowski",
+            "Rade Zagorac",
+            "Joe Young",
+            "Patric Young"
+          ]
+        },
+        "fp_adp_espn": {
+          "listed": 193,
+          "matched": 188,
+          "unmatched_examples": [
+            "Paul Zipser",
+            "Wang Zhelin",
+            "Marcus Zegarowski",
+            "Joe Young",
+            "Patric Young"
+          ]
+        },
+        "fp_adp_yahoo": {
+          "listed": 209,
+          "matched": 207,
+          "unmatched_examples": [
+            "Aleksandar Vezenkov",
+            "Kenyon Martin Jr."
+          ]
+        },
+        "fp_ecr": {
+          "listed": 551,
+          "matched": 541,
+          "unmatched_examples": [
+            "Kenyon Martin Jr.",
+            "Aleksandar Vezenkov",
+            "Gregory Jackson II",
+            "James Nnaji",
+            "Jeenathan Williams",
+            "Justin Lewis",
+            "Justinian Jessup",
+            "Mojave King"
+          ]
+        }
+      },
+      "top130": {
+        "BPV + ESPN blend (app)": 296420.0,
+        "BPV (no ESPN)": 293478.0,
+        "ESPN projections": 296055.0,
+        "espn_points": 304358.0,
+        "fp_adp_avg": 301067.0,
+        "fp_adp_espn": 301007.0,
+        "fp_adp_yahoo": 298263.0,
+        "fp_ecr": 303853.0
+      },
+      "spearman_top150": {
+        "BPV + ESPN blend (app)": 0.6477591428591767,
+        "BPV (no ESPN)": 0.6417594413263021,
+        "ESPN projections": 0.6758030808510433,
+        "espn_points": 0.6735932028921305,
+        "fp_adp_avg": 0.6923063247255434,
+        "fp_adp_espn": 0.6897841591043742,
+        "fp_adp_yahoo": 0.6823847125516831,
+        "fp_ecr": 0.685687973410621
+      },
+      "vs_espn_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": 444.2,
+          "seats_better": 7
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": 880.1,
+          "seats_better": 7
+        },
+        "ESPN projections": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "espn_points": {
+          "gain_best10": 2709.0,
+          "seats_better": 10
+        },
+        "fp_adp_avg": {
+          "gain_best10": 4981.2,
+          "seats_better": 10
+        },
+        "fp_adp_espn": {
+          "gain_best10": 3378.3,
+          "seats_better": 10
+        },
+        "fp_adp_yahoo": {
+          "gain_best10": 3828.9,
+          "seats_better": 10
+        },
+        "fp_ecr": {
+          "gain_best10": 2166.1,
+          "seats_better": 10
+        }
+      },
+      "vs_adp_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": 257.3,
+          "seats_better": 6
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": -1116.9,
+          "seats_better": 3
+        },
+        "ESPN projections": {
+          "gain_best10": -529.9,
+          "seats_better": 5
+        },
+        "espn_points": {
+          "gain_best10": 1205.2,
+          "seats_better": 8
+        },
+        "fp_adp_avg": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "fp_adp_espn": {
+          "gain_best10": 212.6,
+          "seats_better": 5
+        },
+        "fp_adp_yahoo": {
+          "gain_best10": -2151.7,
+          "seats_better": 2
+        },
+        "fp_ecr": {
+          "gain_best10": -1504.5,
+          "seats_better": 2
+        }
+      }
+    },
+    "2024-25": {
+      "lists": {
+        "espn_points": {
+          "listed": 150,
+          "matched": 150,
+          "unmatched_examples": []
+        },
+        "fp_ecr": {
+          "listed": 329,
+          "matched": 325,
+          "unmatched_examples": [
+            "Carlton Carrington",
+            "Robert Dillingham",
+            "Ron Holland II",
+            "Matas Buzelis-DUP"
+          ]
+        }
+      },
+      "top130": {
+        "BPV + ESPN blend (app)": 281849.0,
+        "BPV (no ESPN)": 282342.0,
+        "ESPN projections": 280891.0,
+        "espn_points": 282086.0,
+        "fp_ecr": 283965.0
+      },
+      "spearman_top150": {
+        "BPV + ESPN blend (app)": 0.5809401137298298,
+        "BPV (no ESPN)": 0.5734873314259178,
+        "ESPN projections": 0.5654887466011804,
+        "espn_points": 0.5549300457178473,
+        "fp_ecr": 0.5545869190516606
+      },
+      "vs_espn_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": -73.4,
+          "seats_better": 7
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": -1345.0,
+          "seats_better": 4
+        },
+        "ESPN projections": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "espn_points": {
+          "gain_best10": -2210.0,
+          "seats_better": 2
+        },
+        "fp_ecr": {
+          "gain_best10": -1478.2,
+          "seats_better": 3
+        }
+      }
+    },
+    "2025-26": {
+      "lists": {
+        "espn_points": {
+          "listed": 150,
+          "matched": 150,
+          "unmatched_examples": []
+        },
+        "fantrax_points": {
+          "listed": 250,
+          "matched": 250,
+          "unmatched_examples": []
+        },
+        "fp_adp_avg": {
+          "listed": 273,
+          "matched": 271,
+          "unmatched_examples": [
+            "Marcus Zegarowski",
+            "Paul Zipser"
+          ]
+        },
+        "fp_adp_espn": {
+          "listed": 199,
+          "matched": 197,
+          "unmatched_examples": [
+            "Marcus Zegarowski",
+            "Paul Zipser"
+          ]
+        },
+        "fp_adp_yahoo": {
+          "listed": 255,
+          "matched": 255,
+          "unmatched_examples": []
+        },
+        "fp_ecr": {
+          "listed": 373,
+          "matched": 372,
+          "unmatched_examples": [
+            "Herb Jones"
+          ]
+        },
+        "fp_points_espn": {
+          "listed": 396,
+          "matched": 394,
+          "unmatched_examples": [
+            "Matas Buzelis-DUP",
+            "Herb Jones"
+          ]
+        }
+      },
+      "top130": {
+        "BPV + ESPN blend (app)": 258361.0,
+        "BPV (no ESPN)": 258887.0,
+        "ESPN projections": 258746.0,
+        "espn_points": 262558.0,
+        "fantrax_points": 261223.0,
+        "fp_adp_avg": 257635.0,
+        "fp_adp_espn": 259306.0,
+        "fp_adp_yahoo": 257201.0,
+        "fp_ecr": 262261.0,
+        "fp_points_espn": 263478.0
+      },
+      "spearman_top150": {
+        "BPV + ESPN blend (app)": 0.48422817389963035,
+        "BPV (no ESPN)": 0.44750868484658457,
+        "ESPN projections": 0.49224809302485606,
+        "espn_points": 0.48986931852041093,
+        "fantrax_points": 0.48524510888957245,
+        "fp_adp_avg": 0.5322806031931666,
+        "fp_adp_espn": 0.49784479118628605,
+        "fp_adp_yahoo": 0.5683107130294115,
+        "fp_ecr": 0.4938463877031044,
+        "fp_points_espn": 0.4798581980162775
+      },
+      "vs_espn_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": -1151.4,
+          "seats_better": 3
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": -2269.7,
+          "seats_better": 0
+        },
+        "ESPN projections": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "espn_points": {
+          "gain_best10": 868.8,
+          "seats_better": 7
+        },
+        "fantrax_points": {
+          "gain_best10": 4190.3,
+          "seats_better": 10
+        },
+        "fp_adp_avg": {
+          "gain_best10": 705.6,
+          "seats_better": 8
+        },
+        "fp_adp_espn": {
+          "gain_best10": 226.1,
+          "seats_better": 6
+        },
+        "fp_adp_yahoo": {
+          "gain_best10": 2188.0,
+          "seats_better": 9
+        },
+        "fp_ecr": {
+          "gain_best10": 5076.0,
+          "seats_better": 10
+        },
+        "fp_points_espn": {
+          "gain_best10": 2666.7,
+          "seats_better": 9
+        }
+      },
+      "vs_adp_field": {
+        "BPV + ESPN blend (app)": {
+          "gain_best10": -2106.1,
+          "seats_better": 1
+        },
+        "BPV (no ESPN)": {
+          "gain_best10": -5105.0,
+          "seats_better": 0
+        },
+        "ESPN projections": {
+          "gain_best10": 739.1,
+          "seats_better": 6
+        },
+        "espn_points": {
+          "gain_best10": 1070.0,
+          "seats_better": 7
+        },
+        "fantrax_points": {
+          "gain_best10": 2716.1,
+          "seats_better": 10
+        },
+        "fp_adp_avg": {
+          "gain_best10": 0.0,
+          "seats_better": 0
+        },
+        "fp_adp_espn": {
+          "gain_best10": -2414.7,
+          "seats_better": 2
+        },
+        "fp_adp_yahoo": {
+          "gain_best10": 2859.6,
+          "seats_better": 8
+        },
+        "fp_ecr": {
+          "gain_best10": 2712.2,
+          "seats_better": 10
+        },
+        "fp_points_espn": {
+          "gain_best10": -605.1,
+          "seats_better": 6
+        }
+      }
+    }
+  },
+  "summary": {
+    "BPV (no ESPN)": {
+      "seasons": 4,
+      "top130": 271858.25,
+      "spearman_top150": 0.5412012392618271,
+      "top130_minus_blend": -1014.5,
+      "vs_espn_gain_best10": -1257.175,
+      "vs_adp_gain_best10": -3110.95,
+      "adp_seasons": 2
+    },
+    "BPV + ESPN blend (app)": {
+      "seasons": 4,
+      "top130": 272872.75,
+      "spearman_top150": 0.5726585033719122,
+      "top130_minus_blend": 0.0,
+      "vs_espn_gain_best10": -259.05,
+      "vs_adp_gain_best10": -924.4,
+      "adp_seasons": 2
+    },
+    "ESPN projections": {
+      "seasons": 4,
+      "top130": 273621.5,
+      "spearman_top150": 0.5736478916897877,
+      "top130_minus_blend": 748.75,
+      "vs_espn_gain_best10": 0.0,
+      "vs_adp_gain_best10": 104.60000000000002,
+      "adp_seasons": 2
+    },
+    "espn_points": {
+      "seasons": 4,
+      "top130": 274570.75,
+      "spearman_top150": 0.5638313863267379,
+      "top130_minus_blend": 1698.0,
+      "vs_espn_gain_best10": -53.47500000000002,
+      "vs_adp_gain_best10": 1137.6,
+      "adp_seasons": 2
+    },
+    "fantrax_points": {
+      "seasons": 1,
+      "top130": 261223.0,
+      "spearman_top150": 0.48524510888957245,
+      "top130_minus_blend": 2862.0,
+      "vs_espn_gain_best10": 4190.3,
+      "vs_adp_gain_best10": 2716.1,
+      "adp_seasons": 1
+    },
+    "fp_adp_avg": {
+      "seasons": 2,
+      "top130": 279351.0,
+      "spearman_top150": 0.612293463959355,
+      "top130_minus_blend": 1960.5,
+      "vs_espn_gain_best10": 2843.4,
+      "vs_adp_gain_best10": 0.0,
+      "adp_seasons": 2
+    },
+    "fp_adp_espn": {
+      "seasons": 2,
+      "top130": 280156.5,
+      "spearman_top150": 0.5938144751453301,
+      "top130_minus_blend": 2766.0,
+      "vs_espn_gain_best10": 1802.2,
+      "vs_adp_gain_best10": -1101.05,
+      "adp_seasons": 2
+    },
+    "fp_adp_yahoo": {
+      "seasons": 2,
+      "top130": 277732.0,
+      "spearman_top150": 0.6253477127905473,
+      "top130_minus_blend": 341.5,
+      "vs_espn_gain_best10": 3008.45,
+      "vs_adp_gain_best10": 353.95000000000005,
+      "adp_seasons": 2
+    },
+    "fp_ecr": {
+      "seasons": 4,
+      "top130": 278671.0,
+      "spearman_top150": 0.5706257106549028,
+      "top130_minus_blend": 5798.25,
+      "vs_espn_gain_best10": 1484.35,
+      "vs_adp_gain_best10": 603.8499999999999,
+      "adp_seasons": 2
+    },
+    "fp_points_espn": {
+      "seasons": 1,
+      "top130": 263478.0,
+      "spearman_top150": 0.4798581980162775,
+      "top130_minus_blend": 5117.0,
+      "vs_espn_gain_best10": 2666.7,
+      "vs_adp_gain_best10": -605.1,
+      "adp_seasons": 1
+    }
+  }
+}
