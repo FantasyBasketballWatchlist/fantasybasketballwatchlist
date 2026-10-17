@@ -36,16 +36,6 @@ def _fingerprint_static(endpoint, values):
             values["v"] = _static_hashes[name]
 
 
-def _warm_up():
-    """Build the ratings as soon as the server starts, so the first visitor doesn't wait for it."""
-    try:
-        ratings.get()
-    except Exception:
-        app.logger.exception("warm-up build failed")
-
-
-threading.Thread(target=_warm_up, daemon=True).start()
-
 _responses, _responses_lock = {}, threading.Lock()
 
 
@@ -53,7 +43,7 @@ def cached_json(view):
     """Reuse a route's JSON until the ratings are rebuilt (same URL, same answer)."""
     @functools.wraps(view)
     def wrapper(*args, **kwargs):
-        ratings.get()                                   # may start a background rebuild
+        ratings.get()                                   # rebuilds first if the ratings are stale
         key = (request.path, request.query_string, ratings.version())
         with _responses_lock:
             hit = _responses.get(key)
@@ -197,9 +187,12 @@ ACCURACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
 
 @app.route("/api/accuracy")
 def get_accuracy():
-    """Saved snapshots scored against actual results (rescored in the background every few hours),
+    """Saved snapshots scored against actual results (rescored automatically every few hours),
     plus the in-season checks refresh.py runs (data/tracking/summary.json)."""
-    _rescore_accuracy_in_background()
+    try:
+        accuracy_tracker.refresh()
+    except Exception:
+        app.logger.exception("accuracy scoring failed")
     out = {"updated": None, "snapshots": []}
     if os.path.exists(ACCURACY_PATH):
         with open(ACCURACY_PATH, encoding="utf-8") as f:
@@ -208,24 +201,6 @@ def get_accuracy():
         with open(TRACKING_SUMMARY, encoding="utf-8") as f:
             out["live_checks"] = json.load(f)
     return jsonify(out)
-
-
-_rescoring = threading.Event()
-
-
-def _rescore_accuracy_in_background():
-    if _rescoring.is_set():
-        return
-    _rescoring.set()
-
-    def work():
-        try:
-            accuracy_tracker.refresh()
-        except Exception:
-            app.logger.exception("accuracy scoring failed")
-        finally:
-            _rescoring.clear()
-    threading.Thread(target=work, daemon=True).start()
 
 
 @app.route("/api/players")

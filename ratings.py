@@ -809,45 +809,23 @@ def _roster_crowding(season_games, target_season, out_share=None):
     return team_of.to_dict(), crowding.to_dict()
 
 
-_cache = {"at": 0, "value": None, "rebuilding": False}
-_cache_lock = threading.Lock()      # guards _cache
-_build_lock = threading.Lock()      # one build at a time
-
-
-def _rebuild():
-    with _build_lock:
-        value = build()
-    with _cache_lock:
-        _cache.update(value=value, at=time.time(), rebuilding=False)
-    return value
-
-
-def _rebuild_in_background():
-    try:
-        _rebuild()
-    except Exception:
-        with _cache_lock:           # keep serving the old ratings; try again on a later request
-            _cache.update(rebuilding=False, at=time.time() - CACHE_SECONDS + 60)
+_cache = {"at": 0, "day": None, "value": None}
+_cache_lock = threading.Lock()
 
 
 def get():
-    """Cached (players, meta). Only the very first call waits for a build; after that, stale ratings are
-    served while a fresh build runs in the background, so no visitor waits for a rebuild."""
+    """Cached (players, meta).
+
+    Offline (the live site) the data only changes on a deploy, so the ratings are rebuilt only when the date changes
+    (for the date-based values such as this week's games): at most once a day. Online they're rebuilt after
+    CACHE_SECONDS, as the data behind them refreshes. No background threads (a threaded server hung on Render).
+    """
     with _cache_lock:
-        value, stale = _cache["value"], time.time() - _cache["at"] > CACHE_SECONDS
-        if value is not None and stale and not _cache["rebuilding"]:
-            _cache["rebuilding"] = True
-            threading.Thread(target=_rebuild_in_background, daemon=True).start()
-    if value is not None:
-        return value
-    with _build_lock:               # first call: build once, other first callers wait for the same build
-        with _cache_lock:
-            if _cache["value"] is not None:
-                return _cache["value"]
-        value = build()
-    with _cache_lock:
-        _cache.update(value=value, at=time.time())
-    return value
+        today = datetime.date.today()
+        stale = (_cache["day"] != today) if nba_data.OFFLINE else (time.time() - _cache["at"] > CACHE_SECONDS)
+        if _cache["value"] is None or stale:
+            _cache.update(value=build(), at=time.time(), day=today)
+        return _cache["value"]
 
 
 def version():

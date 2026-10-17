@@ -6,3 +6,4 @@ __pycache__/
 venv/
 data/cache/
 .render_deploy_hook
+.last_verified_code

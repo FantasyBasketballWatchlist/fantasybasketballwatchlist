@@ -92,7 +92,10 @@ hoopothesis.cc runs on Render with `NBA_OFFLINE=1`: stats.nba.com doesn't answer
    projections for rookies and players returning from a missed season vs ESPN. A part doing worse than its
    benchmark on a fair sample is flagged; nothing changes the model by itself.
 3. Checks before publishing: sanity checks on the ratings, and a full offline copy of the site run against
-   `data/live/` exactly as the server will. If anything fails it doesn't publish, so the live site keeps working data.
+   `data/live/` exactly as the server will. If the code changed since the last verified deploy, it also runs the
+   site in a Render-like Docker container (`deploy/Dockerfile`: Linux, gunicorn, 0.5 CPU, 512 MB) under
+   keep-alive traffic like Render's proxy, so Docker Desktop needs to be running for code changes to go live.
+   If anything fails it doesn't publish, so the live site keeps working data.
 4. Commits, pushes, triggers a Render deploy, and confirms hoopothesis.cc is serving the new data.
 
 Problems show up as a Windows notification and in `data/refresh.log`.

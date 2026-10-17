@@ -9,7 +9,9 @@ reads data/live/. This script:
 3. Logs this run's in-season predictions and scores the ones whose games are done (analysis/live_checks.py,
    data/tracking/).
 4. Checks before publishing: sanity checks on the new ratings, then a full offline copy of the site run against
-   data/live/ exactly as the server will (every route must answer, and the rankings must match). If a check
+   data/live/ exactly as the server will (every route must answer, and the rankings must match). If the code
+   changed since the last verified deploy, it also runs the site in a Render-like Docker container
+   (deploy/Dockerfile: Linux, gunicorn, 0.5 CPU, 512 MB) under keep-alive traffic like Render's proxy. If a check
    fails, nothing is published and the live site keeps its current data.
 5. Commits data/live/, data/snapshots/, data/preseason/ and data/tracking/ (only if they changed), pushes, asks
    Render to redeploy (deploy hook from RENDER_DEPLOY_HOOK or the gitignored file .render_deploy_hook), then
@@ -39,6 +41,9 @@ COMMIT_PATHS = ["data/live", "data/snapshots", "data/preseason", "data/tracking"
 ROUTES = ["/api/meta", "/api/players", "/api/rankings", "/api/positions", "/api/waiver", "/api/accuracy"]
 PAGES = ["/", "/draft", "/league", "/trade-analyzer", "/waiver-wires"]
 DEPLOY_WAIT_SECONDS = 10 * 60
+LAST_VERIFIED_FILE = os.path.join(ROOT, ".last_verified_code")       # commit whose code last passed the container
+DOCKER_CANDIDATES = ["docker", os.path.expandvars("%LOCALAPPDATA%/Programs/DockerDesktop/resources/bin/docker.exe")]
+CONTAINER_PORT = 18080
 
 # Same routes, run against data/live/ with the network off, the way the server runs.
 OFFLINE_CHECK = """
@@ -144,6 +149,75 @@ def offline_problems(players):
     return problems
 
 
+def _docker():
+    for exe in DOCKER_CANDIDATES:
+        try:
+            if subprocess.run([exe, "info"], capture_output=True, timeout=60).returncode == 0:
+                return exe
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return None
+
+
+def code_changed():
+    """True if anything outside data/ changed since the commit that last passed the container check."""
+    try:
+        with open(LAST_VERIFIED_FILE, encoding="utf-8") as f:
+            last = f.read().strip()
+        committed = git("diff", "--name-only", last, "HEAD", "--", ".", ":(exclude)data").strip()
+        uncommitted = git("status", "--porcelain", "--", ".", ":(exclude)data").strip()
+        return bool(committed or uncommitted)
+    except (OSError, subprocess.CalledProcessError):
+        return True
+
+
+def container_problems():
+    """Run the site in a Render-like container (0.5 CPU, 512 MB, gunicorn) and send it proxy-like traffic."""
+    import requests
+    docker = _docker()
+    if not docker:
+        return ["the code changed but Docker isn't running, so it can't be tested before going live (start Docker Desktop)"]
+    name, url = "hoopothesis-check", f"http://127.0.0.1:{CONTAINER_PORT}"
+    run = lambda *a, **k: subprocess.run([docker, *a], cwd=ROOT, capture_output=True, text=True, **k)
+    built = run("build", "-q", "-f", "deploy/Dockerfile", "-t", name, ".", timeout=1200)
+    if built.returncode:
+        return [f"container build failed: {built.stderr[-300:]}"]
+    run("rm", "-f", name)
+    run("run", "-d", "--name", name, "--cpus", "0.5", "--memory", "512m", "-p", f"{CONTAINER_PORT}:10000", name)
+    problems = []
+    try:
+        for _ in range(60):                              # first request builds the ratings
+            try:
+                if requests.get(url + "/api/meta", timeout=120).status_code == 200:
+                    break
+            except requests.RequestException:
+                time.sleep(2)
+        else:
+            return ["the container never answered /api/meta"]
+        session, slow, failed = requests.Session(), 0, []   # keep-alive, like Render's proxy
+        for i, path in enumerate((PAGES + ROUTES) * 4):
+            try:
+                t = time.time()
+                code = session.get(url + path, timeout=15).status_code
+                slow += time.time() - t > 2
+                if code != 200:
+                    failed.append(f"{path} {code}")
+            except requests.RequestException as e:
+                failed.append(f"{path} {type(e).__name__}")
+            if i % 9 == 8:
+                time.sleep(3)                            # idle gaps longer than gunicorn's keep-alive
+        if failed:
+            problems.append("in the container: " + ", ".join(failed[:5]))
+        if slow:
+            problems.append(f"in the container, {slow} requests took over 2 s")
+    finally:
+        logs = run("logs", "--tail", "20", name).stdout
+        run("rm", "-f", name)
+    if problems:
+        log("container logs:\n" + logs)
+    return problems
+
+
 def deploy_hook():
     url = os.environ.get("RENDER_DEPLOY_HOOK")
     if not url and os.path.exists(HOOK_FILE):
@@ -214,10 +288,17 @@ def main():
                 notify(f"In-season check: {flag}")
 
         problems = sanity_problems(players, meta) + offline_problems(players)
+        verify_code = not problems and code_changed()
+        if verify_code:
+            log("code changed since the last verified deploy: testing it in a Render-like container")
+            problems += container_problems()
         if problems:
             notify("Refresh stopped before publishing: " + "; ".join(problems))
             return 1
         log("checks passed")
+        if verify_code:
+            with open(LAST_VERIFIED_FILE, "w", encoding="utf-8") as f:
+                f.write(git("rev-parse", "HEAD").strip())
 
         if "--no-push" not in sys.argv:
             version = publish()
