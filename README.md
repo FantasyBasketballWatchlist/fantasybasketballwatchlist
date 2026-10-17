@@ -1,8 +1,12 @@
-# Fantasy Basketball Watchlist
+# Hoopothesis
+
+Live at https://hoopothesis.cc
 
 Player values for ESPN points leagues, built on **BPV (Basketball Performance Value)**: expected fantasy points per team game from rostering a player, counting his production, how often he plays, and the free agent you can stream when he's out long-term.
 
-- **Watchlist** (`/`): search any player for their BPV breakdown, an 80% likely range, and fantasy-playoff game count, plus the top-25 rankings. Between seasons, players are shown on next season's team.
+- **Rankings** (`/`): search any player for their BPV breakdown, an 80% likely range, and fantasy-playoff game count, plus the top-25 rankings. Between seasons, players are shown on next season's team.
+- **Draft** (`/draft`): a snake-draft tracker with suggested picks, team rankings and position outlook. Pick your draft slot at the top of the clock card.
+- **League** (`/league`): up to 20 teams; each team's players with BPV, and teams ranked by the BPV of their best starting lineup.
 - **Trade Analyzer** (`/trade-analyzer`): compares both sides by value over replacement, so 2-for-1 deals account for the roster spot.
 - **Waiver Wires** (`/waiver-wires`): recent risers and fallers, split into minutes changes (which tend to last) and hot or cold shooting (which tends to fade).
 
