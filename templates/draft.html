@@ -105,6 +105,10 @@
     .lvl.plenty { color: #c9f5e3; background: rgba(52,211,153,.13); }
     .need-dot { color: var(--orange); font-weight: 700; }
     .slot-tag { color: var(--dim); font-size: .72rem; min-width: 38px; }
+    .depth { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; font-size: .78rem; color: var(--muted); }
+    .depth span { border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
+    .depth span.low { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 50%, transparent); }
+    .x.armed { color: #2a0707; background: var(--bad); border-color: var(--bad); }
     .toolbar .seg button { padding: 6px 10px; }
 
     @media (max-width: 1600px) { .hide-md { display: none; } }
@@ -206,12 +210,13 @@
         <div class="card panel" style="--c: var(--orange)">
           <h3><span class="dot"></span>Your team</h3>
           <div class="totals"><span>Players <b id="my-count">0</b></span><span>Total BPV <b id="my-bpv">0</b></span><span>Over repl. <b id="my-vor">0</b></span></div>
+          <div class="depth" id="my-depth"></div>
           <div id="my-roster"><p class="empty">No players yet.</p></div>
         </div>
 
         <div class="card panel" style="--c: var(--blue)">
           <h3><span class="dot"></span>Pick log</h3>
-          <p class="help" style="margin:4px 0 8px">Remove a pick to put the player back. The next click fills that pick.</p>
+          <p class="help" style="margin:4px 0 8px">Tap ✕ twice to put a player back. The next pick then fills that empty spot.</p>
           <div id="log"><p class="empty">No picks yet.</p></div>
         </div>
       </aside>
@@ -221,11 +226,13 @@
       The dashed line marks how many picks happen before your next turn: players above it will probably be gone if the
       other teams draft by BPV. Real drafters don't, so treat it as a rough guide. The draft is saved in this browser,
       so a refresh won't lose it.<br><br>
-      Positions are ESPN's eligibility; a player listed at two positions can start at either. The suggested pick plays out
-      the rest of the draft for each candidate (other teams taking the best BPV left) and picks the one that leaves your
-      starting lineup (PG, SG, SF, PF, C, G, F, 3 UTIL by default) worth the most, so it takes a position early only
-      when waiting would leave that spot empty or weak. In backtests, adjusting player value by position didn't improve
-      rankings, and these draft tips haven't been backtested, so treat them as a guide.
+      Positions are ESPN's eligibility; a player listed at two positions can start at either. The player list is
+      sorted by BPV alone, so taking players straight down it tends to pile up guards. The suggested pick accounts for
+      position: it plays out the rest of the draft for each candidate and picks the one whose final roster gets the
+      most out of daily lineups (PG, SG, SF, PF, C, G, F, 3 UTIL by default). Only players with a game that night can
+      start, so on busy nights a roster with eight guards and one center leaves spots empty. In simulated drafts,
+      following the suggestions gave rosters with every position covered and about 15–20 BPV more than following the
+      list in the worst draft spots. Simulations aren't real drafts, so treat it as a guide.
     </p>
   </main>
 
@@ -240,14 +247,15 @@
     // Best BPV at a position this much above what's likely left by your next pick = scarce; this little = plenty.
     const SCARCE_DROP = 2.0, PLENTY_DROP = 0.5;
     let positions = {}, positionSource = null;
-    let state = { teams: 10, slot: 1, rounds: 13, lineup: DEFAULT_LINEUP, posFilter: 'ALL', picks: {}, history: [] };
+    // names: player id -> name, so a pick still shows if that player drops out of a later data refresh.
+    let state = { teams: 10, slot: 1, rounds: 13, lineup: DEFAULT_LINEUP, posFilter: 'ALL', picks: {}, history: [], names: {} };
 
     function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
     let hadSaved = false;
     function restore() {
       try {
         const s = JSON.parse(localStorage.getItem(STORE));
-        if (s && s.picks) { state = { ...state, ...s }; hadSaved = true; }
+        if (s && s.picks) { state = { ...state, ...s, names: s.names || {} }; hadSaved = true; }
         state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
         state.slot = Math.min(state.slot, state.teams);
       } catch (e) {}
@@ -275,14 +283,21 @@
       return null;
     }
 
+    // A second tap right after a pick is ignored: the list redraws under your finger, so a double tap would
+    // otherwise draft the next player too.
+    const TAP_GUARD_MS = 400;
+    let lastDraftAt = 0;
     function draft(id) {
       const n = currentPick();
-      if (n == null || takenIds().has(id)) return;
+      if (n == null || takenIds().has(id) || performance.now() - lastDraftAt < TAP_GUARD_MS) return;
+      lastDraftAt = performance.now();
       state.picks[n] = id;
+      state.names[id] = byId.get(id)?.name ?? state.names[id];
       state.history.push(n);
       save(); render();
     }
     function unpick(n) {
+      if (!(n in state.picks)) return;
       delete state.picks[n];
       state.history = state.history.filter(x => x !== n);
       save(); render();
@@ -290,7 +305,13 @@
     function undo() { if (state.history.length) unpick(state.history[state.history.length - 1]); }
 
     // ---------- positions
-    const posOf = (id) => positions[id] ? positions[id].split('/') : [];
+    const posCache = new Map();                    // cleared when positions load; the look-ahead calls this a lot
+    const playerOf = (id) => byId.get(id) || { id, name: state.names[id] || 'Unknown player', bpv: 0, value_over_replacement: 0 };
+    const posOf = (id) => {
+      let ps = posCache.get(id);
+      if (!ps) { ps = positions[id] ? positions[id].split('/') : []; posCache.set(id, ps); }
+      return ps;
+    };
     const lineupSlots = () => state.lineup.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     const fits = slotFits;
 
@@ -351,13 +372,12 @@
       return { pick, why, alerts, look, fill, needPositions };
     }
 
-    // Suggested pick: for each candidate, play out the rest of the draft (other teams take the best BPV left, as the
-    // Projected standings assume; at your later picks you take whoever adds most to your lineup) and keep the
-    // candidate whose final starting lineup is worth the most. A starting spot you couldn't fill is filled by the best
-    // player actually left at that position after the draft (a real free agent: if centers ran out, a weak center),
-    // not by an average free agent; bench BPV only breaks ties. So it takes the best player unless that would leave a
-    // starting spot you can't fill well later. Multi-position players can move between slots.
-    const LOOKAHEAD_CANDIDATES = 10, LOOKAHEAD_OPTIONS = 8, BENCH_TIEBREAK = 0.02;
+    // Suggested pick: for each candidate, play out the rest of the draft (other teams take the best BPV left, or a
+    // position they still need; at your later picks you take whoever adds most to your roster) and keep the candidate
+    // whose final roster is worth the most over daily lineups. Because only about half your players have a game on a
+    // given day, a roster stacked at one position leaves other starting spots empty on many nights, so this spreads
+    // your picks across positions. Multi-position players can move between slots.
+    const LOOKAHEAD_CANDIDATES = 10, LOOKAHEAD_OPTIONS = 8;
     let lookCache = { key: null, value: null };
 
     function replacementBpv() {
@@ -365,10 +385,53 @@
       return players.slice().sort((a, b) => b.bpv - a.bpv)[idx]?.bpv ?? 0;
     }
 
-    function teamScore(ids, repl) {
-      const v = lineupValue(ids, repl);
-      return v.value + BENCH_TIEBREAK * v.bench;
+    // Daily lineups: on any given night only the players with a game can start, and NBA nights are uneven (some
+    // have two games, some have twelve). On a busy night a roster stacked at one position can't start all of them
+    // while its other spots sit empty, so a roster's value is the BPV its starters produce over sample nights of
+    // varying size, and depth at every position counts. Every player plays half the nights (more of the busy ones),
+    // on a pattern fixed by his id, so no player is luckier than another.
+    const NIGHT_GROUPS = [1, 2, 4, 6, 7];            // games out of 8 nights, from light nights to busy ones
+    const NIGHTS_PER_GROUP = 8, SAMPLE_DAYS = NIGHT_GROUPS.length * NIGHTS_PER_GROUP;
+    const PLAY_DAYS = NIGHT_GROUPS.reduce((a, b) => a + b, 0);
+    const dayPattern = new Map();
+    function playsOn(id) {
+      let days = dayPattern.get(id);
+      if (!days) {
+        let s = (id * 2654435761) >>> 0;
+        const rnd = () => { s = (s + 0x6D2B79F5) >>> 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+        days = [];
+        NIGHT_GROUPS.forEach(games => {
+          const order = Array.from({ length: NIGHTS_PER_GROUP }, (_, i) => i);
+          for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+          const on = new Set(order.slice(0, games));
+          for (let i = 0; i < NIGHTS_PER_GROUP; i++) days.push(on.has(i));
+        });
+        dayPattern.set(id, days);
+      }
+      return days;
     }
+    // In BPV units: a player who starts every game he plays adds his full BPV. Same placement as fillLineup
+    // (best BPV first, dual-position players can move over), without its bookkeeping, since this runs thousands
+    // of times per suggestion.
+    function dailyValue(ids) {
+      const slots = lineupSlots(), owner = new Array(slots.length);
+      const sorted = ids.map(id => ({ ps: posOf(id), bpv: byId.get(id)?.bpv ?? 0, days: playsOn(id) })).sort((a, b) => b.bpv - a.bpv);
+      const tryPlace = (x, seen) => {
+        for (let i = 0; i < slots.length; i++) {
+          if (seen[i] || !fits(slots[i], x.ps)) continue;
+          seen[i] = true;
+          if (owner[i] == null || tryPlace(owner[i], seen)) { owner[i] = x; return true; }
+        }
+        return false;
+      };
+      let total = 0;
+      for (let d = 0; d < SAMPLE_DAYS; d++) {
+        owner.fill(null);
+        for (const x of sorted) if (x.days[d] && tryPlace(x, new Array(slots.length))) total += x.bpv;
+      }
+      return total / PLAY_DAYS;
+    }
+    const teamScore = (ids) => dailyValue(ids);
 
     // Candidates worth simulating: the best few by BPV plus the best player left at each position.
     function shortlist(pool, n) {
@@ -377,45 +440,47 @@
       return out;
     }
 
-    // Final lineup value: your starters, plus the best leftover player who fits each spot you couldn't fill
-    // (most specific spots first: C before F before UTIL).
-    const SPECIFICITY = { G: 1, F: 1, UTIL: 2 };
-    function finalValue(ids, leftover) {
-      const fill = fillLineup(ids);
-      let value = 0;
-      fill.slotOf.forEach((slot, id) => { value += byId.get(id)?.bpv ?? 0; });
-      const used = new Set();
-      fill.open.slice().sort((a, b) => (SPECIFICITY[a] ?? 0) - (SPECIFICITY[b] ?? 0)).forEach(slot => {
-        const fa = leftover.find(p => !used.has(p.id) && fits(slot, posOf(p.id)));
-        if (fa) { used.add(fa.id); value += fa.bpv; }
-      });
-      const bench = ids.filter(id => !fill.slotOf.has(id)).reduce((s, id) => s + (byId.get(id)?.bpv ?? 0), 0);
-      return { value, score: value + BENCH_TIEBREAK * bench };
+    // Another team's pick in the play-out: like most drafters, the best BPV left unless one of the next few fills a
+    // starting spot it can't fill yet (so centers don't sit there for you just because a guard ranks higher).
+    const OPPONENT_REACH = 6;
+    function opponentPick(pool, roster) {
+      const open = fillLineup(roster).openSpecific;
+      if (open.length) {
+        const x = pool.slice(0, OPPONENT_REACH).find(p => open.some(s => fits(s, posOf(p.id))));
+        if (x) return x;
+      }
+      return pool[0];
     }
 
-    function playOut(roster, pool, from, repl) {
+    function playOut(roster, pool, from) {
       roster = roster.slice(); pool = pool.slice();
+      const others = {};
+      for (const [n, id] of Object.entries(state.picks)) { const t = teamOf(+n); if (t !== state.slot) (others[t] = others[t] || []).push(id); }
       for (let n = from; n <= totalPicks() && pool.length; n++) {
         if (n in state.picks) continue;
-        if (teamOf(n) !== state.slot) { pool.shift(); continue; }        // another team: best BPV left
+        const t = teamOf(n);
+        if (t !== state.slot) {
+          const x = opponentPick(pool, others[t] || []);
+          (others[t] = others[t] || []).push(x.id); pool.splice(pool.indexOf(x), 1);
+          continue;
+        }
         let best = null, bestScore = -Infinity;
         for (const x of shortlist(pool, LOOKAHEAD_OPTIONS)) {
-          const sc = teamScore([...roster, x.id], repl);
+          const sc = teamScore([...roster, x.id]);
           if (sc > bestScore + 1e-9) { best = x; bestScore = sc; }
         }
         roster.push(best.id); pool.splice(pool.indexOf(best), 1);
       }
-      return { roster, leftover: pool };
+      return roster;
     }
 
     function lookAhead(available, mineIds, now) {
       const key = JSON.stringify([state.picks, state.slot, state.teams, state.rounds, state.lineup, players.length]);
       if (lookCache.key === key) return lookCache.value;
-      const repl = replacementBpv();
       const pool = available.slice().sort((a, b) => b.bpv - a.bpv);
       const results = shortlist(pool, LOOKAHEAD_CANDIDATES).map(c => {
-        const end = playOut([...mineIds, c.id], pool.filter(x => x !== c), now + 1, repl);
-        return { c, ...finalValue(end.roster, end.leftover) };
+        const value = dailyValue(playOut([...mineIds, c.id], pool.filter(x => x !== c), now + 1));
+        return { c, value, score: value };
       });
       const top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
       const bestBpv = results.find(r => r.c === pool[0]);
@@ -426,7 +491,7 @@
           ? `Best BPV left, and fills your open ${posOf(top.c.id).join('/')} need.` : 'Best BPV left.';
       } else {
         const gain = top.value - bestBpv.value;
-        why = `Fills a ${posOf(top.c.id).join('/')} need: playing out the rest of the draft, your starting lineup ends ${fmt(gain)} BPV `
+        why = `Balances your roster at ${posOf(top.c.id).join('/')}: playing out the rest of the draft, your daily lineups end up ${fmt(gain)} BPV `
           + `better than if you take ${pool[0].name} (${fmt(pool[0].bpv - top.c.bpv)} BPV more on his own) now.`;
       }
       lookCache = { key, value: { pick: top.c, why } };
@@ -528,7 +593,10 @@
         const pickInRound = (now - 1) % state.teams + 1;
         document.getElementById('clock-pick').textContent = `Round ${roundOf(now)} · Pick ${pickInRound} · #${now} overall`;
         document.getElementById('clock-who').textContent = teamOf(now) === state.slot ? "You're up" : `Team ${teamOf(now)}`;
-        document.getElementById('clock-until').textContent = until == null ? 'No picks left for you'
+        const lastMade = Math.max(0, ...Object.keys(state.picks).map(Number));
+        document.getElementById('clock-until').textContent = now < lastMade
+          ? `Filling empty pick #${now} (a removed pick). Later picks stay where they are.`
+          : until == null ? 'No picks left for you'
           : until === 0 ? 'Take the best player left' : `${until} pick${until === 1 ? '' : 's'} until your turn`;
       }
       document.getElementById('undo').disabled = !state.history.length;
@@ -560,13 +628,15 @@
         && (pf === 'ALL' || posOf(p.id).includes(pf)));
       const cutoffAt = (!q && pf === 'ALL' && until) ? until : null;   // index in the available list where your next pick lands
       let availIndex = 0;
+      // Mark players who fill a missing starting position, once only one or two are missing (early on it'd be everyone).
+      const needSet = new Set(mineIds.length && adv.needPositions.length <= 2 ? adv.needPositions : []);
       if (players.length) paintRows(document.querySelector('#avail tbody'), rows.length ? rows.map(p => {
         const n = taken.get(p.id), tier = tierOf(p.rank);
         const isCut = n == null && cutoffAt != null && availIndex++ === cutoffAt;
         const notes = [p.injury_note, p.rookie ? 'rookie' : ''].filter(Boolean).join(' · ');
         return `<tr data-id="${p.id}" class="tier-${tier.key}${n != null ? ' taken' : ''}${isCut ? ' cutoff' : ''}">
           <td><span class="rank-pill">${p.rank ?? '–'}</span></td>
-          <td class="name">${isCut ? '<span class="cutoff-label">▼ About where your next pick lands</span>' : ''}${escapeHtml(p.name)}${positions[p.id] ? `<span class="pos">${positions[p.id]}</span>` : ''}${n == null && adv.pick && adv.pick.id === p.id && now != null ? '<span class="chip sugg">Suggested</span>' : ''} <small>${escapeHtml(p.team || '')}${n != null ? ` · <span class="by">pick ${n}, ${teamName(teamOf(n))}</span>` : ''}</small>
+          <td class="name">${isCut ? '<span class="cutoff-label">▼ About where your next pick lands</span>' : ''}${escapeHtml(p.name)}${positions[p.id] ? `<span class="pos">${positions[p.id]}</span>` : ''}${n == null && needSet.size && posOf(p.id).some(x => needSet.has(x)) ? ' <span class="need-dot" title="Fills a starting spot your lineup still needs">●</span>' : ''}${n == null && adv.pick && adv.pick.id === p.id && now != null ? '<span class="chip sugg">Suggested</span>' : ''} <small>${escapeHtml(p.team || '')}${n != null ? ` · <span class="by">pick ${n}, ${teamName(teamOf(n))}</span>` : ''}</small>
             ${notes ? `<span class="note" title="${escapeHtml(notes)}">${escapeHtml(notes)}</span>` : ''}</td>
           <td class="r"><span class="num">${fmt(p.bpv)}</span></td>
           <td class="r hide-md">${fmt(p.value_over_replacement)}</td>
@@ -577,8 +647,14 @@
 
       // your team
       const mine = Object.entries(state.picks).filter(([n]) => teamOf(+n) === state.slot)
-        .map(([n, id]) => ({ n: +n, p: byId.get(id) })).filter(x => x.p).sort((a, b) => a.n - b.n);
+        .map(([n, id]) => ({ n: +n, p: playerOf(id) })).sort((a, b) => a.n - b.n);
       document.getElementById('my-count').textContent = `${mine.length}/${state.rounds}`;
+      // Players who can play each position (a PG/SG counts for both). Low = fewer than one per five players drafted.
+      const depthGoal = Math.floor(mine.length / POSITIONS.length);
+      document.getElementById('my-depth').innerHTML = mine.length && Object.keys(positions).length ? POSITIONS.map(p => {
+        const c = mine.filter(x => posOf(x.p.id).includes(p)).length;
+        return `<span class="${c < depthGoal ? 'low' : ''}" title="Players on your team who can play ${p}">${p} ${c}</span>`;
+      }).join('') : '';
       document.getElementById('my-bpv').textContent = fmt(mine.reduce((s, x) => s + (x.p.bpv || 0), 0));
       document.getElementById('my-vor').textContent = fmt(mine.reduce((s, x) => s + (x.p.value_over_replacement || 0), 0));
       document.getElementById('my-roster').innerHTML = mine.length ? mine.map(x =>
@@ -587,11 +663,11 @@
         : '<p class="empty">No players yet.</p>';
 
       // pick log, newest first
-      const log = Object.entries(state.picks).map(([n, id]) => ({ n: +n, p: byId.get(id) })).sort((a, b) => b.n - a.n);
+      const log = Object.entries(state.picks).map(([n, id]) => ({ n: +n, p: playerOf(id) })).sort((a, b) => b.n - a.n);
       document.getElementById('log').innerHTML = log.length ? log.map(x =>
         `<div class="log-row${teamOf(x.n) === state.slot ? ' mine' : ''}"><span class="n">#${x.n}</span>
-          <b>${escapeHtml(x.p ? x.p.name : 'Unknown player')}</b><span class="by">${teamName(teamOf(x.n))}</span>
-          <button class="x" data-unpick="${x.n}" title="Put back in the pool">✕</button></div>`).join('')
+          <b>${escapeHtml(x.p.name)}</b><span class="by">${teamName(teamOf(x.n))}</span>
+          <button class="x" data-unpick="${x.n}" title="Put back in the pool (tap twice)">✕</button></div>`).join('')
         : '<p class="empty">No picks yet.</p>';
 
       renderTeams(available);
@@ -602,7 +678,7 @@
       for (let r = 1; r <= state.rounds; r++) {
         const cells = Array(state.teams);
         for (let k = 0; k < state.teams; k++) {
-          const n = (r - 1) * state.teams + k + 1, t = teamOf(n), p = byId.get(state.picks[n]);
+          const n = (r - 1) * state.teams + k + 1, t = teamOf(n), p = n in state.picks ? playerOf(state.picks[n]) : null;
           cells[t - 1] = `<td class="${t === state.slot ? 'me' : ''}${n === now ? ' now' : ''}${!p && n < (now ?? Infinity) ? ' open' : ''}">
             <span class="pn">#${n}</span>${p ? escapeHtml(p.name) : ''}</td>`;
         }
@@ -619,9 +695,7 @@
       const lineup = document.getElementById('set-lineup').value.split(',').map(s => s.trim().toUpperCase())
         .filter(s => s === 'UTIL' || s in LINEUP_FITS);
       state.lineup = lineup.length ? lineup.join(',') : DEFAULT_LINEUP;
-      // Picks beyond the new draft length would be invisible, so return those players to the pool.
-      for (const n of Object.keys(state.picks)) if (+n > totalPicks()) delete state.picks[n];
-      state.history = state.history.filter(n => n in state.picks);
+      // Picks past a shortened draft are kept (still listed in the pick log), so a mistyped Rounds can't erase them.
       writeSettings(); save(); render();
     }
     function writeSettings() {
@@ -650,17 +724,33 @@
     });
     document.getElementById('undo').addEventListener('click', undo);
     document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) { e.preventDefault(); undo(); }
     });
     document.querySelector('#avail tbody').addEventListener('click', e => {
       const tr = e.target.closest('tr[data-id]');
       if (!tr) return;
-      const id = +tr.dataset.id, n = takenIds().get(id);
-      if (n != null) unpick(n); else draft(id);
+      const id = +tr.dataset.id;
+      if (!takenIds().has(id)) draft(id);           // drafted players are removed from the pick log, not by a stray tap
     });
+    // Two taps to remove a pick, like Reset, so a stray tap can't take a player off a team.
+    let unpickTimer = null;
     document.getElementById('log').addEventListener('click', e => {
       const b = e.target.closest('[data-unpick]');
-      if (b) unpick(+b.dataset.unpick);
+      if (!b) return;
+      if (!b.classList.contains('armed')) {
+        document.querySelectorAll('#log .x.armed').forEach(x => { x.classList.remove('armed'); x.textContent = '✕'; });
+        b.classList.add('armed'); b.textContent = 'Remove?';
+        clearTimeout(unpickTimer);
+        unpickTimer = setTimeout(() => { b.classList.remove('armed'); b.textContent = '✕'; }, 3000);
+        return;
+      }
+      clearTimeout(unpickTimer);
+      unpick(+b.dataset.unpick);
+    });
+    // Another tab with the draft open saved a change: take it, so this tab can't later save over it with old picks.
+    window.addEventListener('storage', e => {
+      if (e.key !== STORE || !e.newValue) return;
+      try { const s = JSON.parse(e.newValue); if (s && s.picks) { state = { ...state, ...s, names: s.names || {} }; writeSettings(); render(); } } catch (err) {}
     });
     const q = document.getElementById('q');
     q.addEventListener('input', render);
@@ -688,11 +778,13 @@
         const data = await response.json();
         try {
           const pos = posResponse && posResponse.ok ? await posResponse.json() : {};
-          positions = pos.positions || {}; positionSource = pos.source || null;
+          positions = pos.positions || {}; positionSource = pos.source || null; posCache.clear();
         } catch (e) { positions = {}; }
         if (!response.ok) throw new Error(data.error);
         players = data.players.slice().sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
         byId = new Map(players.map(p => [p.id, p]));
+        for (const id of Object.values(state.picks)) if (byId.has(id)) state.names[id] = byId.get(id).name;
+        if (hadSaved) save();
         if (!hadSaved) { state.teams = data.meta.league_teams || 10; state.rounds = data.meta.roster_size || 13; }
         state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
         const m = data.meta;
