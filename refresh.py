@@ -6,7 +6,7 @@ reads data/live/. This script:
 1. Calls every API route, which rebuilds the ratings and fetches whatever is out of date into
    data/cache/ (and saves a snapshot when one is due).
 2. Copies exactly the cache files those routes read into data/live/.
-3. Commits data/live/, data/snapshots/, data/preseason/ and data/accuracy.json, pushes, and asks Render to redeploy
+3. Commits data/live/, data/snapshots/ and data/preseason/ (only if they changed), pushes, and asks Render to redeploy
    (the deploy hook URL is read from RENDER_DEPLOY_HOOK or the gitignored file .render_deploy_hook).
 
     python refresh.py            # refresh, commit, push, deploy
@@ -21,7 +21,7 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 LIVE_DIR = os.path.join(ROOT, "data", "live")
 HOOK_FILE = os.path.join(ROOT, ".render_deploy_hook")
-COMMIT_PATHS = ["data/live", "data/snapshots", "data/preseason", "data/accuracy.json"]
+COMMIT_PATHS = ["data/live", "data/snapshots", "data/preseason"]   # the site rescores accuracy itself
 ROUTES = ["/api/meta", "/api/players", "/api/rankings", "/api/positions", "/api/waiver", "/api/accuracy"]
 
 
