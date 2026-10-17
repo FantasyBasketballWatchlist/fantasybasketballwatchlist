@@ -109,8 +109,11 @@
 
     @media (max-width: 1600px) { .hide-md { display: none; } }
     @media (max-width: 960px) {
-      .draft { grid-template-columns: 1fr; }
-      .side { position: static; max-height: none; order: -1; }
+      .draft { grid-template-columns: minmax(0, 1fr); }      /* minmax(0, …) so the board can't widen the page */
+      .side { display: contents; }                          /* its cards join the page's single column... */
+      .side > * { order: 1; }                               /* ...after the player list, */
+      .side > .clock { order: -1; }                         /* except "on the clock" and the suggestion, first */
+      .toolbar .search { min-width: 0; flex-basis: 100%; }
     }
   </style>
 </head>
@@ -477,15 +480,15 @@
       const nowRank = new Map(rows.slice().sort((a, b) => b.now.value - a.now.value).map((r, i) => [r.t, i + 1]));
       rows.sort((a, b) => b.proj.value - a.proj.value);
       renderStandings(rows, avg);
-      el.innerHTML = `<thead><tr><th>#</th><th>Team</th><th class="r">Picks</th><th class="r">Now</th>
+      el.innerHTML = `<thead><tr><th>#</th><th>Team</th><th class="r hide-xs">Picks</th><th class="r hide-xs">Now</th>
         <th class="r">Projected</th><th class="r">vs avg</th><th class="hide-sm">Open spots now</th><th class="hide-sm">Best player</th></tr></thead><tbody>`
         + rows.map((r, i) => {
           const d = r.proj.value - avg, mine = r.t === state.slot;
           return `<tr${mine ? ' style="background:rgba(255,122,26,.07)"' : ''}>
             <td><span class="rank-pill" style="--c:${i === 0 ? 'var(--t-super)' : 'var(--t-waiver)'}">${i + 1}</span></td>
             <td class="name"${mine ? ' style="color:var(--orange)"' : ''}>${teamName(r.t)}<small>now #${nowRank.get(r.t)}</small></td>
-            <td class="r">${r.picks}</td>
-            <td class="r">${fmt(r.now.value)}</td>
+            <td class="r hide-xs">${r.picks}</td>
+            <td class="r hide-xs">${fmt(r.now.value)}</td>
             <td class="r"><span class="num">${fmt(r.proj.value)}</span></td>
             <td class="r"><span class="delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${fmt(d)}</span></td>
             <td class="hide-sm">${r.picks ? (r.now.holes.length ? escapeHtml(r.now.holes.join(', ')) : '<span style="color:var(--good)">none</span>') : '–'}</td>

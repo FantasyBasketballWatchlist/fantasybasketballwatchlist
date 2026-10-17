@@ -269,11 +269,37 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 
 @media (max-width: 760px) {
   .grid-2 { grid-template-columns: 1fr; }
-  .topbar-inner { flex-direction: column; gap: 10px; }
+  /* Compact header: logo over a menu of five equal tabs that always fits the screen. */
+  .topbar-inner { flex-direction: column; gap: 6px; padding: 8px 10px; }
+  .brand svg { width: 22px; height: 22px; }
+  .brand span { font-size: 1.25rem; }
+  .nav { width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; }
+  .nav a { padding: 8px 2px; font-size: .82rem; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav-long { display: none; }
+  .page { padding: 20px 14px 44px; }
+  .hero { margin-bottom: 20px; }
+  .hero p { font-size: .93rem; }
+  .section-title { flex-wrap: wrap; gap: 2px 12px; margin: 28px 0 10px; }
+  .section-title h2 { font-size: 1.4rem; }
+  .panel { padding: 16px; }
+  table.data { font-size: .9rem; }
+  table.data th, table.data td { padding: 10px 8px; }
+  table.data td.name { white-space: normal; min-width: 120px; }      /* long names wrap instead of pushing numbers off-screen */
   .headline { gap: 18px; }
   .big-stat .num { font-size: 2.8rem; }
-  .player { padding: 20px; }
+  .player { padding: 20px 16px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  /* Below 16px, iPhones zoom the page when you tap a text box. */
+  input, select, textarea { font-size: 16px !important; }
   .hide-sm { display: none; }
+}
+
+@media (max-width: 480px) {
+  .hide-xs { display: none; }
+}
+
+@media (max-width: 360px) {
+  .nav a { font-size: .74rem; padding: 8px 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

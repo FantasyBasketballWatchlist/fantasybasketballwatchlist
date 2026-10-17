@@ -40,8 +40,8 @@
     <div class="card table-wrap">
       <table class="data clickable" id="rankingsTable">
         <thead>
-          <tr><th>#</th><th>Player</th><th class="hide-sm">Tier</th><th class="r">Production</th><th>Availability</th>
-              <th class="r">BPV</th><th>HCI</th><th class="r hide-sm" title="Games in the fantasy playoffs (last 4 weeks)">Playoff G</th></tr>
+          <tr><th>#</th><th>Player</th><th class="hide-sm">Tier</th><th class="r hide-xs">Production</th><th class="hide-xs">Availability</th>
+              <th class="r">BPV</th><th class="hide-xs">HCI</th><th class="r hide-sm" title="Games in the fantasy playoffs (last 4 weeks)">Playoff G</th></tr>
         </thead>
         <tbody>
           <tr><td colspan="8"><div class="skeleton"></div></td></tr>
@@ -194,10 +194,10 @@
           <td><span class="rank-pill">${p.rank}</span></td>
           <td class="name">${escapeHtml(p.name)} ${inSeason() ? formChip(p.recent_fpts, p.season_fpts) : ''} ${note} ${rookie}<small>${escapeHtml(p.team || '')}</small></td>
           <td class="hide-sm"><span class="badge">${t.label}</span></td>
-          <td class="r"><span class="num">${fmt(p.production)}</span></td>
-          <td><div class="mini"><div class="meter" style="--c:var(--good)"><i style="--v:${p.availability}"></i></div><span>${pct(p.availability)}</span></div></td>
+          <td class="r hide-xs"><span class="num">${fmt(p.production)}</span></td>
+          <td class="hide-xs"><div class="mini"><div class="meter" style="--c:var(--good)"><i style="--v:${p.availability}"></i></div><span>${pct(p.availability)}</span></div></td>
           <td class="r"><span class="num" style="color:var(--c)">${fmt(p.bpv, 1)}</span></td>
-          <td><div class="mini"><div class="meter"><i style="--v:${p.heat_check_index / 100}"></i></div><span>${p.heat_check_index}</span></div></td>
+          <td class="hide-xs"><div class="mini"><div class="meter"><i style="--v:${p.heat_check_index / 100}"></i></div><span>${p.heat_check_index}</span></div></td>
           <td class="r hide-sm">${p.playoff_games ?? '—'}</td></tr>`;
       }).join('');
     }

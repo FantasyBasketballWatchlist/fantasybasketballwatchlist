@@ -155,14 +155,14 @@
     function renderStandings(rows) {
       const el = document.getElementById('standings');
       const avg = rows.length ? rows.reduce((s, r) => s + r.s.score, 0) / rows.length : 0;
-      el.innerHTML = `<thead><tr><th>#</th><th>Team</th><th class="r">Players</th><th class="r">Team score</th><th class="r">vs avg</th>
+      el.innerHTML = `<thead><tr><th>#</th><th>Team</th><th class="r hide-xs">Players</th><th class="r">Team score</th><th class="r">vs avg</th>
         <th class="r hide-sm">Total BPV</th><th class="r hide-sm">Over repl.</th>${inSeason() ? '<th class="r hide-sm" title="Projected points from the starters this week">This week</th>' : ''}
         <th class="hide-sm">Open starting spots</th></tr></thead><tbody>`
         + rows.slice().sort((a, b) => b.s.score - a.s.score).map((r, i) => {
           const d = r.s.score - avg;
           return `<tr><td><span class="rank-pill" style="--c:${i === 0 ? 'var(--t-super)' : 'var(--t-waiver)'}">${i + 1}</span></td>
             <td class="name" style="color:${COLORS[r.t % COLORS.length]}">${escapeHtml(r.team.name)}</td>
-            <td class="r">${r.team.ids.length}</td>
+            <td class="r hide-xs">${r.team.ids.length}</td>
             <td class="r"><span class="num">${fmt(r.s.score)}</span></td>
             <td class="r"><span class="delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${fmt(d)}</span></td>
             <td class="r hide-sm">${fmt(r.s.total)}</td><td class="r hide-sm">${fmt(r.s.vor)}</td>
@@ -187,13 +187,13 @@
           <td class="name">${escapeHtml(p.name)}${positions[id] ? `<span class="pos">${positions[id]}</span>` : ''}${inj} ${formChip(p.recent_fpts, p.season_fpts)}
             <small>${escapeHtml(p.team || '')} · #${p.rank ?? '—'}</small></td>
           <td class="r"><span class="num">${fmt(p.bpv)}</span></td>
-          <td class="r" title="Fantasy points per game when playing">${fmt(p.production)}</td>
+          <td class="r hide-xs" title="Fantasy points per game when playing">${fmt(p.production)}</td>
           <td class="r" title="Share of games expected to play">${pct(p.availability)}</td>
           ${week ? `<td class="r hide-sm">${p.week_fpts == null ? 'N/A' : `${Math.round(p.week_fpts)} (${p.week_games})`}</td>` : ''}
           <td>${remove}</td></tr>`;
       }).join('');
       return `<div class="table-wrap"><table class="data"><thead><tr><th>Slot</th><th>Player</th><th class="r">BPV</th>
-        <th class="r">FPTS/G</th><th class="r">Avail.</th>${week ? '<th class="r hide-sm">This week (G)</th>' : ''}<th></th></tr></thead>
+        <th class="r hide-xs">FPTS/G</th><th class="r">Avail.</th>${week ? '<th class="r hide-sm">This week (G)</th>' : ''}<th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>`;
     }
 
