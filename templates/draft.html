@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Draft Tracker · Hoopothesis</title>
+  {% set page_title = 'Fantasy Basketball Draft Helper & Tracker | Hoopothesis' %}
+  {% set page_description = 'Track your fantasy basketball snake draft live: the best players left, suggested picks for your draft slot, position scarcity and projected team rankings.' %}
+  {% set canonical_path = '/draft' %}
+  {% include '_head.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
@@ -117,7 +120,7 @@
   <main class="page">
     <section class="hero">
       <h1>Draft <span class="accent">Tracker</span></h1>
-      <p>Click a player when he's taken. The list shows who's left, best BPV first.</p>
+      <p>Your fantasy basketball draft helper: click a player when he's taken. The list shows who's left, best BPV first.</p>
       <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
     </section>
 

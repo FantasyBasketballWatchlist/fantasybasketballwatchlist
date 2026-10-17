@@ -1,8 +1,9 @@
+import datetime
 import json
 import math
 import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 
 import nba_data
@@ -48,15 +49,19 @@ def home():
 
 
 @app.route("/trade-analyzer")
-@app.route("/trade-analyzer.html")
 def trade_analyzer():
     return render_template("trade-analyzer.html")
 
 
 @app.route("/waiver-wires")
-@app.route("/waiver-wires.html")
 def waiver_wires():
     return render_template("waiver-wires.html")
+
+
+@app.route("/trade-analyzer.html")
+@app.route("/waiver-wires.html")
+def old_page_urls():
+    return redirect(request.path[:-len(".html")], code=301)
 
 
 @app.route("/draft")
@@ -67,6 +72,52 @@ def draft_tracker():
 @app.route("/league")
 def league():
     return render_template("league.html")
+
+
+# ---------- search engines and icons ----------
+SITE_URL = "https://hoopothesis.cc"
+PAGES = ["/", "/draft", "/league", "/trade-analyzer", "/waiver-wires"]
+
+
+@app.route("/robots.txt")
+def robots():
+    # /api/ stays crawlable: search engines need it to render the pages. API responses are noindex instead.
+    return Response(f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}/sitemap.xml\n", mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    today = datetime.date.today().isoformat()     # rankings are rebuilt every day
+    urls = "".join(f"<url><loc>{SITE_URL}{p}</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq>"
+                   f"<priority>{'1.0' if p == '/' else '0.8'}</priority></url>" for p in PAGES)
+    return Response('<?xml version="1.0" encoding="UTF-8"?>'
+                    f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', mimetype="application/xml")
+
+
+@app.route("/site.webmanifest")
+def manifest():
+    return jsonify({
+        "name": "Hoopothesis", "short_name": "Hoopothesis", "start_url": "/", "display": "standalone",
+        "description": "Data-driven fantasy basketball rankings and projections.",
+        "background_color": "#0a0f1c", "theme_color": "#0a0f1c",
+        "icons": [{"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                  {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                  {"src": "/static/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+    })
+
+
+@app.route("/favicon.ico")
+@app.route("/apple-touch-icon.png")
+def root_icons():
+    # Browsers and iOS ask for these at the site root.
+    return send_from_directory(app.static_folder, request.path.lstrip("/"), max_age=7 * 24 * 3600)
+
+
+@app.after_request
+def api_noindex(response):
+    if request.path.startswith("/api/"):
+        response.headers["X-Robots-Tag"] = "noindex"
+    return response
 
 
 @app.route("/api/meta")

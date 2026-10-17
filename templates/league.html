@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>League · Hoopothesis</title>
+  {% set page_title = 'Fantasy Basketball League Power Rankings | Hoopothesis' %}
+  {% set page_description = "Add up to 20 fantasy basketball teams and rank them by the value of their best starting lineup, with every player's projected points per game." %}
+  {% set canonical_path = '/league' %}
+  {% include '_head.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
