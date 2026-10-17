@@ -481,7 +481,7 @@ def build(today=None):
             kind = bpv.injury_type(r.report_reason)
             share = REPORT_SHARE_PLAYED[kind]
             out = round((1 - share) * remaining)
-            note = f"expected to play about {share:.0%} of remaining games ({kind}; injury report: {r.report_reason})"
+            note = f"out (injury report: {r.report_reason}); expected to miss about {out} of his team's remaining games"
             # The teammate boost was tested for serious injuries only, using his full minutes.
             if kind == "serious" and r.minutes is not None and not pd.isna(r.minutes) and r.minutes >= TEAMMATE_OUT_MIN_MPG:
                 lost_minutes[r.team] = lost_minutes.get(r.team, 0.0) + REPORT_TEAMMATE_COEF * r.minutes
@@ -599,8 +599,7 @@ def _absence_streaks(df, injured, season_games, team_games, remaining_games):
                            + ABSENCE_STREAK_COEF * min(streak, ABSENCE_STREAK_CAP)))
         df.at[i, "availability"] = new
         if streak >= 1:
-            df.at[i, "injury_note"] = (f"has missed his team's last {streak} game{'s' if streak > 1 else ''}; "
-                                       f"availability lowered to {new:.0%}")
+            df.at[i, "injury_note"] = f"has missed his team's last {streak} game{'s' if streak > 1 else ''}"
 
 
 def _save_preseason_prior(target_season, prior):

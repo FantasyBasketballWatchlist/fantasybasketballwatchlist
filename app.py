@@ -94,8 +94,17 @@ def _find(players, player_id=None, name=None):
     return None if match.empty else match.iloc[0]
 
 
+# Only what the pages display goes out: the model's internals (method notes, weights, baselines, availability
+# components) stay on the server.
+PUBLIC_META = ["mode", "season", "target_season", "league_teams", "roster_size", "replacement_level", "playoff_games_range"]
+PUBLIC_PLAYER = ["id", "name", "team", "rank", "games", "bpv", "production", "availability", "season_fpts", "recent_fpts",
+                 "value_over_replacement", "range_low", "range_high", "games_missed", "playoff_games", "playoff_fpts",
+                 "week_games", "week_fpts", "espn_fpg", "espn_games", "heat_check_index", "report_status", "report_reason",
+                 "play_probability", "injury_note", "rookie", "per_game"]
+
+
 def _meta(meta):
-    return {k: v for k, v in meta.items() if k != "rookie_baselines"}
+    return {k: meta.get(k) for k in PUBLIC_META}
 
 
 @app.route("/")
@@ -179,7 +188,7 @@ def api_noindex(response):
 @cached_json
 def get_meta():
     _, meta = ratings.get()
-    return jsonify(_clean({**meta, "data_version": _data_version()}))
+    return jsonify(_clean({**_meta(meta), "data_version": _data_version()}))
 
 
 ACCURACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "accuracy.json")
@@ -219,7 +228,8 @@ def get_player():
     player = _find(players, player_id, request.args.get("name"))
     if player is None:
         return jsonify({"error": "Player not found"}), 404
-    return jsonify({"player": _clean(player.to_dict()), "meta": _meta(meta)})
+    player = player.to_dict()
+    return jsonify({"player": _clean({k: player.get(k) for k in PUBLIC_PLAYER}), "meta": _clean(_meta(meta))})
 
 
 @app.route("/api/rankings")
@@ -228,7 +238,7 @@ def get_rankings():
     players, meta = ratings.get()
     limit = request.args.get("limit", default=200, type=int)
     cols = ["rank", "id", "name", "team", "games", "production", "season_fpts", "recent_fpts", "range_low", "range_high", "availability", "bpv",
-            "value_over_replacement", "heat_check_index", "playoff_games", "playoff_fpts", "week_games", "week_fpts", "production_note", "injury_note", "report_status", "play_probability", "rookie"]
+            "value_over_replacement", "heat_check_index", "playoff_games", "playoff_fpts", "week_games", "week_fpts", "injury_note", "report_status", "play_probability", "rookie"]
     return jsonify({"players": _records(players[cols].head(limit)), "meta": _meta(meta)})
 
 
@@ -286,7 +296,7 @@ def waiver_signals():
     threshold = request.args.get("threshold", default=4.0, type=float)
     df = players[(players["games"] >= ratings.ROLE_MIN_GAMES)].copy()
     cols = ["id", "name", "team", "games", "season_fpts", "recent_fpts", "recent_minutes",
-            "minutes_change_fpts", "efficiency_change_fpts", "bpv", "production_note"]
+            "minutes_change_fpts", "efficiency_change_fpts", "bpv"]
     mc, ec = df["minutes_change_fpts"], df["efficiency_change_fpts"]
     lists = {
         "rising_minutes": df[mc >= threshold].sort_values("minutes_change_fpts", ascending=False),

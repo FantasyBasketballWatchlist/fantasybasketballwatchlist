@@ -277,10 +277,9 @@
           </tr></thead><tbody><tr>
             ${['MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'FGM', 'FGA', 'FTM', 'FTA', 'FG3M'].map(k => `<td class="r">${fmt(s[k])}</td>`).join('')}
           </tr></tbody></table></div>` : ''}
-        <details class="explain"><summary>How this number is built</summary>
-          <p>Production: ${escapeHtml(p.production_note)}.</p>
-          <p>BPV = ${pct(p.availability)} &times; ${fmt(p.production)} + ${pct(1 - p.availability)} &times; ${pct(p.manageable)} &times; ${fmt(m.replacement_level)}
-            (when he misses a long stretch you can stream a free agent; scattered absences are worth nothing).</p>
+        <details class="explain"><summary>What this number means</summary>
+          <p>BPV is the fantasy points per game this player is expected to be worth to your team this season, after accounting
+            for the games he's likely to miss. Value over a free agent compares him with the kind of player you could pick up instead.</p>
           <p>The likely range means 8 in 10 players end up inside it. Playoff games count his team's games in the last 4 weeks
             (ESPN's default fantasy playoffs${m.playoff_games_range ? ', ' + m.playoff_games_range[0] + '–' + m.playoff_games_range[1] + ' across teams' : ''});
             expected playoff FPTS allows for late-season rest on bad teams.</p>
