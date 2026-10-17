@@ -286,7 +286,11 @@ def build(today=None):
                                             else min(int(inj.get("out_games", 0)), SEASON_GAMES) / SEASON_GAMES)
                      for name, inj in overrides["injuries"].items()}
         roster_team, crowding = _roster_crowding(pg[production_season], target_season, out_share)
-        espn = _espn_by_player(pg[production_season], target_season)
+        # Last season's players, plus the new draftees (no games yet) so incoming rookies get ESPN's projection too.
+        names = pg[production_season].drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
+        draftees = draft[draft["SEASON"].astype(int) == nba_data.season_start_year(target_season)]
+        draftees = draftees.drop_duplicates("PERSON_ID").set_index("PERSON_ID")["PLAYER_NAME"]
+        espn = _espn_by_player(pd.concat([names, draftees[~draftees.index.isin(names.index)]]), target_season)
         fpts_rates = _fpts_rates(pg, seasons, target_season)
 
     season_games = pg[production_season]
@@ -361,7 +365,8 @@ def build(today=None):
             "espn_fpg": espn[pid][0] if pid in espn else None, "espn_games": espn[pid][1] if pid in espn else None,
             "games_missed": int(season_row["missed"]) if season_row is not None else 0,
             "games_missed_long": int(season_row["missed_long"]) if season_row is not None else 0,
-            "rookie": bool(pid in debuts),
+            # Before a season, everyone listed here has NBA games; the rookies are the "projection only" rows below.
+            "rookie": bool(pid in debuts) if mode == "in-season" else False,
             "per_game": {c: float(means[c]) for c in STAT_COLUMNS},
             "last_games": g.tail(RECENT_GAMES)[["GAME_DATE", "MATCHUP", "MIN", "FPTS"]].iloc[::-1]
                            .to_dict(orient="records"),
@@ -382,12 +387,19 @@ def build(today=None):
         if adj is not None:
             production += adj
             note += f", {adj:+.1f} for preseason minutes"
+        # Same ESPN blend as veterans, games included (docs/prereg-rookie-espn.md: -82 season FPTS of error).
+        availability, espn_row = league_p, espn.get(d.PERSON_ID)
+        if espn_row is not None:
+            production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn_row[0]
+            availability = min(1.0, ESPN_GAMES_SCALE * espn_row[1] / SEASON_GAMES)
+            note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn_row[0]:.1f})"
         rows.append({
             "id": int(d.PERSON_ID), "name": d.PLAYER_NAME, "team": team, "games": 0, "minutes": None,
             "season_fpts": None, "recent_fpts": None, "recent_minutes": None,
             "minutes_change_fpts": None, "efficiency_change_fpts": None,
             "production": production, "production_note": note,
-            "range": None, "availability": league_p, "espn_fpg": None, "espn_games": None,
+            "range": None, "availability": availability,
+            "espn_fpg": espn_row[0] if espn_row else None, "espn_games": espn_row[1] if espn_row else None,
             "games_missed": 0, "games_missed_long": 0, "rookie": True,
             "per_game": None, "last_games": [],
         })
@@ -587,8 +599,8 @@ def _fpts_rates(pg, seasons, target_season):
     return total.dropna().to_dict()
 
 
-def _espn_by_player(season_games, target_season):
-    """player id -> (ESPN projected FPTS/game, ESPN projected games), or {} if unavailable."""
+def _espn_by_player(names, target_season):
+    """player id -> (ESPN projected FPTS/game, ESPN projected games), or {} if unavailable. names: id -> name."""
     try:
         proj = nba_data.espn_projections(target_season)
     except Exception:
@@ -596,7 +608,6 @@ def _espn_by_player(season_games, target_season):
     if proj is None or proj.empty:
         return {}
     by_key = {_espn_key(n): (float(f), float(g)) for n, f, g in zip(proj.PLAYER_NAME, proj.ESPN_FPG, proj.ESPN_GP) if g > 0}
-    names = season_games.drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
     return {pid: by_key[_espn_key(n)] for pid, n in names.items() if _espn_key(n) in by_key}
 
 

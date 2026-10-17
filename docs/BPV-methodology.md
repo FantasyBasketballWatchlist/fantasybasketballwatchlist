@@ -251,7 +251,7 @@ We tested this on every case where a player's last-5 minutes rose at least 8 abo
 
 A rookie's real games are blended with **10 games** of that baseline, which was the best value in backtests.
 
-**Players who haven't played an NBA game yet** (newly drafted rookies) get the baseline for their pick range, availability at the league average, and a *"projection only"* label. The first version gave them 0.
+**Players who haven't played an NBA game yet** (newly drafted rookies) get the baseline for their pick range, availability at the league average, and a *"projection only"* label. The first version gave them 0. Since 2026-10-17, before the season, rookies ESPN projects are blended 37.5% with ESPN's per-game projection and take their games from ESPN (× 0.86), the same rule as veterans; see the rookie test below.
 
 ## 13. Between seasons: age and roster competition matter, older seasons don't
 
@@ -496,6 +496,7 @@ By the pre-set rule the blend is confirmed (best per-game error and ranking in b
 | Per-stat aging on top of that | +0.02 (1 of 4) | Not added |
 | Rookie prior from draft slot and age | −0.08 (−0.16 to +0.00), 12 of 16 seasons | Not added |
 | Rookies: 75% ESPN + 25% draft-slot prior | −0.33 (−1.54 to +0.86), 86 rookies | Not added (too few) |
+| **Incoming rookies, season totals: veterans' ESPN rule** (37.5% ESPN per game, ESPN games × 0.86; pool = every draftee ESPN projected preseason, never-played = 0; docs/prereg-rookie-espn.md, analysis/rookie_espn.py) | −82 season FPTS (−121 to −41), 3 of 4 seasons, top 10% −73, 103 rookies (2021-22 has only 8 and was +5). ESPN alone −49 (−138 to +43), not significant. Per game (20+ games) −0.67 | **Added** |
 
 Where the gap to the experts lives: turned into points, the consensus is worse than the blend on season totals in every slice except players with known preseason injuries (16 players, −120). Games-played error is the largest part of season-total error for every source. Its edge is in ordering the top of the draft, not in point estimates.
 
