@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-29T17:09",
+  "updated": "2026-10-17T12:59",
   "snapshots": [
     {
       "snapshot": "bpv_2026-09-26.csv",
@@ -10,9 +10,9 @@
       "status": "no games yet"
     },
     {
-      "snapshot": "bpv_2026-09-29_pre_2026-27.csv",
+      "snapshot": "bpv_2026-10-17_pre_2026-27.csv",
       "source": "bpv",
-      "date": "2026-09-29",
+      "date": "2026-10-17",
       "season": "2026-27",
       "players": 642,
       "status": "no games yet"

@@ -13,6 +13,10 @@ instead of three requests per player:
 
 Completed seasons are cached permanently; the in-progress season is refreshed
 after CURRENT_SEASON_TTL seconds.
+
+With NBA_OFFLINE=1 nothing is fetched: every dataset is read from CACHE_DIR however old it is.
+The live site runs this way (stats.nba.com doesn't answer cloud servers) and reads data/live/,
+which refresh.py fills from a machine that can reach the NBA.
 """
 import datetime
 import os
@@ -27,9 +31,11 @@ CACHE_DIR = os.environ.get("NBA_CACHE_DIR", os.path.join(os.path.dirname(os.path
 CURRENT_SEASON_TTL = int(os.environ.get("NBA_CACHE_TTL_SECONDS", 6 * 3600))
 REQUEST_TIMEOUT = 60
 RETRIES = 3
+OFFLINE = os.environ.get("NBA_OFFLINE") == "1"
 
 _lock = threading.RLock()   # re-entrant: a fetch may read other cached data (e.g. injury reports need the schedule)
 _memory = {}
+used = set()                # cache file names read this run (refresh.py copies these to data/live/)
 
 
 def season_string(start_year):
@@ -73,14 +79,17 @@ def _cached(name, fetch, is_current):
     """Return a DataFrame from memory, disk, or the network (in that order)."""
     with _lock:
         path = os.path.join(CACHE_DIR, f"{name}.csv")
+        used.add(f"{name}.csv")
         entry = _memory.get(name)
-        fresh_enough = lambda ts: not is_current or time.time() - ts < CURRENT_SEASON_TTL
+        fresh_enough = lambda ts: OFFLINE or not is_current or time.time() - ts < CURRENT_SEASON_TTL
         if entry and fresh_enough(entry[1]):
             return entry[0]
         if os.path.exists(path) and fresh_enough(os.path.getmtime(path)):
             df = pd.read_csv(path, dtype={"GAME_ID": str})
             _memory[name] = (df, os.path.getmtime(path))
             return df
+        if OFFLINE:
+            raise FileNotFoundError(f"{path} is missing and NBA_OFFLINE=1 (run refresh.py)")
         try:
             df = _fetch_with_retry(fetch)
         except Exception:
@@ -237,7 +246,13 @@ def recent_injury_reports(days_back=4, now_eastern=None):
 
     A report lists only teams playing that day, so a player's current status is in the latest report
     that included his team's game (see ratings._latest_report_by_player).
+
+    The result is saved to recent_injury_reports.csv; offline, that file is all there is.
     """
+    path = os.path.join(CACHE_DIR, "recent_injury_reports.csv")
+    used.add("recent_injury_reports.csv")
+    if OFFLINE:
+        return pd.read_csv(path) if os.path.exists(path) else None
     if now_eastern is None:
         utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         now_eastern = utc - datetime.timedelta(hours=4 if 3 <= utc.month <= 11 else 5)
@@ -250,7 +265,14 @@ def recent_injury_reports(days_back=4, now_eastern=None):
         df = _injury_report(now_eastern.date() - datetime.timedelta(days=k))
         if df is not None:
             frames.append(df)
-    return pd.concat(frames, ignore_index=True) if frames else None
+    if not frames:
+        if os.path.exists(path):
+            os.remove(path)     # don't leave old statuses behind for the live site
+        return None
+    reports = pd.concat(frames, ignore_index=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    reports.to_csv(path, index=False)
+    return reports
 
 
 def injury_reports(season, dates=None):
