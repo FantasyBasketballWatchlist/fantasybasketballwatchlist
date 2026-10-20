@@ -120,7 +120,8 @@ WEEK_OPPONENT_COEF = 0.69
 # 2023-24..2025-26): production = 62.5% BPV + 37.5% ESPN per game, and availability from ESPN's projected
 # games scaled by 0.86 (ESPN projects too many games, but ranks who will miss time well). On season
 # totals this tied BPV's error, beat ESPN's by 80 FPTS, ranked players best (0.686 vs 0.664 BPV and
-# 0.671 ESPN) and won 3 of 4 seasons of draft simulations. Veterans only (20+ games, 15+ mpg);
+# 0.671 ESPN). Its draft-simulation wins (3 of 4) came from a design that flattered it; with the other nine teams
+# drafting by ESPN it about tied ESPN (analysis/test_ten_team.py). Veterans only (20+ games, 15+ mpg);
 # not used in season, when ESPN switches to rest-of-season projections.
 ESPN_FPG_WEIGHT = 0.375
 ESPN_GAMES_SCALE = 0.86
@@ -164,6 +165,20 @@ TEAM_BAD, TEAM_TOP = 0.35, 0.68
 # 80% ranges for production (actual FPTS/game minus projection), calibrated out of sample.
 RANGE_IN_SEASON = [(10, -5.84, 8.19), (20, -5.66, 7.24), (30, -5.75, 7.55), (45, -5.49, 7.80)]   # (min games, low, high)
 RANGE_BETWEEN_SEASONS = (-7.34, 6.21)
+
+# What players produced after coming back, for the injury page (analysis/injury_return.py, 2009-10..2025-26, 20+ mpg
+# regulars). Context only: a multiplier built from these did not beat BPV out of sample (docs/prereg-injury-return.md),
+# because BPV's recent-form term catches up within about 5 games back.
+# (absence in team games: min, max, FPTS/game after return as a share of before, minutes share, returns measured)
+RETURN_HISTORY = [(5, 9, 0.979, 0.964, 883), (10, 19, 0.962, 0.947, 367), (20, 39, 0.942, 0.940, 113), (40, None, 0.793, 0.859, 6)]
+# Listed Out with an injury (20+ mpg regulars, 2021-22..2025-26 reports, first listing of each spell, 21+ team games
+# left): team games then missed in a row, by injury type: (median, mean, 80th percentile, spells). For the injury page.
+# Not the same thing as REPORT_SHARE_PLAYED, which is his share of ALL remaining games and so includes the ordinary
+# absences every player has later in the season.
+REPORT_STREAK = {"other": (2, 4.9, 5, 323), "soreness": (2, 5.3, 6, 717), "sprain": (3, 6.9, 10, 404),
+                 "strain": (6, 8.3, 13, 229), "serious": (15, 19.8, 33, 74)}
+# Back from a whole missed season: FPTS/game as a share of the last season played plus the age adjustment (51 players).
+MISSED_SEASON_SHARE, MISSED_SEASON_PLAYERS = 0.866, 51
 
 OVERRIDES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "overrides.json")
 # Preseason production (the BPV + ESPN blend) saved before each season, used as the early-season prior
@@ -373,36 +388,55 @@ def build(today=None):
                            .to_dict(orient="records"),
         })
 
-    # Players on a roster who missed all of the production season (e.g. a torn Achilles) but played 20+ games the
-    # season before: start from that season, age-adjusted, with the usual ESPN blend before a season.
-    # Not backtested: no test covered players returning from a full missed season.
+    # Players on a roster with no games in the production season but 20+ games the season before.
+    # Between seasons (e.g. a torn Achilles): start from that season, age-adjusted, with the usual ESPN blend; they are
+    # saved in the preseason prior like everyone else. Not backtested: no test covered players returning from a full
+    # missed season. In season (everyone who hasn't played yet, which early on is most of the league): the saved
+    # preseason projection if there is one, else last season's average; regulars lose availability for each team game
+    # missed so far, as in _absence_streaks (that rule was tested on regulars who had already played this season).
     listed = {r["id"] for r in rows}
     try:
-        rostered = set(nba_data.rosters(target_season)["PLAYER_ID"])
+        roster_now = nba_data.rosters(target_season).set_index("PLAYER_ID")["TEAM_ABBREVIATION"]
     except Exception:
-        rostered = set()
+        roster_now = pd.Series(dtype=object)
+    rostered = set(roster_now.index)
     before = pg[seasons[-2]]
     before = before[before["PLAYER_ID"].isin(rostered - listed)]
-    try:
-        ages_before = nba_data.player_ages(seasons[-2]).set_index("PLAYER_ID")["AGE"] + 1 if len(before) else None
-    except Exception:       # e.g. offline without that file: skip the age adjustment rather than the ratings
-        ages_before = None
+    if mode == "in-season":
+        ages_before = ages
+        team_played = tg[production_season].groupby("TEAM_ABBREVIATION").size()
+    else:
+        try:
+            ages_before = nba_data.player_ages(seasons[-2]).set_index("PLAYER_ID")["AGE"] + 1 if len(before) else None
+        except Exception:       # e.g. offline without that file: skip the age adjustment rather than the ratings
+            ages_before = None
     for pid, g in before.groupby("PLAYER_ID"):
         n, mpg = len(g), g["MIN"].mean()
         if n < AGE_MIN_GAMES:
             continue
+        team = roster_now.get(pid, g["TEAM_ABBREVIATION"].iloc[-1])
         production = g["FPTS"].mean()
-        note = f"missed all of {production_season}: {seasons[-2]} average"
+        note = (f"no games yet this season: {seasons[-2]} average" if mode == "in-season"
+                else f"missed all of {production_season}: {seasons[-2]} average")
         if mpg >= AGE_MIN_MPG:
             adjustment, age = _age_adjustment(ages_before, pid)
             production += adjustment
             note += f", {adjustment:+.1f} for age {age:.0f}" if age is not None else ""
         availability = float(avail.get(pid, league_p))
+        if mode == "in-season" and pid in frozen_prior:
+            production = float(frozen_prior[pid])
+            note = "no games yet this season: his preseason projection"
+        if mode == "in-season" and mpg >= ABSENCE_STREAK_MIN_MPG:
+            missed = int(team_played.get(team, 0))
+            if missed:
+                availability = min(1.0, max(0.0, availability + ABSENCE_STREAK_INTERCEPT
+                                            + ABSENCE_STREAK_COEF * min(missed, ABSENCE_STREAK_CAP)))
+                note += f"; has missed his team's first {missed} game{'s' if missed > 1 else ''}"
         if pid in espn:
             production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn[pid][0]
             availability = min(1.0, ESPN_GAMES_SCALE * espn[pid][1] / SEASON_GAMES)
             note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn[pid][0]:.1f})"
-        team = roster_team.get(pid, "FA") if roster_team is not None else g["TEAM_ABBREVIATION"].iloc[-1]
+            preseason_prior[pid] = production
         rows.append({
             "id": int(pid), "name": g["PLAYER_NAME"].iloc[-1], "team": team, "games": 0, "minutes": None,
             "season_fpts": None, "recent_fpts": None, "recent_minutes": None,
@@ -446,11 +480,16 @@ def build(today=None):
             "per_game": None, "last_games": [],
         })
 
-    if mode != "in-season" and live:
+    if mode != "in-season" and live and not _season_started(target_season):
         _save_preseason_prior(target_season, preseason_prior)
     df = pd.DataFrame(rows)
     ranked = df[df["games"] >= MIN_GAMES_RANKED]
-    replacement = bpv.replacement_level(ranked["production"], REPLACEMENT_RANK)
+    if len(ranked) >= REPLACEMENT_RANK:
+        replacement = bpv.replacement_level(ranked["production"], REPLACEMENT_RANK)
+    else:
+        # Early in a season too few players have 10 games: use last season's level, as analysis/backtest.py does.
+        prev = hist[(hist["season"] == seasons[-2]) & (hist["played"] >= 20)]
+        replacement = bpv.replacement_level(prev["fpts_pg"], REPLACEMENT_RANK)
     df["manageable"] = league_q
     df["injury_note"] = ""
 
@@ -480,12 +519,18 @@ def build(today=None):
               and bpv.injury_type(r.report_reason) in REPORT_SHARE_PLAYED):
             kind = bpv.injury_type(r.report_reason)
             share = REPORT_SHARE_PLAYED[kind]
-            out = round((1 - share) * remaining)
-            note = f"out (injury report: {r.report_reason}); expected to miss about {out} of his team's remaining games"
+            # The share is his expected share of ALL remaining games (it already includes the ordinary absences
+            # later on), so it replaces his availability, as tested (analysis/test_availability3.py). Until
+            # 2026-10-20 the missing share was IR'd and his normal availability applied on top, counting those
+            # absences twice (docs/prereg-report-share.md: -0.05 error in the share played, 5 of 5 seasons).
+            streak = min(REPORT_STREAK[kind][1], (1 - share) * remaining)
+            note = (f"out (injury report: {r.report_reason}); players listed like this played about {share:.0%} of "
+                    f"their team's remaining games, usually after missing about {REPORT_STREAK[kind][0]} in a row")
             # The teammate boost was tested for serious injuries only, using his full minutes.
             if kind == "serious" and r.minutes is not None and not pd.isna(r.minutes) and r.minutes >= TEAMMATE_OUT_MIN_MPG:
                 lost_minutes[r.team] = lost_minutes.get(r.team, 0.0) + REPORT_TEAMMATE_COEF * r.minutes
-            injured[i] = (remaining, out, note)
+            df.at[i, "availability"] = share
+            injured[i] = ("report", remaining, streak, note)
             continue
         else:
             continue
@@ -504,10 +549,19 @@ def build(today=None):
     values = []
     for i, r in df.iterrows():
         value = bpv.bpv_value(r.production, r.availability, league_q, replacement)
-        if i in injured:
+        if i in injured and injured[i][0] == "report":
+            _, remaining, streak, note = injured[i]
+            if remaining > 0:
+                # BPV's formula with his known stretch counted as IR-able: the typical streak for his injury type
+                # is streamed at replacement, the rest of his missed games get the league's usual long-stretch share.
+                missed = (1 - r.availability) * remaining
+                value = (r.availability * r.production
+                         + (streak + max(0.0, missed - streak) * league_q) * replacement / remaining)
+            df.at[i, "injury_note"] = note
+        elif i in injured:
             remaining, out, note = injured[i]
             if remaining > 0:
-                # Out games are one long stretch: IR him and stream the replacement.
+                # Manual entries: out games are one long stretch: IR him and stream the replacement.
                 value = 0.0 if out == remaining else ((remaining - out) * value + out * replacement) / remaining
             df.at[i, "injury_note"] = note
         values.append(value)
@@ -539,9 +593,26 @@ def build(today=None):
         "rookie_baselines": baselines, "history_seasons": seasons,
         "updated": datetime.datetime.now().isoformat(timespec="seconds"),
     }
-    if live:
+    if live and (mode == "in-season" or not _season_started(target_season)):
         _auto_snapshot(df, mode, target_season, today)
     return df, meta
+
+
+OPENING_TIP_HOUR_ET = 19         # no opening-night game tips before 7 PM Eastern
+
+
+def _season_started(target_season):
+    """True once the season's first game may have tipped, even if no box score is out yet. Before that, the preseason
+    snapshot and prior are rewritten on every build; after it, they must stay frozen (a late run on opening night would
+    otherwise save a "preseason" ranking made with that night's news)."""
+    try:
+        opener = nba_data.schedule(target_season)["GAME_DATE"].min()
+    except Exception:
+        return False
+    utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    now_et = utc - datetime.timedelta(hours=4 if 3 <= utc.month <= 11 else 5)
+    today_et = now_et.date().isoformat()
+    return today_et > opener or (today_et == opener and now_et.hour >= OPENING_TIP_HOUR_ET)
 
 
 def _auto_snapshot(df, mode, target_season, today):
@@ -806,6 +877,86 @@ def _roster_crowding(season_games, target_season, out_share=None):
     team_total = contrib.groupby(team_of).sum()
     crowding = team_of.map(team_total) - contrib - team_total.mean()
     return team_of.to_dict(), crowding.to_dict()
+
+
+REPORT_STATUSES = ["Out", "Doubtful", "Questionable", "Probable"]
+
+
+def _return_history(games_out):
+    """What players back from an absence this long produced, or None."""
+    for lo, hi, fpts, minutes, n in RETURN_HISTORY:
+        if games_out >= lo and (hi is None or games_out <= hi):
+            return {"absence": f"{lo}-{hi}" if hi else f"{lo}+", "fpts_share": fpts, "minutes_share": minutes, "returns": n}
+    return None
+
+
+def injury_list(df, meta):
+    """Everyone on the latest official injury report for his team (Out, Doubtful, Questionable, Probable), plus,
+    between seasons, players coming back from a whole missed season. Each listed player gets his BPV, chance of
+    playing, how many games in a row players Out with that kind of injury went on to miss (REPORT_STREAK) and what
+    players back from absences that long produced (RETURN_HISTORY, context only)."""
+    try:
+        reports = nba_data.recent_injury_reports()
+    except Exception:
+        reports = None
+    by_name = {normalize_name(n): i for i, n in zip(df.index, df["name"])}
+    try:
+        played = nba_data.team_game_logs(meta["season"]).groupby("TEAM_ABBREVIATION").size()             if meta.get("mode") == "in-season" else pd.Series(dtype=int)
+    except Exception:
+        played = pd.Series(dtype=int)
+    out, report_date = [], None
+    if reports is not None and not reports.empty:
+        reports = reports[reports["Current Status"].isin(REPORT_STATUSES)]
+        team_latest = {}
+        for d, matchup in zip(reports["REPORT_DATE"], reports["Matchup"]):
+            for team in str(matchup).split("@"):
+                team_latest[team] = max(team_latest.get(team, ""), d)
+        report_date = max(team_latest.values()) if team_latest else None
+        seen = set()
+        for r in reports.sort_values("REPORT_DATE", ascending=False).itertuples(index=False):
+            name = bpv.report_player_name(r[reports.columns.get_loc("Player Name")])
+            key = normalize_name(name)
+            if key in seen:
+                continue
+            i = by_name.get(key)
+            p = df.loc[i] if i is not None else None
+            teams = str(r.Matchup).split("@")
+            team = p["team"] if p is not None and p["team"] in teams else None
+            # Only his team's latest report counts (reports list only the teams playing that day).
+            latest = team_latest.get(team) if team else max(team_latest.get(t, "") for t in teams)
+            if r.REPORT_DATE != latest:
+                continue
+            seen.add(key)
+            status, reason = r[reports.columns.get_loc("Current Status")], str(r.Reason)
+            category = bpv.absence_reason(reason)
+            kind = bpv.injury_type(reason) if category == "injury" else None
+            row = {"name": p["name"] if p is not None else name, "id": int(p["id"]) if p is not None else None,
+                   "team": team or str(r.Team), "status": status, "reason": reason, "category": category,
+                   "injury_type": kind, "report_date": r.REPORT_DATE, "game_date": str(r[reports.columns.get_loc("Game Date")]),
+                   "matchup": str(r.Matchup), "play_probability": bpv.PLAY_PROBABILITY.get(status),
+                   "rank": int(p["rank"]) if p is not None else None, "bpv": float(p["bpv"]) if p is not None else None,
+                   "production": float(p["production"]) if p is not None else None,
+                   "streak": None, "share_played": None, "return_history": None}
+            if status == "Out" and category == "injury" and kind in REPORT_STREAK:
+                median, mean, p80, n = REPORT_STREAK[kind]
+                remaining = SEASON_GAMES - int(played.get(team, 0)) if team else SEASON_GAMES
+                row["streak"] = {"median": min(median, remaining), "mean": min(mean, remaining), "p80": min(p80, remaining),
+                                 "spells": n}
+                row["return_history"] = _return_history(round(mean))
+                row["share_played"] = REPORT_SHARE_PLAYED.get(kind)
+            out.append(row)
+    order = {s: k for k, s in enumerate(REPORT_STATUSES)}
+    out.sort(key=lambda x: (order.get(x["status"], 9), x["rank"] or 10 ** 6))
+    returning = []
+    if meta.get("mode") != "in-season":
+        back = df[(df["games"] == 0) & df["production_note"].str.startswith("missed all of")]
+        for _, p in back.iterrows():
+            returning.append({"name": p["name"], "id": int(p["id"]), "team": p["team"], "rank": int(p["rank"]),
+                              "bpv": float(p["bpv"]), "production": float(p["production"]), "note": p["production_note"]})
+    return {"report_date": report_date, "players": out, "returning": returning,
+            "missed_season_history": {"fpts_share": MISSED_SEASON_SHARE, "players": MISSED_SEASON_PLAYERS},
+            "return_history": [{"absence": f"{lo}-{hi}" if hi else f"{lo}+", "fpts_share": f, "minutes_share": m, "returns": n}
+                               for lo, hi, f, m, n in RETURN_HISTORY]}
 
 
 _cache = {"at": 0, "day": None, "value": None}

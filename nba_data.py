@@ -253,6 +253,20 @@ def recent_injury_reports(days_back=4, now_eastern=None):
     used.add("recent_injury_reports.csv")
     if OFFLINE:
         return pd.read_csv(path) if os.path.exists(path) else None
+    # Reports come every 15 minutes: reuse one fetched in the last 15 (the ratings and /api/injuries both ask).
+    memo = _memory.get("recent_injury_reports")
+    if now_eastern is None and memo and time.time() - memo[1] < RECENT_REPORTS_TTL:
+        return memo[0]
+    reports = _fetch_recent_injury_reports(path, days_back, now_eastern)
+    if now_eastern is None:
+        _memory["recent_injury_reports"] = (reports, time.time())
+    return reports
+
+
+RECENT_REPORTS_TTL = 15 * 60
+
+
+def _fetch_recent_injury_reports(path, days_back, now_eastern):
     if now_eastern is None:
         utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         now_eastern = utc - datetime.timedelta(hours=4 if 3 <= utc.month <= 11 else 5)

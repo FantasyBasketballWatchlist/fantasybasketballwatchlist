@@ -138,9 +138,19 @@ def league():
     return render_template("league.html")
 
 
+@app.route("/leagues")
+def your_leagues():
+    return render_template("leagues.html")
+
+
+@app.route("/injuries")
+def injuries():
+    return render_template("injuries.html")
+
+
 # ---------- search engines and icons ----------
 SITE_URL = "https://hoopothesis.cc"
-PAGES = ["/", "/draft", "/league", "/trade-analyzer", "/waiver-wires"]
+PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/trade-analyzer", "/waiver-wires"]
 
 
 @app.route("/robots.txt")
@@ -238,8 +248,17 @@ def get_rankings():
     players, meta = ratings.get()
     limit = request.args.get("limit", default=200, type=int)
     cols = ["rank", "id", "name", "team", "games", "production", "season_fpts", "recent_fpts", "range_low", "range_high", "availability", "bpv",
-            "value_over_replacement", "heat_check_index", "playoff_games", "playoff_fpts", "week_games", "week_fpts", "injury_note", "report_status", "play_probability", "rookie"]
+            "value_over_replacement", "heat_check_index", "playoff_games", "playoff_fpts", "week_games", "week_fpts", "injury_note", "report_status", "play_probability", "rookie",
+            "report_reason", "minutes_change_fpts", "efficiency_change_fpts"]
     return jsonify({"players": _records(players[cols].head(limit)), "meta": _meta(meta)})
+
+
+@app.route("/api/injuries")
+@cached_json
+def get_injuries():
+    """The latest official injury report, joined to BPV (see ratings.injury_list)."""
+    players, meta = ratings.get()
+    return jsonify(_clean({**ratings.injury_list(players, meta), "meta": _meta(meta)}))
 
 
 @app.route("/api/positions")
@@ -291,21 +310,36 @@ def waiver_signals():
     """Players whose last 5 games differ from their season, split by why.
 
     Minutes changes tend to stick; per-minute (shooting) swings mostly fade.
+    With a league (?mine=ids of your team&others=ids on the other teams): minutes risers are free agents only,
+    hot shooters and falling minutes are your own players (sell high, drop), cold shooters are on other teams (buy
+    low), and the answer adds your team's players and the best free agents.
     """
     players, meta = ratings.get()
     threshold = request.args.get("threshold", default=4.0, type=float)
+    ids = lambda key: {int(x) for x in request.args.get(key, "").split(",") if x.strip().isdigit()}
+    mine, others = ids("mine"), ids("others")
+    league = bool(mine or others)
     df = players[(players["games"] >= ratings.ROLE_MIN_GAMES)].copy()
     cols = ["id", "name", "team", "games", "season_fpts", "recent_fpts", "recent_minutes",
             "minutes_change_fpts", "efficiency_change_fpts", "bpv"]
     mc, ec = df["minutes_change_fpts"], df["efficiency_change_fpts"]
+    free, own, theirs = ~df["id"].isin(mine | others), df["id"].isin(mine), df["id"].isin(others)
+    pick = lambda mask, group: mask & group if league else mask
     lists = {
-        "rising_minutes": df[mc >= threshold].sort_values("minutes_change_fpts", ascending=False),
-        "hot_shooting": df[(ec >= threshold) & (mc.abs() < threshold / 2)].sort_values("efficiency_change_fpts", ascending=False),
-        "cold_shooting": df[(ec <= -threshold) & (mc.abs() < threshold / 2)].sort_values("efficiency_change_fpts"),
-        "falling_minutes": df[mc <= -threshold].sort_values("minutes_change_fpts"),
+        "rising_minutes": df[pick(mc >= threshold, free)].sort_values("minutes_change_fpts", ascending=False),
+        "hot_shooting": df[pick((ec >= threshold) & (mc.abs() < threshold / 2), own)].sort_values("efficiency_change_fpts", ascending=False),
+        "cold_shooting": df[pick((ec <= -threshold) & (mc.abs() < threshold / 2), theirs)].sort_values("efficiency_change_fpts"),
+        "falling_minutes": df[pick(mc <= -threshold, own)].sort_values("minutes_change_fpts"),
     }
-    return jsonify({**{k: _records(v[cols].head(WAIVER_LIST_SIZE)) for k, v in lists.items()},
-                    "threshold": threshold, "meta": _meta(meta)})
+    out = {**{k: _records(v[cols].head(WAIVER_LIST_SIZE)) for k, v in lists.items()},
+           "threshold": threshold, "league": league, "meta": _meta(meta)}
+    if league:
+        team_cols = cols + ["rank", "production", "availability", "injury_note", "report_status", "report_reason",
+                            "week_games", "week_fpts"]
+        out["team"] = _records(players[players["id"].isin(mine)][team_cols])
+        fa = players[~players["id"].isin(mine | others)].sort_values("bpv", ascending=False)
+        out["free_agents"] = _records(fa[team_cols].head(WAIVER_LIST_SIZE))
+    return jsonify(out)
 
 
 @app.errorhandler(Exception)

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set page_title = 'Your Fantasy Basketball Leagues | Hoopothesis' %}
+  {% set page_description = 'Keep several fantasy basketball leagues side by side: each with its own draft and teams, saved in your browser.' %}
+  {% set canonical_path = '/leagues' %}
+  {% include '_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <style>
+    .top { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center; margin-bottom: 18px; }
+    .top input { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 10px; padding: 9px 12px; width: 240px; }
+    .top input:focus { outline: none; border-color: var(--orange); }
+    .btn.small { padding: 9px 14px; font-size: .82rem; border-radius: 10px; }
+    a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+    .btn.ghost { background: var(--bg-2); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    .btn.ghost:hover { box-shadow: none; border-color: var(--orange); }
+    .btn.danger.armed { background: var(--bad); color: #2a0707; }
+    .lg { padding: 18px; border-top: 3px solid var(--border); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .lg.active { border-top-color: var(--orange); }
+    .lg-head { display: flex; align-items: center; gap: 10px; }
+    .lg-name { flex: 1; min-width: 0; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 8px; padding: 4px 8px;
+      font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .lg-name:hover { border-color: var(--border); }
+    .lg-name:focus { outline: none; border-color: var(--orange); }
+    .tag { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .5px;
+      color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
+    .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .facts div { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
+    .facts label { display: block; color: var(--muted); font-size: .7rem; }
+    .facts b { font-family: 'Barlow Condensed', sans-serif; font-size: 1.15rem; }
+    .roster { color: var(--muted); font-size: .84rem; line-height: 1.5; }
+    .roster b { color: var(--text); font-weight: 600; }
+    .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .updated { color: var(--dim); font-size: .76rem; }
+    .msg { color: var(--orange-2); font-size: .85rem; text-align: center; min-height: 1.2em; margin-bottom: 8px; }
+    @media (max-width: 760px) { .facts { grid-template-columns: repeat(3, 1fr); } .top input { flex: 1; } }
+  </style>
+</head>
+<body>
+  {% set active = 'leagues' %}{% include '_nav.html' %}
+
+  <main class="page">
+    <section class="hero">
+      <h1>Your <span class="accent">Leagues</span></h1>
+      <p>Each league keeps its own draft and its own teams. Pick one to work on; the Draft and Teams pages follow it.</p>
+      <p class="notice">Saved in this browser on this computer. Use Export to move them to another one.</p>
+    </section>
+
+    <div class="top">
+      <input id="new-name" type="text" maxlength="40" placeholder="New league name" autocomplete="off">
+      <button class="btn small" id="new">+ New league</button>
+      <button class="btn small ghost" id="export">Export</button>
+      <label class="btn small ghost" style="cursor:pointer">Import<input type="file" id="import" accept="application/json,.json" hidden></label>
+    </div>
+    <div class="msg" id="msg"></div>
+
+    <div class="grid-2" id="leagues"></div>
+  </main>
+
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    let players = new Map();
+    const msg = (t) => { document.getElementById('msg').textContent = t; };
+
+    function draftFacts(d) {
+      if (!d || !d.picks) return { made: 0, total: null, mine: [], slot: null, teams: null };
+      const teams = d.teams, made = Object.keys(d.picks).length;
+      const teamOf = (n) => { const r = Math.floor((n - 1) / teams), i = (n - 1) % teams; return r % 2 === 0 ? i + 1 : teams - i; };
+      const mine = Object.entries(d.picks).filter(([n]) => teamOf(+n) === d.slot).sort((a, b) => a[0] - b[0])
+        .map(([, id]) => players.get(id)?.name || d.names?.[id] || 'Unknown player');
+      return { made, total: teams * d.rounds, mine, slot: d.slot, teams, teamOf };
+    }
+
+    function card(l, active) {
+      const f = draftFacts(l.draft);
+      const teams = l.teams?.teams || [];
+      const filled = teams.filter(t => t.ids.length).length;
+      const status = f.made === 0 ? 'Not started' : f.made >= f.total ? 'Complete' : `${f.made}/${f.total} picks`;
+      return `<div class="card lg${active ? ' active' : ''}" data-id="${l.id}">
+        <div class="lg-head"><input class="lg-name" value="${escapeHtml(l.name)}" maxlength="40" aria-label="League name">${active ? '<span class="tag">Active</span>' : ''}</div>
+        <div class="facts">
+          <div><label>Draft</label><b>${status}</b></div>
+          <div><label>Your slot</label><b>${f.slot ? `#${f.slot} of ${f.teams}` : '–'}</b></div>
+          <div><label>Teams set up</label><b>${filled}</b></div>
+        </div>
+        <div class="roster">${f.mine.length ? `<b>Your picks:</b> ${f.mine.map(escapeHtml).join(', ')}` : 'No picks yet.'}</div>
+        <div class="buttons">
+          <a class="btn small" href="/draft" data-go>${f.made && f.made < f.total ? 'Continue draft' : f.made ? 'Open draft' : 'Start draft'}</a>
+          <a class="btn small ghost" href="/league" data-go>Teams</a>
+          ${f.made ? '<button class="btn small ghost" data-copy title="Put each drafted team on the Teams page">Draft → Teams</button>' : ''}
+          ${!active ? '<button class="btn small ghost" data-use>Make active</button>' : ''}
+          <button class="btn small ghost danger" data-del>Delete</button>
+        </div>
+        <span class="updated">Last changed ${new Date(l.updated).toLocaleString()}</span>
+      </div>`;
+    }
+
+    function render() {
+      const d = Leagues.read();
+      document.getElementById('leagues').innerHTML = d.leagues.slice()
+        .sort((a, b) => (b.id === d.active) - (a.id === d.active) || b.updated.localeCompare(a.updated))
+        .map(l => card(l, l.id === d.active)).join('');
+    }
+
+    // Two-click confirm instead of a browser dialog.
+    function armed(button, label, action) {
+      if (button.classList.contains('armed')) { action(); return; }
+      button.classList.add('armed'); button.dataset.label = button.textContent; button.textContent = label;
+      setTimeout(() => { if (button.isConnected) { button.classList.remove('armed'); button.textContent = button.dataset.label; } }, 3000);
+    }
+
+    // The drafted rosters become the league's teams (you are "Your team"); the Teams page then ranks them.
+    function copyDraft(l) {
+      const f = draftFacts(l.draft), d = l.draft, teams = [];
+      for (let t = 1; t <= d.teams; t++) {
+        const ids = Object.entries(d.picks).filter(([n]) => f.teamOf(+n) === t).sort((a, b) => a[0] - b[0]).map(([, id]) => id);
+        teams.push({ name: t === d.slot ? 'Your team' : `Team ${t}`, ids });
+      }
+      return { teams, lineup: d.lineup || l.teams?.lineup || 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL', mine: d.slot - 1, trades: [] };
+    }
+
+    const box = document.getElementById('leagues');
+    box.addEventListener('click', e => {
+      const el = e.target.closest('.lg');
+      if (!el) return;
+      const id = el.dataset.id;
+      if (e.target.closest('[data-go]')) { Leagues.switchTo(id); return; }          // then follow the link
+      if (e.target.closest('[data-use]')) { Leagues.switchTo(id); render(); return; }
+      const del = e.target.closest('[data-del]');
+      if (del) { armed(del, 'Sure? Click again', () => { Leagues.remove(id); render(); msg('League deleted.'); }); return; }
+      const cp = e.target.closest('[data-copy]');
+      if (cp) {
+        const l = Leagues.read().leagues.find(x => x.id === id);
+        const hasTeams = (l.teams?.teams || []).some(t => t.ids.length);
+        const go = () => { Leagues.switchTo(id); Leagues.set('teams', copyDraft(l)); render(); msg(`${l.name}: drafted teams copied to the Teams page.`); };
+        if (hasTeams) armed(cp, 'Replace teams?', go); else go();
+      }
+    });
+    box.addEventListener('change', e => {
+      if (!e.target.matches('.lg-name')) return;
+      Leagues.rename(e.target.closest('.lg').dataset.id, e.target.value); render();
+    });
+    document.getElementById('new').addEventListener('click', () => {
+      const input = document.getElementById('new-name');
+      const l = Leagues.create(input.value); input.value = '';
+      render(); msg(`Created ${l.name}. It's now the active league.`);
+    });
+    document.getElementById('new-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('new').click(); });
+
+    document.getElementById('export').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(Leagues.read(), null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `hoopothesis-leagues-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+    // Import adds the file's leagues next to the ones here (same id = replaced by the file's copy).
+    document.getElementById('import').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      try {
+        const incoming = JSON.parse(await file.text());
+        if (!incoming || !Array.isArray(incoming.leagues)) throw new Error('not a leagues file');
+        const d = Leagues.read();
+        const valid = incoming.leagues.filter(l => l && typeof l.id === 'string' && typeof l.name === 'string')
+          .map(l => ({ id: l.id, name: String(l.name).slice(0, 40), created: l.created || new Date().toISOString(),
+                       updated: l.updated || new Date().toISOString(), draft: l.draft || null, teams: l.teams || null }));
+        valid.forEach(l => { const i = d.leagues.findIndex(x => x.id === l.id); if (i >= 0) d.leagues[i] = l; else d.leagues.push(l); });
+        Leagues.write(d); render(); msg(`Imported ${valid.length} league${valid.length === 1 ? '' : 's'}.`);
+      } catch (err) { msg("That file isn't a Hoopothesis leagues export."); }
+    });
+    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY) render(); });
+
+    render();
+    fetch('/api/players').then(r => r.ok ? r.json() : []).then(list => { players = new Map(list.map(p => [p.id, p])); render(); }).catch(() => {});
+  </script>
+</body>
+</html>

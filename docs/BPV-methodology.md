@@ -498,6 +498,20 @@ By the pre-set rule the blend is confirmed (best per-game error and ranking in b
 | Per-stat aging on top of that | +0.02 (1 of 4) | Not added |
 | Rookie prior from draft slot and age | −0.08 (−0.16 to +0.00), 12 of 16 seasons | Not added |
 | Rookies: 75% ESPN + 25% draft-slot prior | −0.33 (−1.54 to +0.86), 86 rookies | Not added (too few) |
+
+**Production after an injury absence (2026-10-20).** Rules written first (`docs/prereg-injury-return.md`); script `analysis/injury_return.py`. Published studies find a first-season drop after the worst injuries (Achilles repair: PER about 80% of the pre-injury level, minutes 83%, vs 96% and 103% for matched controls; ACL: a dip in the first season, mostly recovered by the second), but only for those injuries and only for players who made it back. Here every absence of 5+ team games by a 20+ mpg regular, 2009-10 to 2025-26 (1,369 returns), was scored against BPV's own projection. Players do come back a little weaker, mostly through minutes: rest-of-season FPTS/game was 97.5% of BPV's projection after a 5–9 game absence, 95.7% after 10–19, 93.6% after 20–39 and 80% after 40+ (6 cases). Five games after the return the gap is gone (100–100.5%): BPV's recent-form term has already absorbed it.
+
+| Candidate | Result vs current | Decision |
+|---|---|---|
+| Multiplier by absence length, at the return | −0.04 FPTS/game (−0.10 to +0.02), 9 of 17 seasons; stars (40+) worse by 0.13 | Not added |
+| Same, split by age (30+) | +0.02 vs length alone (worse), 6 of 17 | Not added |
+| Same, split by injury type on the official report (serious vs other, 2021-22 on) | +0.07 vs length alone (worse), 0 of 5 | Not added |
+| Multiplier by absence length, 5 games after the return | +0.00 (−0.00 to +0.01), 7 of 17 | Not added |
+| Back from a whole missed season (51 players): multiplier on last-played season + age | −0.28 (−1.23 to +0.65), 9 of 14; they averaged 87% of that baseline; 4 stars worse | Not added (too few) |
+
+**Bug fix: injury-report availability (2026-10-20).** The official-report rule (a regular listed Out with an injury plays a share of his team's remaining games, by injury type) was tested as his availability, but the app treated the missing share as one IR stretch and then applied his normal availability on top, counting ordinary absences twice: on 2,162 listings it predicted 38% of games played when players played 58%. The app now uses the share as his availability, as tested (`docs/prereg-report-share.md`, `analysis/report_share.py`: share error −0.05 to −0.07, 5 of 5 seasons, stars better). A variant (normal availability after the typical streak) won on absolute error but lost on squared error and over-predicted games played, so it wasn't used.
+
+The average drops are shown on the injury page as context ("players back from absences this long produced X%"), not used in BPV.
 | **Incoming rookies, season totals: veterans' ESPN rule** (37.5% ESPN per game, ESPN games × 0.86; pool = every draftee ESPN projected preseason, never-played = 0; docs/prereg-rookie-espn.md, analysis/rookie_espn.py) | −82 season FPTS (−121 to −41), 3 of 4 seasons, top 10% −73, 103 rookies (2021-22 has only 8 and was +5). ESPN alone −49 (−138 to +43), not significant. Per game (20+ games) −0.67 | **Added** |
 
 Where the gap to the experts lives: turned into points, the consensus is worse than the blend on season totals in every slice except players with known preseason injuries (16 players, −120). Games-played error is the largest part of season-total error for every source. Its edge is in ordering the top of the draft, not in point estimates.

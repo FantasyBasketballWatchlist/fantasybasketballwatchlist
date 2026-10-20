@@ -1,0 +1,437 @@
+{
+ "rules": "docs/prereg-injury-return.md",
+ "test_a": {
+  "checkpoint_0_games_after_return": {
+   "describe": {
+    "10-19": {
+     "events": 367,
+     "actual_over_baseline": 0.957,
+     "actual_over_pre": 0.962,
+     "minutes_after_over_before": 0.947
+    },
+    "5-9": {
+     "events": 883,
+     "actual_over_baseline": 0.975,
+     "actual_over_pre": 0.979,
+     "minutes_after_over_before": 0.964
+    },
+    "20-39": {
+     "events": 113,
+     "actual_over_baseline": 0.936,
+     "actual_over_pre": 0.942,
+     "minutes_after_over_before": 0.94
+    },
+    "40+": {
+     "events": 6,
+     "actual_over_baseline": 0.805,
+     "actual_over_pre": 0.793,
+     "minutes_after_over_before": 0.859
+    }
+   },
+   "length": {
+    "events": 1369,
+    "players": 574,
+    "mae_new": 3.6935811541072634,
+    "mae_old": 3.733572231655967,
+    "diff": -0.03999107754870357,
+    "ci": [
+     -0.09897017896513291,
+     0.02371647513267775
+    ],
+    "by_season": {
+     "2009-10": -0.364,
+     "2010-11": -0.316,
+     "2011-12": 0.006,
+     "2012-13": -0.025,
+     "2013-14": -0.135,
+     "2014-15": 0.027,
+     "2015-16": 0.031,
+     "2016-17": -0.035,
+     "2017-18": 0.011,
+     "2018-19": 0.04,
+     "2019-20": -0.11,
+     "2020-21": -0.042,
+     "2021-22": 0.013,
+     "2022-23": 0.233,
+     "2023-24": -0.011,
+     "2024-25": 0.006,
+     "2025-26": -0.163
+    },
+    "seasons_better": "9 of 17",
+    "stars": {
+     "events": 114,
+     "diff": 0.12957656427559394
+    },
+    "passes": false
+   },
+   "length_age_vs_length": {
+    "events": 1369,
+    "players": 574,
+    "mae_new": 3.7122193472961933,
+    "mae_old": 3.6935811541072634,
+    "diff": 0.018638193188929897,
+    "ci": [
+     0.003249723146992223,
+     0.03429895069947816
+    ],
+    "by_season": {
+     "2009-10": 0.032,
+     "2010-11": -0.014,
+     "2011-12": 0.026,
+     "2012-13": 0.051,
+     "2013-14": 0.049,
+     "2014-15": -0.012,
+     "2015-16": 0.002,
+     "2016-17": -0.004,
+     "2017-18": -0.064,
+     "2018-19": 0.106,
+     "2019-20": 0.003,
+     "2020-21": -0.01,
+     "2021-22": -0.005,
+     "2022-23": 0.088,
+     "2023-24": 0.047,
+     "2024-25": 0.005,
+     "2025-26": 0.018
+    },
+    "seasons_better": "6 of 17",
+    "stars": {
+     "events": 114,
+     "diff": 0.09040705700582485
+    },
+    "passes": false
+   },
+   "type_vs_length (2021-22 on)": {
+    "events": 549,
+    "players": 280,
+    "mae_new": 3.8152962048876122,
+    "mae_old": 3.747461062515326,
+    "diff": 0.06783514237228605,
+    "ci": [
+     0.022566555893647835,
+     0.11836229331809016
+    ],
+    "by_season": {
+     "2021-22": 0.025,
+     "2022-23": 0.141,
+     "2023-24": 0.098,
+     "2024-25": 0.037,
+     "2025-26": 0.069
+    },
+    "seasons_better": "0 of 5",
+    "stars": {
+     "events": 65,
+     "diff": 0.02823047547974067
+    },
+    "passes": false
+   },
+   "by_type (2021-22 on)": {
+    "other": {
+     "events": 414,
+     "actual_over_baseline": 0.985
+    },
+    "serious": {
+     "events": 38,
+     "actual_over_baseline": 0.939
+    },
+    "unlisted": {
+     "events": 97,
+     "actual_over_baseline": 0.986
+    }
+   }
+  },
+  "checkpoint_5_games_after_return": {
+   "describe": {
+    "10-19": {
+     "events": 340,
+     "actual_over_baseline": 1.005,
+     "actual_over_pre": 0.983,
+     "minutes_after_over_before": 0.966
+    },
+    "5-9": {
+     "events": 829,
+     "actual_over_baseline": 1.0,
+     "actual_over_pre": 0.994,
+     "minutes_after_over_before": 0.977
+    },
+    "20-39": {
+     "events": 103,
+     "actual_over_baseline": 1.004,
+     "actual_over_pre": 0.977,
+     "minutes_after_over_before": 0.964
+    },
+    "40+": {
+     "events": 6,
+     "actual_over_baseline": 0.895,
+     "actual_over_pre": 0.828,
+     "minutes_after_over_before": 0.928
+    }
+   },
+   "length": {
+    "events": 1278,
+    "players": 548,
+    "mae_new": 3.5691689205791675,
+    "mae_old": 3.565898868351651,
+    "diff": 0.00327005222751664,
+    "ci": [
+     -0.00410846722124889,
+     0.010355314315956828
+    ],
+    "by_season": {
+     "2009-10": 0.037,
+     "2010-11": 0.016,
+     "2011-12": 0.025,
+     "2012-13": -0.001,
+     "2013-14": -0.001,
+     "2014-15": -0.009,
+     "2015-16": 0.009,
+     "2016-17": 0.001,
+     "2017-18": 0.02,
+     "2018-19": -0.018,
+     "2019-20": -0.0,
+     "2020-21": 0.03,
+     "2021-22": -0.002,
+     "2022-23": 0.005,
+     "2023-24": -0.012,
+     "2024-25": -0.0,
+     "2025-26": -0.009
+    },
+    "seasons_better": "7 of 17",
+    "stars": {
+     "events": 95,
+     "diff": -0.011118663763131309
+    },
+    "passes": false
+   },
+   "length_age_vs_length": {
+    "events": 1278,
+    "players": 548,
+    "mae_new": 3.595591899340003,
+    "mae_old": 3.5691689205791675,
+    "diff": 0.026422978760835658,
+    "ci": [
+     0.006097971981008777,
+     0.04799556755271118
+    ],
+    "by_season": {
+     "2009-10": 0.036,
+     "2010-11": 0.048,
+     "2011-12": 0.032,
+     "2012-13": 0.038,
+     "2013-14": -0.063,
+     "2014-15": -0.057,
+     "2015-16": 0.031,
+     "2016-17": 0.006,
+     "2017-18": 0.004,
+     "2018-19": 0.042,
+     "2019-20": -0.033,
+     "2020-21": 0.008,
+     "2021-22": -0.006,
+     "2022-23": 0.126,
+     "2023-24": 0.078,
+     "2024-25": 0.035,
+     "2025-26": 0.071
+    },
+    "seasons_better": "4 of 17",
+    "stars": {
+     "events": 95,
+     "diff": 0.1365708538102064
+    },
+    "passes": false
+   },
+   "type_vs_length (2021-22 on)": {
+    "events": 509,
+    "players": 270,
+    "mae_new": 3.553119962263248,
+    "mae_old": 3.519233396780803,
+    "diff": 0.03388656548244473,
+    "ci": [
+     -0.012932127405624105,
+     0.09241993531007209
+    ],
+    "by_season": {
+     "2021-22": -0.002,
+     "2022-23": 0.079,
+     "2023-24": 0.218,
+     "2024-25": -0.0,
+     "2025-26": -0.045
+    },
+    "seasons_better": "2 of 5",
+    "stars": {
+     "events": 52,
+     "diff": -0.06676246389700502
+    },
+    "passes": false
+   },
+   "by_type (2021-22 on)": {
+    "other": {
+     "events": 388,
+     "actual_over_baseline": 1.016
+    },
+    "serious": {
+     "events": 36,
+     "actual_over_baseline": 0.988
+    },
+    "unlisted": {
+     "events": 85,
+     "actual_over_baseline": 0.993
+    }
+   }
+  }
+ },
+ "test_b_whole_season": {
+  "events": 51,
+  "players": 49,
+  "mae_new": 5.268496190667639,
+  "mae_old": 5.54436674450301,
+  "diff": -0.27587055383537074,
+  "ci": [
+   -1.2296411680651256,
+   0.6460983586858603
+  ],
+  "by_season": {
+   "2011-12": -1.046,
+   "2012-13": 0.854,
+   "2013-14": 1.025,
+   "2014-15": -1.897,
+   "2015-16": -2.455,
+   "2016-17": 1.409,
+   "2017-18": -1.958,
+   "2018-19": -2.506,
+   "2019-20": 2.647,
+   "2020-21": -1.74,
+   "2022-23": -0.458,
+   "2023-24": -0.24,
+   "2024-25": -3.023,
+   "2025-26": 1.895
+  },
+  "seasons_better": "9 of 14",
+  "stars": {
+   "events": 4,
+   "diff": 1.5583494519176937
+  },
+  "passes": false,
+  "actual_over_baseline": 0.866,
+  "examples": [
+   {
+    "season": "2020-21",
+    "name": "Kevin Durant",
+    "pre_fpg": 47.4,
+    "baseline": 44.8,
+    "actual": 49.2,
+    "w": 35
+   },
+   {
+    "season": "2022-23",
+    "name": "Kawhi Leonard",
+    "pre_fpg": 47.2,
+    "baseline": 44.7,
+    "actual": 44.2,
+    "w": 52
+   },
+   {
+    "season": "2022-23",
+    "name": "Zion Williamson",
+    "pre_fpg": 43.8,
+    "baseline": 45.9,
+    "actual": 43.2,
+    "w": 29
+   },
+   {
+    "season": "2020-21",
+    "name": "John Wall",
+    "pre_fpg": 42.0,
+    "baseline": 40.3,
+    "actual": 35.0,
+    "w": 40
+   },
+   {
+    "season": "2013-14",
+    "name": "Derrick Rose",
+    "pre_fpg": 39.2,
+    "baseline": 38.9,
+    "actual": 19.6,
+    "w": 10
+   },
+   {
+    "season": "2023-24",
+    "name": "Miles Bridges",
+    "pre_fpg": 38.8,
+    "baseline": 38.5,
+    "actual": 37.1,
+    "w": 69
+   },
+   {
+    "season": "2019-20",
+    "name": "Kristaps Porzi\u0146\u0123is",
+    "pre_fpg": 38.8,
+    "baseline": 39.0,
+    "actual": 40.3,
+    "w": 57
+   },
+   {
+    "season": "2022-23",
+    "name": "Jamal Murray",
+    "pre_fpg": 38.3,
+    "baseline": 38.1,
+    "actual": 37.4,
+    "w": 65
+   },
+   {
+    "season": "2013-14",
+    "name": "Andrew Bynum",
+    "pre_fpg": 37.6,
+    "baseline": 37.4,
+    "actual": 17.3,
+    "w": 26
+   },
+   {
+    "season": "2022-23",
+    "name": "Ben Simmons",
+    "pre_fpg": 37.5,
+    "baseline": 37.2,
+    "actual": 28.2,
+    "w": 42
+   },
+   {
+    "season": "2020-21",
+    "name": "DeMarcus Cousins",
+    "pre_fpg": 37.1,
+    "baseline": 35.5,
+    "actual": 21.1,
+    "w": 41
+   },
+   {
+    "season": "2024-25",
+    "name": "Kevin Porter Jr.",
+    "pre_fpg": 36.0,
+    "baseline": 35.7,
+    "actual": 21.5,
+    "w": 75
+   },
+   {
+    "season": "2022-23",
+    "name": "John Wall",
+    "pre_fpg": 35.0,
+    "baseline": 32.4,
+    "actual": 22.5,
+    "w": 34
+   },
+   {
+    "season": "2024-25",
+    "name": "Steven Adams",
+    "pre_fpg": 28.1,
+    "baseline": 25.5,
+    "actual": 12.8,
+    "w": 58
+   },
+   {
+    "season": "2012-13",
+    "name": "Andrei Kirilenko",
+    "pre_fpg": 27.9,
+    "baseline": 25.4,
+    "actual": 29.4,
+    "w": 64
+   }
+  ]
+ }
+}

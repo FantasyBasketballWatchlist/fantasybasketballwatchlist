@@ -131,6 +131,8 @@
       <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
     </section>
 
+    <div class="card league-bar" id="league-bar"></div>
+
     <div class="draft">
       <div>
         <div class="toolbar">
@@ -224,8 +226,9 @@
 
     <p class="footer-note">
       The dashed line marks how many picks happen before your next turn: players above it will probably be gone if the
-      other teams draft by BPV. Real drafters don't, so treat it as a rough guide. The draft is saved in this browser,
-      so a refresh won't lose it.<br><br>
+      other teams draft by BPV. Real drafters don't, so treat it as a rough guide. The draft is saved in this browser
+      under the league picked at the top, so a refresh won't lose it; start another league there (or on
+      <a href="/leagues" style="color:var(--orange)">Your leagues</a>) to run a second draft without losing this one.<br><br>
       Positions are ESPN's eligibility; a player listed at two positions can start at either. The player list is
       sorted by BPV alone, so taking players straight down it tends to pile up guards. The suggested pick accounts for
       position: it plays out the rest of the draft for each candidate and picks the one whose final roster gets the
@@ -238,8 +241,7 @@
 
   <script src="{{ url_for('static', filename='common.js') }}"></script>
   <script>
-    const STORE = 'bpv-draft-v1';
-    let players = [], byId = new Map();
+    let players = [], byId = new Map(), loadedMeta = null;
     // picks: pick number (1-based) -> player id. history: pick numbers in the order they were made, for Undo.
     const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
     const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
@@ -248,18 +250,21 @@
     const SCARCE_DROP = 2.0, PLENTY_DROP = 0.5;
     let positions = {}, positionSource = null;
     // names: player id -> name, so a pick still shows if that player drops out of a later data refresh.
-    let state = { teams: 10, slot: 1, rounds: 13, lineup: DEFAULT_LINEUP, posFilter: 'ALL', picks: {}, history: [], names: {} };
+    // The draft belongs to the active league (Your leagues, saved in this browser).
+    const freshState = () => ({ teams: loadedMeta?.league_teams || 10, slot: 1, rounds: loadedMeta?.roster_size || 13,
+                                lineup: DEFAULT_LINEUP, posFilter: 'ALL', picks: {}, history: [], names: {} });
+    let state = freshState();
 
-    function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+    function save() { Leagues.set('draft', state); }
     let hadSaved = false;
     function restore() {
-      try {
-        const s = JSON.parse(localStorage.getItem(STORE));
-        if (s && s.picks) { state = { ...state, ...s, names: s.names || {} }; hadSaved = true; }
-        state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
-        state.slot = Math.min(state.slot, state.teams);
-      } catch (e) {}
+      state = freshState(); hadSaved = false;
+      const s = Leagues.get('draft');
+      if (s && s.picks) { state = { ...state, ...s, names: s.names || {} }; hadSaved = true; }
+      state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
+      state.slot = Math.min(state.slot, state.teams);
     }
+    function switchLeague() { restore(); lookCache = { key: null, value: null }; writeSettings(); render(); }
 
     const totalPicks = () => state.teams * state.rounds;
     const teamOf = (n) => {                       // snake order, 1-based pick -> 1-based team
@@ -747,11 +752,8 @@
       clearTimeout(unpickTimer);
       unpick(+b.dataset.unpick);
     });
-    // Another tab with the draft open saved a change: take it, so this tab can't later save over it with old picks.
-    window.addEventListener('storage', e => {
-      if (e.key !== STORE || !e.newValue) return;
-      try { const s = JSON.parse(e.newValue); if (s && s.picks) { state = { ...state, ...s, names: s.names || {} }; writeSettings(); render(); } } catch (err) {}
-    });
+    // Another tab saved a change (or switched leagues): take it, so this tab can't later save over it with old picks.
+    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY && e.newValue) switchLeague(); });
     const q = document.getElementById('q');
     q.addEventListener('input', render);
     q.addEventListener('keydown', e => {
@@ -771,6 +773,7 @@
     ['set-teams', 'set-slot', 'set-rounds', 'set-lineup'].forEach(id => document.getElementById(id).addEventListener('change', readSettings));
 
     async function load() {
+      leagueBar(document.getElementById('league-bar'), switchLeague);
       restore();
       writeSettings(); render();
       try {
@@ -784,6 +787,7 @@
         players = data.players.slice().sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9));
         byId = new Map(players.map(p => [p.id, p]));
         for (const id of Object.values(state.picks)) if (byId.has(id)) state.names[id] = byId.get(id).name;
+        loadedMeta = data.meta;
         if (hadSaved) save();
         if (!hadSaved) { state.teams = data.meta.league_teams || 10; state.rounds = data.meta.roster_size || 13; }
         state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));

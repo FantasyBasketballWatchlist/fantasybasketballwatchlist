@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set page_title = 'NBA Injury Report for Fantasy Basketball: Out & Questionable | Hoopothesis' %}
+  {% set page_description = "Every player on the NBA's official injury report, Out to Probable, with his chance of playing, expected games missed and fantasy value." %}
+  {% set canonical_path = '/injuries' %}
+  {% include '_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <style>
+    .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0 0 20px; color: var(--muted); flex-wrap: wrap; font-size: .88rem; }
+    .controls label { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+    .status { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+    .status.Out { color: #fecaca; background: rgba(248,113,113,.16); }
+    .status.Doubtful { color: #fed7aa; background: rgba(251,146,60,.16); }
+    .status.Questionable { color: #fde7b0; background: rgba(255,176,32,.14); }
+    .status.Probable { color: #c9f5e3; background: rgba(52,211,153,.13); }
+    td .reason { display: block; color: var(--dim); font-size: .78rem; font-weight: 400; max-width: 340px; }
+    #list td.outlook { color: var(--muted); font-size: .82rem; min-width: 260px; max-width: 360px; white-space: normal; line-height: 1.45; }
+    #list td .reason { white-space: normal; }
+    .serious { color: #fecaca; font-weight: 600; }
+    .counts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .empty { color: var(--dim); text-align: center; padding: 24px; }
+    table.hist { border-collapse: collapse; font-size: .85rem; margin-top: 8px; }
+    table.hist th, table.hist td { padding: 5px 12px 5px 0; text-align: left; }
+    table.hist th { color: var(--dim); font-weight: 500; font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; }
+    table.hist td.r, table.hist th.r { text-align: right; }
+  </style>
+</head>
+<body>
+  {% set active = 'injuries' %}{% include '_nav.html' %}
+
+  <main class="page">
+    <section class="hero">
+      <h1>Injury <span class="accent">Report</span></h1>
+      <p>Everyone on the NBA's official injury report, with his chance of playing and what it does to his fantasy value</p>
+      <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
+    </section>
+
+    <div class="controls">
+      <div class="seg" id="status-seg">
+        <button data-s="ALL" class="on">All</button><button data-s="Out">Out</button><button data-s="Doubtful">Doubtful</button>
+        <button data-s="Questionable">Questionable</button><button data-s="Probable">Probable</button>
+      </div>
+      <label><input type="checkbox" id="show-other"> Show G League and two-way assignments</label>
+    </div>
+    <div class="counts" id="counts"></div>
+
+    <div class="card table-wrap">
+      <table class="data" id="list">
+        <thead><tr><th>Status</th><th>Player</th><th class="r" title="Share of players with this status who played that day">Plays</th>
+          <th class="r">BPV</th><th class="r hide-sm">Rank</th><th class="hide-sm">Outlook</th></tr></thead>
+        <tbody><tr><td colspan="6"><div class="skeleton"></div></td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="returning-wrap" hidden>
+      <div class="section-title"><h2>Back from a missed season</h2><small>No games last season, on a roster now</small></div>
+      <div class="card table-wrap"><table class="data" id="returning"></table></div>
+    </div>
+
+    <div class="section-title"><h2>How players come back</h2><small>2009-10 to 2025-26</small></div>
+    <div class="card panel">
+      <p class="help" style="margin-top:0">Every time a regular (20+ minutes per game) missed 5 or more team games in a row and came back
+        the same season: his fantasy points per game for the rest of that season, as a share of his average before the absence.</p>
+      <table class="hist" id="hist"></table>
+      <p class="help" style="margin-bottom:0" id="hist-note"></p>
+    </div>
+
+    <p class="footer-note">
+      Statuses come from the NBA's official injury report (every 15 minutes on game days); each player is shown on the
+      latest report that included his team's game. <b>Plays</b> = how often players with that status played that day
+      (2021-22 to 2025-26 reports). For players listed Out with an injury, the outlook is how many games in a row
+      regulars listed Out with that kind of injury went on to miss (surgeries, tears and fractures: a median of 15). It's
+      a typical case, not a medical timeline for this player: team updates beat it. The comeback numbers are background only: when we tried shrinking BPV for players
+      just back from an absence, it didn't predict better, because BPV's recent-form rule catches the drop within about
+      five games (method, Section 16).
+    </p>
+  </main>
+
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    let data = null, statusFilter = 'ALL';
+    const OTHER = new Set(['g_league']);
+
+    function outlook(p) {
+      if (p.status === 'Out' && p.streak) {
+        const h = p.return_history, s = p.streak;
+        const kind = p.injury_type === 'serious' ? '<span class="serious">serious injury</span>' : escapeHtml(p.injury_type);
+        return `${kind}: players listed like this usually missed <b>${s.median}</b> more game${s.median === 1 ? '' : 's'} in a row`
+          + (p.share_played != null ? ` and played ${pct(p.share_played)} of the rest of the season (BPV uses this)` : '')
+          + ` (average ${fmt(s.mean, 0)}, 1 in 5 missed ${s.p80}+)`
+          + (h ? `. Back from ${h.absence}-game absences, players averaged <b>${Math.round(h.fpts_share * 100)}%</b> of their earlier output` : '');
+      }
+      if (p.status === 'Out') return p.category === 'injury' ? 'Out' : escapeHtml({ rest: 'rest', personal: 'personal reasons', suspension: 'suspension', g_league: 'G League', health_protocols: 'health protocols' }[p.category] || 'not injury-related');
+      return p.play_probability != null ? `plays about ${pct(p.play_probability)} of the time with this status` : '';
+    }
+
+    function render() {
+      if (!data) return;
+      const showOther = document.getElementById('show-other').checked;
+      const base = data.players.filter(p => showOther || !OTHER.has(p.category));
+      const rows = base.filter(p => statusFilter === 'ALL' || p.status === statusFilter);
+      const counts = ['Out', 'Doubtful', 'Questionable', 'Probable'].map(s => [s, base.filter(p => p.status === s).length]);
+      document.getElementById('counts').innerHTML = counts.map(([s, n]) => `<span class="status ${s}">${s} ${n}</span>`).join('');
+      document.querySelector('#list tbody').innerHTML = rows.length ? rows.map(p => `<tr>
+          <td><span class="status ${escapeHtml(p.status)}">${escapeHtml(p.status)}</span></td>
+          <td class="name">${escapeHtml(p.name)}
+            <small>${escapeHtml(p.team || '')} · ${escapeHtml(p.matchup)} ${escapeHtml(p.game_date)}</small>
+            <span class="reason">${escapeHtml(p.reason)}</span></td>
+          <td class="r">${pct(p.play_probability)}</td>
+          <td class="r"><span class="num">${fmt(p.bpv)}</span></td>
+          <td class="r hide-sm">${p.rank ?? '–'}</td>
+          <td class="outlook hide-sm">${outlook(p)}</td></tr>`).join('')
+        : `<tr><td colspan="6" class="empty">${data.players.length ? 'Nobody with this status.' : 'No injury report available right now. Reports come out on game days.'}</td></tr>`;
+
+      const ret = data.returning || [];
+      document.getElementById('returning-wrap').hidden = !ret.length;
+      const m = data.missed_season_history;
+      document.getElementById('returning').innerHTML = '<thead><tr><th>Player</th><th class="r">BPV</th><th class="r">Rank</th><th class="r">FPTS/G</th><th class="hide-sm">How</th></tr></thead><tbody>'
+        + ret.map(p => `<tr><td class="name">${escapeHtml(p.name)}<small>${escapeHtml(p.team)}</small></td>
+          <td class="r"><span class="num">${fmt(p.bpv)}</span></td><td class="r">${p.rank}</td><td class="r">${fmt(p.production)}</td>
+          <td class="hide-sm" style="color:var(--muted);font-size:.82rem">${escapeHtml(p.note)}</td></tr>`).join('')
+        + `</tbody><caption style="caption-side:bottom;text-align:left;color:var(--dim);font-size:.8rem;padding:8px 12px">
+          In the past, the ${m.players} players back from a whole missed season averaged ${Math.round(m.fpts_share * 100)}% of this kind of
+          estimate (their last full season plus age). Too few to adjust BPV with yet.</caption>`;
+
+      document.getElementById('hist').innerHTML = '<thead><tr><th>Games missed</th><th class="r">FPTS/G after</th><th class="r">Minutes after</th><th class="r">Returns</th></tr></thead><tbody>'
+        + data.return_history.map(h => `<tr><td>${h.absence}</td><td class="r">${Math.round(h.fpts_share * 100)}%</td>
+          <td class="r">${Math.round(h.minutes_share * 100)}%</td><td class="r">${h.returns}</td></tr>`).join('') + '</tbody>';
+      document.getElementById('hist-note').textContent = 'Most of the drop is minutes, and it fades fast: five games after the return, '
+        + "players were producing what their recent games said they would. The 40+ row is only six returns. Published studies of the worst "
+        + "injuries find bigger first-season drops (Achilles repairs: about 80% of the earlier level), mostly recovered a season later.";
+    }
+
+    document.getElementById('status-seg').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      statusFilter = b.dataset.s;
+      document.querySelectorAll('#status-seg button').forEach(x => x.classList.toggle('on', x === b));
+      render();
+    });
+    document.getElementById('show-other').addEventListener('change', render);
+
+    (async () => {
+      try {
+        const r = await fetch('/api/injuries');
+        data = await r.json();
+        if (!r.ok) throw new Error(data.error);
+        const m = data.meta;
+        document.getElementById('season-notice').textContent = (data.report_date ? `Latest report: ${data.report_date}. ` : '')
+          + (m.mode === 'in-season' ? `${m.season} season in progress` : `Before the ${m.target_season} season: values are full-season BPV`);
+      } catch (e) {
+        document.getElementById('season-notice').textContent = 'Could not load the injury report. Try again in a minute.';
+        data = null;
+        document.querySelector('#list tbody').innerHTML = '<tr><td colspan="6" class="empty">Unavailable.</td></tr>';
+      }
+      render();
+    })();
+  </script>
+</body>
+</html>

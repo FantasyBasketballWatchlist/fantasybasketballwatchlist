@@ -8,6 +8,8 @@ Player values for ESPN points leagues, built on **BPV (Basketball Performance Va
 - **Draft** (`/draft`): a snake-draft tracker with suggested picks, team rankings and position outlook. Pick your draft slot at the top of the clock card.
 - **League** (`/league`): up to 20 teams; each team's players with BPV, and teams ranked by the BPV of their best starting lineup.
 - **Trade Analyzer** (`/trade-analyzer`): compares both sides by value over replacement, so 2-for-1 deals account for the roster spot.
+- **Your Leagues** (`/leagues`): several named leagues, each with its own draft and teams, saved in the browser. The Draft and Teams pages work on the active league and can switch or start a new one; Export/Import moves them to another computer.
+- **Injuries** (`/injuries`): everyone on the NBA's official injury report (Out, Doubtful, Questionable, Probable) with BPV, chance of playing, how long players with that kind of injury usually stayed out, and how players have produced after coming back.
 - **Waiver Wires** (`/waiver-wires`): recent risers and fallers, split into minutes changes (which tend to last) and hot or cold shooting (which tends to fade).
 
 The method, and the backtests behind every constant, are written up in [docs/BPV-methodology.md](docs/BPV-methodology.md).
@@ -21,7 +23,7 @@ python app.py
 
 Then open http://127.0.0.1:8080. On Windows you can double-click `runthis.bat`.
 
-Before each season, BPV blends in ESPN's public preseason projections (per game and projected games), which beat both BPV and ESPN alone in testing. During the season the site also reads the NBA's official injury report (every 15 minutes on game days) to show each player's status, chance of playing and this week's expected points, and to estimate how much of the rest of the season an injured player will miss. That needs Java and `pip install -r requirements-extra.txt` (which also installs the analysis-script packages); without them everything else still works.
+Before each season, BPV blends in ESPN's public preseason projections (per game and projected games). In testing the blend beat both BPV and ESPN alone on per-game and season-total error, but in draft simulations against drafters using ESPN's rankings it only tied ESPN, and FantasyPros' expert consensus ranked the top 130 better in 4 of 4 seasons (methodology, Section 16). During the season the site also reads the NBA's official injury report (every 15 minutes on game days) to show each player's status, chance of playing and this week's expected points, and to estimate how much of the rest of the season an injured player will miss. That needs Java and `pip install -r requirements-extra.txt` (which also installs the analysis-script packages); without them everything else still works.
 
 The first load downloads season game logs from stats.nba.com, which takes a few seconds. They're cached in `data/cache/`: completed seasons permanently, the current season for 6 hours.
 
@@ -72,6 +74,7 @@ A known injury also affects teammates: in season they get a production boost; be
 | `analysis/decay_test.py` | exponential decay vs the last-5 rule |
 | `analysis/snapshot.py` | saves today's rankings to `data/snapshots/` so they can be scored after the season |
 | `analysis/collect.py` | daily data collection without the app: fresh data, BPV and ESPN snapshots, scoring; meant to be run on a schedule by the website's host once it's published; status in `data/collect_status.json` |
+| `analysis/injury_return.py` | production after returning from an absence (in-season and whole missed seasons); rules in `docs/prereg-injury-return.md` |
 | `analysis/accuracy_tracker.py` | scores every saved snapshot against the games played since (error vs a simple benchmark, ranking, range coverage); runs automatically from the home page every 6 hours |
 | `analysis/test_*.py` | tests of every candidate improvement (Cox, roster crowding, teammates, injury reports, tanking, recalibration, schedule, positions, ranges...); see the paper's Section 16 |
 | `analysis/report_charts.py`, `analysis/report_pdf.py` | build the full PDF report, `docs/BPV-report.pdf` |

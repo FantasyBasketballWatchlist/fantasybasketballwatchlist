@@ -15,6 +15,12 @@
     .panel { min-height: 200px; }
     .list-row { animation: fadeUp .35s var(--ease) both; }
     .list-row .meta { color: var(--dim); font-size: .8rem; }
+    .scope { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 18px; color: var(--muted); font-size: .88rem; }
+    .scope select { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 6px 10px; max-width: 220px; }
+    .scope select:focus { outline: none; border-color: var(--orange); }
+    .scope a { color: var(--orange); text-decoration: none; }
+    #team-card { margin-bottom: 18px; }
+    .who-tag { color: var(--dim); font-size: .78rem; font-weight: 500; text-transform: none; letter-spacing: 0; font-family: Inter, sans-serif; }
   </style>
 </head>
 <body>
@@ -27,6 +33,19 @@
       <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
     </section>
 
+    <div class="card scope">
+      <label>League <select id="league" aria-label="League"></select></label>
+      <label id="team-wrap" hidden>Team <select id="team" aria-label="Team"></select></label>
+      <a href="/leagues">Your leagues →</a>
+    </div>
+
+    <div class="card panel" id="team-card" style="--c: var(--good)" hidden>
+      <h3><span class="dot"></span>Updates for <span id="team-name"></span></h3>
+      <p class="help">Injury report, minutes and shooting changes over the last 5 games, and the best free agents in this league
+        (players on none of its teams) worth more than this team's weakest players.</p>
+      <div class="updates" id="updates"></div>
+    </div>
+
     <div class="controls">
       <span>Show changes of at least</span>
       <div class="seg" id="threshold-seg">
@@ -37,22 +56,22 @@
 
     <div class="grid-2">
       <div class="card panel" style="--c: var(--good)">
-        <h3><span class="dot"></span>Pick up: minutes rising</h3>
+        <h3><span class="dot"></span>Pick up: minutes rising <span class="who-tag" data-who="free"></span></h3>
         <p class="help">More playing time usually sticks, so these gains are the most trustworthy.</p>
         <div id="rising_minutes"></div>
       </div>
       <div class="card panel" style="--c: var(--orange)">
-        <h3><span class="dot"></span>Sell high: hot shooting</h3>
+        <h3><span class="dot"></span>Sell high: hot shooting <span class="who-tag" data-who="mine"></span></h3>
         <p class="help">Same minutes, much better per-minute output. This tends to fade back toward the season average.</p>
         <div id="hot_shooting"></div>
       </div>
       <div class="card panel" style="--c: var(--ice)">
-        <h3><span class="dot"></span>Buy low: cold shooting</h3>
+        <h3><span class="dot"></span>Buy low: cold shooting <span class="who-tag" data-who="others"></span></h3>
         <p class="help">Same minutes, a cold stretch. These players usually bounce back.</p>
         <div id="cold_shooting"></div>
       </div>
       <div class="card panel" style="--c: var(--bad)">
-        <h3><span class="dot"></span>Drop candidates: minutes falling</h3>
+        <h3><span class="dot"></span>Drop candidates: minutes falling <span class="who-tag" data-who="mine"></span></h3>
         <p class="help">Losing playing time usually lasts. Check the news before dropping someone.</p>
         <div id="falling_minutes"></div>
       </div>
@@ -68,6 +87,33 @@
   <script src="{{ url_for('static', filename='common.js') }}"></script>
   <script>
     let threshold = 4;
+    // League view: "all" = every player; otherwise a league from Your leagues and one of its teams.
+    const NO_LEAGUE = 'all';
+    let scope = { league: NO_LEAGUE, team: 0 };
+    try { const v = JSON.parse(localStorage.getItem('hoop-waiver-scope')); if (v && v.league) scope = v; } catch (e) {}
+    const saveScope = () => { try { localStorage.setItem('hoop-waiver-scope', JSON.stringify(scope)); } catch (e) {} };
+
+    function leagueTeams() {
+      if (scope.league === NO_LEAGUE) return null;
+      const l = Leagues.read().leagues.find(x => x.id === scope.league);
+      return l && l.teams && Array.isArray(l.teams.teams) ? l.teams : null;
+    }
+
+    function renderScope() {
+      const d = Leagues.read();
+      if (scope.league !== NO_LEAGUE && !d.leagues.some(l => l.id === scope.league)) scope.league = NO_LEAGUE;
+      document.getElementById('league').innerHTML = `<option value="${NO_LEAGUE}">All players (no league)</option>`
+        + d.leagues.map(l => `<option value="${l.id}"${l.id === scope.league ? ' selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
+      const lt = leagueTeams();
+      document.getElementById('team-wrap').hidden = !lt;
+      if (lt) {
+        if (!(scope.team >= 0 && scope.team < lt.teams.length)) scope.team = lt.mine || 0;
+        document.getElementById('team').innerHTML = lt.teams.map((t, i) =>
+          `<option value="${i}"${i === scope.team ? ' selected' : ''}>${escapeHtml(t.name)}${i === lt.mine ? ' (you)' : ''}</option>`).join('');
+      }
+      const tags = { free: 'free agents in this league', mine: 'on this team', others: 'on other teams: trade targets' };
+      document.querySelectorAll('[data-who]').forEach(el => { el.textContent = lt ? `· ${tags[el.dataset.who]}` : ''; });
+    }
 
     function describeMode(meta) {
       if (meta.mode === 'in-season') return `${meta.season} season in progress`;
@@ -88,7 +134,14 @@
 
     async function load() {
       try {
-        const response = await fetch(`/api/waiver?threshold=${threshold}`);
+        const lt = leagueTeams();
+        let query = `threshold=${threshold}`;
+        if (lt) {
+          const mine = lt.teams[scope.team]?.ids || [];
+          const others = lt.teams.filter((_, i) => i !== scope.team).flatMap(t => t.ids);
+          query += `&mine=${mine.join(',')}&others=${others.join(',')}`;
+        }
+        const response = await fetch(`/api/waiver?${query}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         document.getElementById('season-notice').textContent = describeMode(data.meta);
@@ -96,6 +149,14 @@
         renderList('hot_shooting', data.hot_shooting, 'efficiency_change_fpts');
         renderList('cold_shooting', data.cold_shooting, 'efficiency_change_fpts');
         renderList('falling_minutes', data.falling_minutes, 'minutes_change_fpts');
+        const card = document.getElementById('team-card');
+        card.hidden = !data.league;
+        if (data.league) {
+          document.getElementById('team-name').textContent = lt.teams[scope.team]?.name || '';
+          document.getElementById('updates').innerHTML = data.team.length
+            ? renderUpdates(teamUpdates(data.team, data.free_agents))
+            : '<p class="help" style="margin:0">No players on this team yet. Add them on the Teams page.</p>';
+        }
       } catch (error) {
         document.getElementById('season-notice').textContent = 'Could not load NBA data. Make sure app.py is running, then refresh.';
       }
@@ -108,6 +169,14 @@
       threshold = +b.dataset.t;
       load();
     });
+    document.getElementById('league').addEventListener('change', e => {
+      scope = { league: e.target.value, team: -1 };
+      if (scope.league !== NO_LEAGUE) Leagues.switchTo(scope.league);     // the Draft and Teams pages follow along
+      renderScope(); saveScope(); load();
+    });
+    document.getElementById('team').addEventListener('change', e => { scope.team = +e.target.value; saveScope(); load(); });
+    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY) { renderScope(); load(); } });
+    renderScope();
     load();
   </script>
 </body>

@@ -51,7 +51,24 @@
     .totals b { font-family: 'Barlow Condensed', sans-serif; font-size: 1.2rem; }
     .team-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
     .holes { color: var(--muted); font-size: .8rem; }
-    @media (max-width: 760px) { .totals { grid-template-columns: repeat(2, 1fr); } }
+    .side-by-side { display: grid; grid-template-columns: 1fr 1.4fr; gap: 18px; margin-top: 18px; align-items: start; }
+    .panel select.pick { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 6px 10px; max-width: 100%; }
+    .panel select.pick:focus { outline: none; border-color: var(--orange); }
+    .trade-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    .trade-side h4 { font-size: .8rem; color: var(--muted); font-weight: 500; margin: 8px 0 6px; }
+    .trade-list { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 4px 8px; }
+    .trade-list label { display: flex; gap: 8px; align-items: center; padding: 5px 0; font-size: .86rem; cursor: pointer; border-bottom: 1px solid rgba(148,163,184,.07); }
+    .trade-list label:last-child { border-bottom: 0; }
+    .trade-list label span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trade-list label small { color: var(--dim); }
+    .trade-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .trade-sum { color: var(--muted); font-size: .85rem; }
+    .trade-log { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+    .trade-log .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; font-size: .84rem; color: var(--muted);
+      border-top: 1px solid rgba(148,163,184,.07); padding-top: 6px; }
+    .trade-log .row b { color: var(--text); font-weight: 600; }
+    @media (max-width: 960px) { .side-by-side { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .totals { grid-template-columns: repeat(2, 1fr); } .trade-sides { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -64,12 +81,16 @@
       <p class="notice" id="season-notice">Loading NBA data...</p>
     </section>
 
+    <div class="card league-bar" id="league-bar"></div>
+
     <div class="card panel">
       <div class="controls">
         <label>Starting lineup (G = PG/SG, F = SF/PF, UTIL = anyone)
           <input type="text" id="set-lineup" spellcheck="false"></label>
         <label class="team-count">Teams
           <select id="set-teams" aria-label="Number of teams"></select></label>
+        <label class="team-count">Your team
+          <select id="set-mine" aria-label="Your team"></select></label>
         <div class="buttons">
           <button class="btn small ghost danger" id="reset">Clear all</button>
         </div>
@@ -86,33 +107,64 @@
       <b>Over repl.</b> = BPV above what a free agent gives.
     </p>
 
+    <div class="side-by-side">
+      <div class="card panel" style="--c: var(--good)">
+        <h3><span class="dot"></span>Updates</h3>
+        <p class="help">For <select class="pick" id="upd-team" aria-label="Team to show updates for"></select>: injury report, minutes and
+          shooting changes over the last 5 games, and free agents (players on no team here) worth more than its weakest players.</p>
+        <div class="updates" id="updates"></div>
+      </div>
+      <div class="card panel" style="--c: var(--blue)">
+        <h3><span class="dot"></span>Trades</h3>
+        <p class="help">Record a trade that went through: tick what each team gives, then process it. The players move and the trade is logged.</p>
+        <div class="trade-sides">
+          <div class="trade-side"><select class="pick" id="trade-a" aria-label="First team"></select><h4>Gives</h4><div class="trade-list" id="trade-a-list"></div></div>
+          <div class="trade-side"><select class="pick" id="trade-b" aria-label="Second team"></select><h4>Gives</h4><div class="trade-list" id="trade-b-list"></div></div>
+        </div>
+        <div class="trade-foot">
+          <span class="trade-sum" id="trade-sum"></span>
+          <button class="btn small" id="trade-go" disabled>Process trade</button>
+        </div>
+        <div class="trade-log" id="trade-log"></div>
+      </div>
+    </div>
+
     <div class="grid-2 teams" id="teams"></div>
 
     <p class="footer-note">
-      Teams are saved in this browser, so a refresh won't lose them. A player can be on only one team; adding him to another
+      Teams are saved in this browser under the league picked at the top, so a refresh won't lose them. A player can be on only one team; adding him to another
       team moves him. Positions are ESPN's eligibility. This is BPV's opinion only; in backtests, BPV on its own didn't beat ESPN's rankings.
     </p>
   </main>
 
   <script src="{{ url_for('static', filename='common.js') }}"></script>
   <script>
-    const STORE = 'bpv-league-v1';
     const MIN_TEAMS = 4, MAX_TEAMS = 20, DEFAULT_TEAMS = 10, MAX_PLAYERS = 25;
     const newTeams = (n, from = 0) => Array.from({ length: n }, (_, i) => ({ name: `Team ${from + i + 1}`, ids: [] }));
     const DEFAULT_LINEUP = 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL';    // ESPN standard
     const COLORS = ['var(--orange)', 'var(--t-starter)', 'var(--t-allstar)', 'var(--t-roster)', 'var(--t-super)', 'var(--bad)', 'var(--ice)', 'var(--blue)'];
     let state = { teams: newTeams(DEFAULT_TEAMS), lineup: DEFAULT_LINEUP };
     let players = [], byId = new Map(), meta = {}, positions = {};
-    let notes = {}, focusTeam = null;
+    let notes = {}, focusTeam = null, updTeam = 0;
+    const trade = { a: 0, b: 1, give: { a: new Set(), b: new Set() } };
 
-    function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+    // The teams belong to the active league (Your leagues, saved in this browser).
+    function save() { Leagues.set('teams', state); }
     function restore() {
-      try {
-        const s = JSON.parse(localStorage.getItem(STORE));
-        if (s && Array.isArray(s.teams) && s.teams.length) state = { ...state, ...s };
-      } catch (e) {}
+      state = { teams: newTeams(DEFAULT_TEAMS), lineup: DEFAULT_LINEUP, mine: 0, trades: [] };
+      const s = Leagues.get('teams');
+      if (s && Array.isArray(s.teams) && s.teams.length) state = { ...state, ...s };
       if (state.teams.length < MIN_TEAMS) state.teams.push(...newTeams(MIN_TEAMS - state.teams.length, state.teams.length));
+      if (!Array.isArray(state.trades)) state.trades = [];
+      if (!(state.mine >= 0 && state.mine < state.teams.length)) state.mine = 0;
+      updTeam = state.mine;
     }
+    function switchLeague() {
+      restore(); notes = {};
+      document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
+      render();
+    }
+    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY && e.newValue) switchLeague(); });
 
     const lineupSlots = () => state.lineup.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     // Without ESPN positions, let anyone fill any slot rather than leaving every specific slot empty.
@@ -235,6 +287,7 @@
       renderStandings(rows);
       document.getElementById('set-teams').value = state.teams.length;
       document.getElementById('repl').textContent = fmt(meta.replacement_level);
+      renderSide();
       const el = document.getElementById('teams');
       if (only) {
         [...new Set(only)].forEach(t => {
@@ -252,6 +305,95 @@
       focusTeam = null;
     }
 
+    // ---------- updates and trades
+    const teamOptions = (sel) => state.teams.map((t, i) => `<option value="${i}"${i === sel ? ' selected' : ''}>${escapeHtml(t.name)}${i === state.mine ? ' (you)' : ''}</option>`).join('');
+    const nameOf = (id) => byId.get(id)?.name || 'Unknown player';
+
+    function renderSide() {
+      document.getElementById('set-mine').innerHTML = teamOptions(state.mine);
+      if (updTeam >= state.teams.length) updTeam = state.mine;
+      document.getElementById('upd-team').innerHTML = teamOptions(updTeam);
+      const rostered = new Set(state.teams.flatMap(t => t.ids));
+      const freeAgents = players.filter(p => !rostered.has(p.id)).sort((a, b) => b.bpv - a.bpv).slice(0, 15);
+      const team = state.teams[updTeam].ids.map(id => byId.get(id)).filter(Boolean);
+      document.getElementById('updates').innerHTML = players.length
+        ? (team.length ? renderUpdates(teamUpdates(team, freeAgents)) : '<p class="help" style="margin:0">No players on this team yet.</p>')
+        : '<p class="help" style="margin:0">Loading...</p>';
+      renderTrade();
+    }
+
+    function renderTrade() {
+      const n = state.teams.length;
+      if (trade.a >= n) trade.a = 0;
+      if (trade.b >= n || trade.b === trade.a) trade.b = trade.a === 0 ? 1 : 0;
+      document.getElementById('trade-a').innerHTML = teamOptions(trade.a);
+      document.getElementById('trade-b').innerHTML = teamOptions(trade.b);
+      for (const side of ['a', 'b']) {
+        const ids = state.teams[trade[side]].ids;
+        trade.give[side] = new Set([...trade.give[side]].filter(id => ids.includes(id)));
+        document.getElementById(`trade-${side}-list`).innerHTML = ids.length
+          ? ids.slice().sort((x, y) => bpvOf(y) - bpvOf(x)).map(id => `<label><input type="checkbox" data-side="${side}" value="${id}"${trade.give[side].has(id) ? ' checked' : ''}>
+              <span>${escapeHtml(nameOf(id))}</span><small>${fmt(byId.get(id)?.bpv)}</small></label>`).join('')
+          : '<p class="empty">No players.</p>';
+      }
+      const vor = (set) => [...set].reduce((s, id) => s + (byId.get(id)?.value_over_replacement ?? 0), 0);
+      const ready = trade.give.a.size + trade.give.b.size > 0;
+      // Value over replacement, like the Trade Analyzer: a 2-for-1 frees a roster spot for a free agent.
+      const d = vor(trade.give.b) - vor(trade.give.a);
+      document.getElementById('trade-sum').textContent = ready
+        ? `${state.teams[trade.a].name} ${d >= 0 ? 'gains' : 'loses'} ${fmt(Math.abs(d))} BPV over replacement; ${state.teams[trade.b].name} the opposite.`
+        : 'Tick the players each team gives.';
+      document.getElementById('trade-go').disabled = !ready;
+      document.getElementById('trade-log').innerHTML = state.trades.map((t, k) => `<div class="row"><span>
+          <b>${escapeHtml(t.aName)}</b> gave ${t.aGives.map(id => escapeHtml(t.names[id] || nameOf(id))).join(', ') || 'nothing'};
+          <b>${escapeHtml(t.bName)}</b> gave ${t.bGives.map(id => escapeHtml(t.names[id] || nameOf(id))).join(', ') || 'nothing'}
+          <small style="color:var(--dim)">· ${new Date(t.at).toLocaleDateString()}</small></span>
+          <button class="btn small ghost" data-undo="${k}">Undo</button></div>`).join('');
+    }
+
+    function processTrade() {
+      const a = trade.a, b = trade.b, aGives = [...trade.give.a], bGives = [...trade.give.b];
+      if (a === b || !aGives.length && !bGives.length) return;
+      const ta = state.teams[a], tb = state.teams[b];
+      ta.ids = ta.ids.filter(id => !aGives.includes(id)).concat(bGives);
+      tb.ids = tb.ids.filter(id => !bGives.includes(id)).concat(aGives);
+      state.trades.unshift({ at: new Date().toISOString(), a, b, aName: ta.name, bName: tb.name, aGives, bGives,
+                             names: Object.fromEntries([...aGives, ...bGives].map(id => [id, nameOf(id)])) });
+      trade.give = { a: new Set(), b: new Set() };
+      notes[a] = notes[b] = 'Trade processed.';
+      save(); render();
+    }
+
+    // Undo only if every player is still where the trade put him (later moves would otherwise be scrambled).
+    function undoTrade(k) {
+      const t = state.trades[k], ta = state.teams[t.a], tb = state.teams[t.b];
+      if (!ta || !tb || !t.aGives.every(id => tb.ids.includes(id)) || !t.bGives.every(id => ta.ids.includes(id))) {
+        document.getElementById('trade-sum').textContent = "Can't undo: some of those players have moved since. Move them by hand.";
+        return;
+      }
+      ta.ids = ta.ids.filter(id => !t.bGives.includes(id)).concat(t.aGives);
+      tb.ids = tb.ids.filter(id => !t.aGives.includes(id)).concat(t.bGives);
+      state.trades.splice(k, 1);
+      save(); render();
+    }
+
+    document.getElementById('set-mine').addEventListener('change', e => { state.mine = +e.target.value; updTeam = state.mine; save(); render(); });
+    document.getElementById('upd-team').addEventListener('change', e => { updTeam = +e.target.value; renderSide(); });
+    document.getElementById('trade-a').addEventListener('change', e => { trade.a = +e.target.value; trade.give.a = new Set(); renderTrade(); });
+    document.getElementById('trade-b').addEventListener('change', e => { trade.b = +e.target.value; trade.give.b = new Set(); renderTrade(); });
+    document.querySelector('.trade-sides').addEventListener('change', e => {
+      const box = e.target.closest('input[type=checkbox]');
+      if (!box) return;
+      const set = trade.give[box.dataset.side];
+      box.checked ? set.add(+box.value) : set.delete(+box.value);
+      renderTrade();
+    });
+    document.getElementById('trade-go').addEventListener('click', processTrade);
+    document.getElementById('trade-log').addEventListener('click', e => {
+      const b = e.target.closest('[data-undo]');
+      if (b) armed(b, 'Sure?', () => undoTrade(+b.dataset.undo));
+    });
+
     // Two-click confirm instead of a browser dialog.
     function armed(button, label, action) {
       if (button.classList.contains('armed')) { action(); return; }
@@ -268,7 +410,13 @@
         state.teams[t].ids = state.teams[t].ids.filter(id => id !== +rm.dataset.id);
         delete notes[t]; save(); render([t]);
       } else if (e.target.closest('.remove-team')) {
-        armed(e.target.closest('.remove-team'), 'Sure?', () => { state.teams.splice(t, 1); notes = {}; save(); render(); });
+        armed(e.target.closest('.remove-team'), 'Sure?', () => {
+          state.teams.splice(t, 1); notes = {};
+          if (state.mine === t) state.mine = 0; else if (state.mine > t) state.mine--;
+          state.trades = state.trades.filter(x => x.a !== t && x.b !== t)
+            .map(x => ({ ...x, a: x.a > t ? x.a - 1 : x.a, b: x.b > t ? x.b - 1 : x.b }));
+          save(); render();
+        });
       }
     });
     document.getElementById('teams').addEventListener('change', e => {
@@ -301,7 +449,7 @@
       save(); render();
     });
     document.getElementById('reset').addEventListener('click', e => armed(e.currentTarget, 'Sure?', () => {
-      state = { teams: newTeams(state.teams.length), lineup: state.lineup };
+      state = { teams: newTeams(state.teams.length), lineup: state.lineup, mine: state.mine, trades: [] };
       notes = {}; save(); render();
     }));
     document.getElementById('set-lineup').addEventListener('change', e => {
@@ -312,6 +460,7 @@
     });
 
     async function load() {
+      leagueBar(document.getElementById('league-bar'), switchLeague);
       restore();
       document.getElementById('set-lineup').value = state.lineup.split(',').join(', ');
       document.getElementById('set-teams').innerHTML = Array.from({ length: MAX_TEAMS - MIN_TEAMS + 1 },

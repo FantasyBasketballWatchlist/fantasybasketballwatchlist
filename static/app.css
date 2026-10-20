@@ -269,11 +269,11 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 
 @media (max-width: 760px) {
   .grid-2 { grid-template-columns: 1fr; }
-  /* Compact header: logo over a menu of five equal tabs that always fits the screen. */
+  /* Compact header: logo over a menu of equal tabs (two rows of four) that always fits the screen. */
   .topbar-inner { flex-direction: column; gap: 6px; padding: 8px 10px; }
   .brand svg { width: 22px; height: 22px; }
   .brand span { font-size: 1.25rem; }
-  .nav { width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; }
+  .nav { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; }
   .nav a { padding: 8px 2px; font-size: .82rem; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nav-long { display: none; }
   .page { padding: 20px 14px 44px; }
@@ -309,3 +309,25 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 
 .player { scroll-margin-top: 90px; }
 #trade-result { scroll-margin-top: 90px; }
+
+/* League switcher (Draft and Teams pages) */
+.league-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: .88rem; color: var(--muted); }
+.league-bar label { display: flex; align-items: center; gap: 8px; }
+.league-bar select, .league-bar .lb-name { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 6px 10px; }
+.league-bar select { border-color: var(--orange); font-weight: 700; cursor: pointer; max-width: 220px; }
+.league-bar .lb-name { min-width: 0; width: 180px; }
+.league-bar .lb-name:focus, .league-bar select:focus { outline: none; border-color: var(--orange); }
+.league-bar .btn.small { padding: 7px 12px; font-size: .8rem; border-radius: 9px; }
+.league-bar .btn.ghost { background: var(--bg-2); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+.league-bar .btn.ghost:hover { box-shadow: none; border-color: var(--orange); }
+.league-bar .lb-all { color: var(--orange); text-decoration: none; }
+.league-bar .lb-all:hover { text-decoration: underline; }
+.league-bar .lb-note { margin-left: auto; color: var(--dim); font-size: .78rem; }
+@media (max-width: 760px) { .league-bar .lb-note { display: none; } .league-bar .lb-name { flex: 1; } }
+
+/* Team updates (Teams and Waiver pages) */
+.updates { display: flex; flex-direction: column; gap: 8px; }
+.alert-item { font-size: .86rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.03); }
+.alert-item.urgent { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); color: #fecaca; }
+.alert-item.warn { border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.07); color: #fde7b0; }
+.alert-item.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.06); color: #c9f5e3; }
