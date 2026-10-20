@@ -127,6 +127,12 @@ WEEK_OPPONENT_COEF = 0.69
 ESPN_FPG_WEIGHT = 0.375
 ESPN_GAMES_SCALE = 0.86
 
+# Early in a season, availability keeps ESPN's preseason projected games (x 0.86 / 82), fading as his team plays:
+# weight 41 / (41 + team games played). Players listed Out keep the injury-report share. Tested on 2021-22 and
+# 2023-24..2025-26 (docs/prereg-early-availability.md): squared error of the share played 0.0606 -> 0.0584, interval
+# -0.0033 to -0.0011, 4 of 4 seasons, stars not worse; most of the gain in the first two weeks.
+EARLY_ESPN_K = 41
+
 # Between seasons, last season's FPTS/game is replaced by per-minute rates x last season's minutes. Each
 # scoring stat's rate uses the last 3 seasons, each game weighted 0.5 ** (days before the new season /
 # half-life), padded with `pad` minutes at the league-average rate. Half-lives and pads were fitted per
@@ -556,6 +562,7 @@ def build(today=None):
 
     if mode != "in-season" and live and not _season_started(target_season):
         _save_preseason_prior(target_season, preseason_prior)
+        _save_preseason_espn_games(target_season, {int(r["id"]): r["espn_games"] for r in rows if r.get("espn_games")})
     df = pd.DataFrame(rows)
     ranked = df[df["games"] >= MIN_GAMES_RANKED]
     if len(ranked) >= max(REPLACEMENT_POOL_MIN, REPLACEMENT_RANK + 100):
@@ -620,6 +627,14 @@ def build(today=None):
 
     if mode == "in-season":
         _absence_streaks(df, injured, pg[production_season], tg[production_season], remaining_games)
+        espn_games = _load_preseason_espn_games(production_season)
+        if espn_games:
+            team_played = tg[production_season].groupby("TEAM_ABBREVIATION").size()
+            for i, r in df.iterrows():
+                if r.id in espn_games and r.report_status != "Out":
+                    w = EARLY_ESPN_K / (EARLY_ESPN_K + int(team_played.get(r.team, 0)))
+                    espn_avail = min(1.0, ESPN_GAMES_SCALE * espn_games[r.id] / SEASON_GAMES)
+                    df.at[i, "availability"] = w * espn_avail + (1 - w) * r.availability
 
     values = []
     for i, r in df.iterrows():
@@ -779,6 +794,27 @@ def _save_preseason_prior(target_season, prior):
             os.path.join(PRESEASON_PRIOR_DIR, f"prior_{target_season}.csv"))
     except OSError:
         pass
+
+
+def _save_preseason_espn_games(target_season, games):
+    """Save ESPN's preseason projected games (ESPN switches to rest-of-season projections once games start)."""
+    if not games:
+        return
+    try:
+        os.makedirs(PRESEASON_PRIOR_DIR, exist_ok=True)
+        pd.Series(games, name="espn_games").rename_axis("PLAYER_ID").to_csv(
+            os.path.join(PRESEASON_PRIOR_DIR, f"espn_games_{target_season}.csv"))
+    except OSError:
+        pass
+
+
+def _load_preseason_espn_games(season):
+    """player id -> ESPN's preseason projected games for this season, or {} if none were saved."""
+    path = os.path.join(PRESEASON_PRIOR_DIR, f"espn_games_{season}.csv")
+    if not os.path.exists(path):
+        return {}
+    df = pd.read_csv(path)
+    return dict(zip(df["PLAYER_ID"], df["espn_games"]))
 
 
 def _load_preseason_prior(season):
