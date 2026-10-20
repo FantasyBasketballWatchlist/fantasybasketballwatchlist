@@ -4,11 +4,31 @@
   "status": "no weeks logged yet"
  },
  "injury": {
-  "status": "no injury reports logged yet"
+  "status": "waiting for games",
+  "logged": 47
  },
  "preseason": {
-  "status": "no preseason snapshot or no games yet"
+  "status": "scored",
+  "snapshot": "bpv_2026-10-20_pre_2026-27.csv",
+  "min_games": 10,
+  "groups": {
+   "incoming rookies": {
+    "players": 0,
+    "bpv_error": null,
+    "espn_error": null
+   },
+   "returning from a missed season": {
+    "players": 0,
+    "bpv_error": null,
+    "espn_error": null
+   },
+   "everyone else": {
+    "players": 0,
+    "bpv_error": null,
+    "espn_error": null
+   }
+  }
  },
  "flags": [],
- "updated": "2026-10-17"
+ "updated": "2026-10-20"
 }
