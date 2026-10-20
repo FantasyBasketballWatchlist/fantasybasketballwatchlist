@@ -513,6 +513,17 @@ By the pre-set rule the blend is confirmed (best per-game error and ranking in b
 
 **ESPN's projected games early in the season (2026-10-20, added).** Before a season, availability comes from ESPN's projected games, which know about current injuries; once the first box score appears it switched to each player's history, so on opening night injured players who hadn't played jumped (Mark Williams: 25% to 69% availability). Now ESPN's preseason games fade out instead: weight 41 / (41 + games his team has played); players listed Out keep the injury-report share. Rules written first (`docs/prereg-early-availability.md`, `analysis/early_availability.py`), the app rebuilt 1 to 42 days after four openers (5,040 player-checkpoints): squared error of the share played 0.0606 to 0.0584 (interval −0.0033 to −0.0011), 4 of 4 seasons, stars not worse; most of the gain on day 1 (0.098 to 0.089). Absolute error was very slightly worse (0.187 to 0.189); squared error is the measure for an expected value and was chosen beforehand.
 
+**Short or missing recent history (2026-10-20).** Four rules added that evening as stopgaps were then tested with rules written first (`docs/prereg-short-history.md`, `analysis/short_history.py`, 2011-12 to 2025-26), each against what it replaced:
+
+| Rule | Cases | Error before → after (FPTS/game) | Seasons better | Decision |
+|---|---|---|---|---|
+| Between seasons, under 20 games last season: last two seasons pooled + age (vs his short season) | 210 | 6.50 → 5.32 (−1.97 to −0.41) | 14 of 15 | Kept |
+| Between seasons, under 20 games over two seasons: blend toward the draft-slot baseline (k = 10) | 243 | 6.86 → 5.57 | 15 of 15 | Kept |
+| In season, no prior to lean on: same blend | 897 | 5.55 → 4.74 | 14 of 15 | Kept |
+| In season, under 20 games last season: pooled two seasons as the prior (k = 8) | 721 | 4.97 → 4.22 | 11 of 15 | Kept |
+
+The season before alone (ignoring the short season) was worse than pooling (3 of 15). All four still predict low on average (e.g. 9.3 vs 11.6 FPTS/game in season), partly because only players who went on to play were scored. Returners with the ESPN blend: 6 cases in the four ESPN seasons, too few to judge (error 7.4 → 6.8, better for 2 of 6).
+
 The average drops are shown on the injury page as context ("players back from absences this long produced X%"), not used in BPV.
 | **Incoming rookies, season totals: veterans' ESPN rule** (37.5% ESPN per game, ESPN games × 0.86; pool = every draftee ESPN projected preseason, never-played = 0; docs/prereg-rookie-espn.md, analysis/rookie_espn.py) | −82 season FPTS (−121 to −41), 3 of 4 seasons, top 10% −73, 103 rookies (2021-22 has only 8 and was +5). ESPN alone −49 (−138 to +43), not significant. Per game (20+ games) −0.67 | **Added** |
 

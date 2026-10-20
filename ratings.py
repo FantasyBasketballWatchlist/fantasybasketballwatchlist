@@ -372,8 +372,8 @@ def build(today=None):
                 production = bpv.shrink(production, n, prior, PRIOR_SEASON_K)
                 note += ", blended with last season (age-adjusted)" if n < 3 * PRIOR_SEASON_K else ""
             elif recent_games(pid)[0] is not None:
-                # Under 20 games last season and no saved projection: the last two seasons pooled (not backtested;
-                # before this, one game back from injury counted unshrunk).
+                # Under 20 games last season and no saved projection: the last two seasons pooled as the prior
+                # (docs/prereg-short-history.md, T3: error 4.97 -> 4.22 FPTS/game, 11 of 15 seasons).
                 g_prior, label = recent_games(pid)
                 prior = g_prior["FPTS"].mean()
                 if g_prior["MIN"].mean() >= AGE_MIN_MPG:
@@ -382,7 +382,7 @@ def build(today=None):
                 note += f", blended with {label} (age-adjusted)" if n < 3 * PRIOR_SEASON_K else ""
             else:
                 # Little NBA history and no saved projection (e.g. a two-way player called up): blend toward the
-                # draft-slot baseline, as for rookies. Before this, 2 games at 39 FPTS ranked a player 68th.
+                # draft-slot baseline, as for rookies (prereg-short-history.md, T2b: 5.55 -> 4.74, 14 of 15 seasons).
                 prior = baselines.get(bpv.pick_bucket(picks.get(pid)), baselines["undrafted"])["fpts_per_game"]
                 production = bpv.shrink(production, n, prior, ROOKIE_K)
                 note += ", blended with draft-slot baseline (little NBA history)" if n < 3 * ROOKIE_K else ""
@@ -413,8 +413,8 @@ def build(today=None):
                     use_espn = True
             elif n < AGE_MIN_GAMES and pid in last_games and n + len(last_games[pid]) >= AGE_MIN_GAMES:
                 # Under 20 games last season (an injury, usually): his last two seasons pooled, age-adjusted, and the
-                # ESPN blend, like players back from a whole missed season. Not backtested; before this, 5 games
-                # ranked a player 60th.
+                # ESPN blend (prereg-short-history.md, T1: 6.50 -> 5.32 FPTS/game vs his short season, 14 of 15
+                # seasons; the season before alone was worse than pooling).
                 pooled = pd.concat([last_games[pid], g])
                 production = pooled["FPTS"].mean()
                 note = f"only {n} games in {production_season}: {seasons[-2]} and {production_season} pooled"
@@ -428,8 +428,8 @@ def build(today=None):
                     preseason_prior[pid] = production
                     use_espn = True
             elif n < AGE_MIN_GAMES:
-                # Under 20 games even over two seasons: blend toward the draft-slot baseline, as in season (before
-                # this, a two-way player's handful of games ranked him 125th).
+                # Under 20 games even over two seasons: blend toward the draft-slot baseline, as in season
+                # (prereg-short-history.md, T2a: 6.86 -> 5.57 FPTS/game, 15 of 15 seasons).
                 prior = baselines.get(bpv.pick_bucket(picks.get(pid)), baselines["undrafted"])["fpts_per_game"]
                 production = bpv.shrink(production, n, prior, ROOKIE_K)
                 note = f"only {n} NBA games last season: blended with the draft-slot baseline"
