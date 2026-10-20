@@ -284,6 +284,8 @@ def build(today=None):
     overrides = load_overrides()
 
     hist = bpv.availability_history(seasons, pg, tg, draft)
+    if mode == "in-season":
+        hist = _record_missed_last_season(hist, seasons, tg, production_season)
     league_p, league_q = bpv.league_availability(hist)
     avail = bpv.predict_availability(hist, seasons, production_season, AVAILABILITY_DECAY, AVAILABILITY_K, league_p)
     baselines = bpv.rookie_baselines(bpv.rookie_seasons(seasons, pg, draft, hist))
@@ -302,12 +304,39 @@ def build(today=None):
                                             else min(int(inj.get("out_games", 0)), SEASON_GAMES) / SEASON_GAMES)
                      for name, inj in overrides["injuries"].items()}
         roster_team, crowding = _roster_crowding(pg[production_season], target_season, out_share)
-        # Last season's players, plus the new draftees (no games yet) so incoming rookies get ESPN's projection too.
-        names = pg[production_season].drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
+        # Last season's players, players back from a missed season (they played the season before), and the new
+        # draftees (no games yet), so returners and incoming rookies get ESPN's projection too.
+        name_of = lambda games: games.drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
+        names = name_of(pg[production_season])
+        returning = name_of(pg[seasons[-2]])
         draftees = draft[draft["SEASON"].astype(int) == nba_data.season_start_year(target_season)]
         draftees = draftees.drop_duplicates("PERSON_ID").set_index("PERSON_ID")["PLAYER_NAME"]
+        names = pd.concat([names, returning[~returning.index.isin(names.index)]])
         espn = _espn_by_player(pd.concat([names, draftees[~draftees.index.isin(names.index)]]), target_season)
         fpts_rates = _fpts_rates(pg, seasons, target_season)
+
+    last_games = dict(tuple(pg[seasons[-2]].groupby("PLAYER_ID")))
+    older_games = dict(tuple(pg[seasons[-3]].groupby("PLAYER_ID"))) if len(seasons) >= 3 else {}
+
+    def recent_games(pid):
+        """(games, label): last season if he played 20+ games, else the last two seasons pooled if that makes 20+."""
+        last, older = last_games.get(pid), older_games.get(pid)
+        if last is not None and len(last) >= AGE_MIN_GAMES:
+            return last, seasons[-2]
+        parts = [x for x in (older, last) if x is not None]
+        pooled = pd.concat(parts) if parts else None
+        if pooled is not None and len(pooled) >= AGE_MIN_GAMES:
+            return pooled, (f"{seasons[-3]} and {seasons[-2]}" if last is not None and older is not None
+                            else seasons[-3] if older is not None else seasons[-2])
+        return None, None
+
+    if mode == "in-season":
+        # Ages for players who missed last season come from the season before, a year older.
+        try:
+            older_ages = nba_data.player_ages(seasons[-3]).set_index("PLAYER_ID")["AGE"] + 1
+            ages = pd.concat([ages, older_ages[~older_ages.index.isin(ages.index)]])
+        except Exception:
+            pass
 
     season_games = pg[production_season]
     league_efg = (season_games["FGM"].sum() + 0.5 * season_games["FG3M"].sum()) / max(season_games["FGA"].sum(), 1)
@@ -335,6 +364,15 @@ def build(today=None):
                     prior += _age_adjustment(ages, pid)[0]
                 production = bpv.shrink(production, n, prior, PRIOR_SEASON_K)
                 note += ", blended with last season (age-adjusted)" if n < 3 * PRIOR_SEASON_K else ""
+            elif recent_games(pid)[0] is not None:
+                # Under 20 games last season and no saved projection: the last two seasons pooled (not backtested;
+                # before this, one game back from injury counted unshrunk).
+                g_prior, label = recent_games(pid)
+                prior = g_prior["FPTS"].mean()
+                if g_prior["MIN"].mean() >= AGE_MIN_MPG:
+                    prior += _age_adjustment(ages, pid)[0]
+                production = bpv.shrink(production, n, prior, PRIOR_SEASON_K)
+                note += f", blended with {label} (age-adjusted)" if n < 3 * PRIOR_SEASON_K else ""
             if n >= RECALIBRATION_MIN_GAMES:
                 production = RECALIBRATION[0] + RECALIBRATION[1] * production
                 fga = g["FGA"].sum()
@@ -400,24 +438,25 @@ def build(today=None):
     except Exception:
         roster_now = pd.Series(dtype=object)
     rostered = set(roster_now.index)
-    before = pg[seasons[-2]]
-    before = before[before["PLAYER_ID"].isin(rostered - listed)]
     if mode == "in-season":
         ages_before = ages
         team_played = tg[production_season].groupby("TEAM_ABBREVIATION").size()
+        candidates = [(pid, *recent_games(pid)) for pid in sorted(rostered - listed)]
+        candidates = [c for c in candidates if c[1] is not None]
     else:
+        before = pg[seasons[-2]]
+        before = before[before["PLAYER_ID"].isin(rostered - listed)]
         try:
             ages_before = nba_data.player_ages(seasons[-2]).set_index("PLAYER_ID")["AGE"] + 1 if len(before) else None
         except Exception:       # e.g. offline without that file: skip the age adjustment rather than the ratings
             ages_before = None
-    for pid, g in before.groupby("PLAYER_ID"):
+        candidates = [(pid, g, seasons[-2]) for pid, g in before.groupby("PLAYER_ID") if len(g) >= AGE_MIN_GAMES]
+    for pid, g, label in candidates:
         n, mpg = len(g), g["MIN"].mean()
-        if n < AGE_MIN_GAMES:
-            continue
         team = roster_now.get(pid, g["TEAM_ABBREVIATION"].iloc[-1])
         production = g["FPTS"].mean()
-        note = (f"no games yet this season: {seasons[-2]} average" if mode == "in-season"
-                else f"missed all of {production_season}: {seasons[-2]} average")
+        note = (f"no games yet this season: {label} average" if mode == "in-season"
+                else f"missed all of {production_season}: {label} average")
         if mpg >= AGE_MIN_MPG:
             adjustment, age = _age_adjustment(ages_before, pid)
             production += adjustment
@@ -671,6 +710,27 @@ def _absence_streaks(df, injured, season_games, team_games, remaining_games):
         df.at[i, "availability"] = new
         if streak >= 1:
             df.at[i, "injury_note"] = f"has missed his team's last {streak} game{'s' if streak > 1 else ''}"
+
+
+def _record_missed_last_season(hist, seasons, tg, season):
+    """In season, record a rostered regular (20+ mpg two seasons ago) who missed all of last season as missing it,
+    as bpv.availability_history does once he plays again. Without this his availability would be the healthy-looking
+    older record until his first game, and then drop."""
+    try:
+        rostered = set(nba_data.rosters(season)["PLAYER_ID"])
+    except Exception:
+        return hist
+    last, before = seasons[-2], seasons[-3]
+    seen_last = set(hist.loc[hist["season"] == last, "PLAYER_ID"])
+    rel = hist[(hist["season"] == before) & (hist["mpg"] >= bpv.RELEVANT_MPG) & hist["PLAYER_ID"].isin(rostered)
+               & ~hist["PLAYER_ID"].isin(seen_last)]
+    if rel.empty:
+        return hist
+    n = int(tg[last].groupby("TEAM_ID").size().median())
+    extra = pd.DataFrame({"PLAYER_ID": rel["PLAYER_ID"].to_numpy(), "PLAYER_NAME": rel["PLAYER_NAME"].to_numpy(),
+                          "played": 0, "missed": n, "missed_long": n, "spells": 1, "possible": n, "mpg": 0.0,
+                          "fpts_pg": np.nan, "fpts_total": 0.0, "availability": 0.0, "manageable": 1.0, "season": last})
+    return pd.concat([hist, extra], ignore_index=True)
 
 
 def _save_preseason_prior(target_season, prior):
