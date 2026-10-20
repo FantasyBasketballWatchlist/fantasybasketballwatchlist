@@ -598,7 +598,7 @@ def build(today=None):
     return df, meta
 
 
-OPENING_TIP_HOUR_ET = 19         # no opening-night game tips before 7 PM Eastern
+OPENING_TIP_HOUR_ET = 12         # opening night 2026-27 had a game finished by 6 PM Eastern; noon to be safe
 
 
 def _season_started(target_season):
