@@ -28,14 +28,18 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATUS = os.path.join(ROOT, "data", "collect_status.json")
 
 
-def save_espn(meta, today):
-    """ESPN's current projections, matched to NBA player ids, saved as a snapshot."""
+def save_espn(meta, today, players=None):
+    """ESPN's current projections, matched to NBA player ids, saved as a snapshot. players: the ratings (id, name),
+    so everyone BPV rates can be matched; without it, last season's / this season's game logs are used."""
     target = meta["target_season"]
-    names_from = nba_data.player_game_logs(meta["season"])
-    by_player = ratings._espn_by_player(names_from, target)
+    if players is not None:
+        names = players.drop_duplicates("id").set_index("id")["name"]
+    else:
+        names_from = nba_data.player_game_logs(meta["season"])
+        names = names_from.drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
+    by_player = ratings._espn_by_player(names, target)
     if not by_player:
         return None
-    names = names_from.drop_duplicates("PLAYER_ID", keep="last").set_index("PLAYER_ID")["PLAYER_NAME"]
     df = pd.DataFrame([{"id": pid, "name": names.get(pid, ""), "production": fpg, "games": gp, "bpv": fpg * gp}
                        for pid, (fpg, gp) in by_player.items()])
     # "bpv" holds ESPN's projected total, the score its ranking is judged on (named so the tracker treats
@@ -58,7 +62,7 @@ def main():
         games = nba_data.player_game_logs(meta["season"])
         status["latest_game"] = games["GAME_DATE"].max() if len(games) else None
         try:
-            status["espn_snapshot"] = save_espn(meta, today)
+            status["espn_snapshot"] = save_espn(meta, today, players)
         except Exception as e:                       # ESPN is optional; keep collecting NBA data
             status["espn_error"] = str(e)
         accuracy_tracker.refresh(max_age=0)

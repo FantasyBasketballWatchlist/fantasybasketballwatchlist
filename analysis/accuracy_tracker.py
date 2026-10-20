@@ -59,8 +59,12 @@ def score(path, only_ids=None):
     if games.empty:
         return {**result, "status": "no games yet"}
     games = bpv.add_fpts(games) if "FPTS" not in games else games
-    before = games[games["GAME_DATE"] <= date.isoformat()]
-    after = games[games["GAME_DATE"] > date.isoformat()]
+    if "_pre_" in os.path.basename(path):
+        # A preseason snapshot projects the whole season, opening night included (it's dated opening day).
+        before, after = games.iloc[0:0], games
+    else:
+        before = games[games["GAME_DATE"] <= date.isoformat()]
+        after = games[games["GAME_DATE"] > date.isoformat()]
     if after.empty:
         return {**result, "status": "no games after the snapshot yet"}
     actual = after.groupby("PLAYER_ID")["FPTS"].agg(["mean", "size", "sum"])
@@ -126,7 +130,11 @@ def main():
 
 def head_to_head(espn_path, paths, date):
     """BPV vs ESPN from the same day, on the players both projected."""
-    bpv_same_day = [p for p in paths if os.path.basename(p).startswith(f"bpv_{date}")]
+    # Same day and same kind: a preseason ESPN snapshot is paired with the preseason BPV one, not with an in-season
+    # snapshot saved later that day.
+    pre = "_pre_" in os.path.basename(espn_path)
+    bpv_same_day = [p for p in paths if os.path.basename(p).startswith(f"bpv_{date}")
+                    and ("_pre_" in os.path.basename(p)) == pre]
     if not bpv_same_day:
         return None
     common = set(pd.read_csv(espn_path)["id"]) & set(pd.read_csv(bpv_same_day[0])["id"])

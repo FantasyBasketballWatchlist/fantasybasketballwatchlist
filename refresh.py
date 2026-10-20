@@ -9,7 +9,8 @@ reads data/live/. This script:
 3. Logs this run's in-season predictions and scores the ones whose games are done (analysis/live_checks.py,
    data/tracking/).
 4. Checks before publishing: sanity checks on the new ratings, then a full offline copy of the site run against
-   data/live/ exactly as the server will (every route must answer, and the rankings must match). If the code
+   data/live/ exactly as the server will (every route must answer, and the rankings must match). Also saves ESPN's
+   projections as a snapshot (analysis/collect.py) so the accuracy table can compare BPV and ESPN on the same day. If the code
    changed since the last verified deploy, it also runs the site in a Render-like Docker container
    (deploy/Dockerfile: Linux, gunicorn, 0.5 CPU, 512 MB) under keep-alive traffic like Render's proxy. If a check
    fails, nothing is published and the live site keeps its current data.
@@ -296,6 +297,13 @@ def main():
     try:
         cache_dir, names, players, meta = rebuild()
         sync_live(cache_dir, names)
+        try:
+            from analysis import collect
+            saved = collect.save_espn(meta, datetime.date.today(), players)
+            if saved:
+                log(f"ESPN snapshot: {os.path.basename(saved)}")
+        except Exception as e:                       # ESPN is optional; the BPV refresh goes on without it
+            log(f"ESPN snapshot skipped: {type(e).__name__}: {e}")
 
         from analysis import live_checks
         live_checks.record(players, meta)
