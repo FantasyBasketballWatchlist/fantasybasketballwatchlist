@@ -61,6 +61,7 @@ LEAGUE_TEAMS = int(os.environ.get("LEAGUE_TEAMS", 10))
 ROSTER_SIZE = int(os.environ.get("LEAGUE_ROSTER_SIZE", 13))
 REPLACEMENT_RANK = LEAGUE_TEAMS * ROSTER_SIZE
 MIN_GAMES_RANKED = 10             # fewer games than this and the player isn't used to set replacement level
+REPLACEMENT_POOL_MIN = 400        # until this many have 10+ games (mid-December), last season's level is used
 OFFSEASON_AFTER_DAYS = 14         # no games for this long means the season is over
 SEASON_GAMES = 82
 
@@ -349,7 +350,7 @@ def build(today=None):
         n = len(g)
         mpg = g["MIN"].mean()
         production, note = _production(g, mode, overrides)
-        tested_range = True
+        tested_range, use_espn = True, False
         if mode == "in-season":
             if pid in debuts:
                 prior = baselines.get(bpv.pick_bucket(picks.get(pid)), baselines["undrafted"])["fpts_per_game"]
@@ -373,6 +374,12 @@ def build(today=None):
                     prior += _age_adjustment(ages, pid)[0]
                 production = bpv.shrink(production, n, prior, PRIOR_SEASON_K)
                 note += f", blended with {label} (age-adjusted)" if n < 3 * PRIOR_SEASON_K else ""
+            else:
+                # Little NBA history and no saved projection (e.g. a two-way player called up): blend toward the
+                # draft-slot baseline, as for rookies. Before this, 2 games at 39 FPTS ranked a player 68th.
+                prior = baselines.get(bpv.pick_bucket(picks.get(pid)), baselines["undrafted"])["fpts_per_game"]
+                production = bpv.shrink(production, n, prior, ROOKIE_K)
+                note += ", blended with draft-slot baseline (little NBA history)" if n < 3 * ROOKIE_K else ""
             if n >= RECALIBRATION_MIN_GAMES:
                 production = RECALIBRATION[0] + RECALIBRATION[1] * production
                 fga = g["FGA"].sum()
@@ -397,6 +404,29 @@ def build(today=None):
                     production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn[pid][0]
                     note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn[pid][0]:.1f})"
                     preseason_prior[pid] = production
+                    use_espn = True
+            elif n < AGE_MIN_GAMES and pid in last_games and n + len(last_games[pid]) >= AGE_MIN_GAMES:
+                # Under 20 games last season (an injury, usually): his last two seasons pooled, age-adjusted, and the
+                # ESPN blend, like players back from a whole missed season. Not backtested; before this, 5 games
+                # ranked a player 60th.
+                pooled = pd.concat([last_games[pid], g])
+                production = pooled["FPTS"].mean()
+                note = f"only {n} games in {production_season}: {seasons[-2]} and {production_season} pooled"
+                if pooled["MIN"].mean() >= AGE_MIN_MPG:
+                    adjustment, age = _age_adjustment(ages, pid)
+                    production += adjustment
+                    note += f", {adjustment:+.1f} for age {age:.0f}" if age is not None else ""
+                if pid in espn:
+                    production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn[pid][0]
+                    note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn[pid][0]:.1f})"
+                    preseason_prior[pid] = production
+                    use_espn = True
+            elif n < AGE_MIN_GAMES:
+                # Under 20 games even over two seasons: blend toward the draft-slot baseline, as in season (before
+                # this, a two-way player's handful of games ranked him 125th).
+                prior = baselines.get(bpv.pick_bucket(picks.get(pid)), baselines["undrafted"])["fpts_per_game"]
+                production = bpv.shrink(production, n, prior, ROOKIE_K)
+                note = f"only {n} NBA games last season: blended with the draft-slot baseline"
         means = g[STAT_COLUMNS].mean()
         # Split the last-5 change into its minutes part and its per-minute (efficiency) part.
         per_min = g["FPTS"].mean() / max(mpg, 1)
@@ -414,7 +444,7 @@ def build(today=None):
             "minutes_change_fpts": float(minutes_change), "efficiency_change_fpts": float(efficiency_change),
             "production": float(production), "production_note": note,
             "range": _range(n, mode, tested_range),
-            "availability": (min(1.0, ESPN_GAMES_SCALE * espn[pid][1] / SEASON_GAMES) if (tested_range and pid in espn)
+            "availability": (min(1.0, ESPN_GAMES_SCALE * espn[pid][1] / SEASON_GAMES) if use_espn
                              else float(avail.get(pid, league_p))),
             "espn_fpg": espn[pid][0] if pid in espn else None, "espn_games": espn[pid][1] if pid in espn else None,
             "games_missed": int(season_row["missed"]) if season_row is not None else 0,
@@ -508,6 +538,11 @@ def build(today=None):
             production = (1 - ESPN_FPG_WEIGHT) * production + ESPN_FPG_WEIGHT * espn_row[0]
             availability = min(1.0, ESPN_GAMES_SCALE * espn_row[1] / SEASON_GAMES)
             note += f"; blended {ESPN_FPG_WEIGHT:.0%} with ESPN's projection ({espn_row[0]:.1f})"
+            preseason_prior[d.PERSON_ID] = production
+        if mode == "in-season" and d.PERSON_ID in frozen_prior:
+            # Hasn't played yet: his preseason projection (with ESPN's blend) rather than the bare draft-slot average.
+            production = float(frozen_prior[d.PERSON_ID])
+            note = "no games yet: his preseason projection"
         rows.append({
             "id": int(d.PERSON_ID), "name": d.PLAYER_NAME, "team": team, "games": 0, "minutes": None,
             "season_fpts": None, "recent_fpts": None, "recent_minutes": None,
@@ -523,10 +558,11 @@ def build(today=None):
         _save_preseason_prior(target_season, preseason_prior)
     df = pd.DataFrame(rows)
     ranked = df[df["games"] >= MIN_GAMES_RANKED]
-    if len(ranked) >= REPLACEMENT_RANK:
+    if len(ranked) >= max(REPLACEMENT_POOL_MIN, REPLACEMENT_RANK + 100):
         replacement = bpv.replacement_level(ranked["production"], REPLACEMENT_RANK)
     else:
-        # Early in a season too few players have 10 games: use last season's level, as analysis/backtest.py does.
+        # Early in a season the 10+ game pool is incomplete (the 130th best of ~200 players is far too low: 20.6 on
+        # 2025-11-12 vs 26 before and after): use last season's level, as analysis/backtest.py does.
         prev = hist[(hist["season"] == seasons[-2]) & (hist["played"] >= 20)]
         replacement = bpv.replacement_level(prev["fpts_pg"], REPLACEMENT_RANK)
     df["manageable"] = league_q
