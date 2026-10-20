@@ -5,7 +5,7 @@ Live at https://hoopothesis.cc
 Player values for ESPN points leagues, built on **BPV (Basketball Performance Value)**: expected fantasy points per team game from rostering a player, counting his production, how often he plays, and the free agent you can stream when he's out long-term.
 
 - **Rankings** (`/`): search any player for their BPV breakdown, an 80% likely range, and fantasy-playoff game count, plus the top-25 rankings. Between seasons, players are shown on next season's team.
-- **Draft** (`/draft`): a snake-draft tracker with suggested picks, team rankings and position outlook. Pick your draft slot at the top of the clock card.
+- **Draft** (`/draft`): a snake-draft tracker with suggested picks, team rankings and position outlook. Pick your draft slot at the top of the clock card. **Sync with ESPN (beta)** fills in picks from an ESPN league's draft (ESPN's unofficial API, called from the browser; public leagues, or private ones when logged into ESPN in the same browser), whether you draft in the ESPN app or on the website.
 - **League** (`/league`): up to 20 teams; each team's players with BPV, and teams ranked by the BPV of their best starting lineup.
 - **Trade Analyzer** (`/trade-analyzer`): compares both sides by value over replacement, so 2-for-1 deals account for the roster spot.
 - **Your Leagues** (`/leagues`): several named leagues, each with its own draft and teams, saved in the browser. The Draft and Teams pages work on the active league and can switch or start a new one; Export/Import moves them to another computer.

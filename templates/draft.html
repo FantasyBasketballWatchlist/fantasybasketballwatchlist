@@ -110,6 +110,13 @@
     .depth span.low { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 50%, transparent); }
     .x.armed { color: #2a0707; background: var(--bad); border-color: var(--bad); }
     .toolbar .seg button { padding: 6px 10px; }
+    .espn .row { display: flex; gap: 8px; margin-top: 10px; }
+    .espn input, .espn select { flex: 1; min-width: 0; padding: 7px 8px; color: var(--text); background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .85rem; }
+    .espn input:focus, .espn select:focus { outline: none; border-color: var(--orange); }
+    .espn .status { font-size: .8rem; color: var(--muted); margin-top: 8px; }
+    .espn .status.bad { color: #fecaca; }
+    .espn .status.live { color: #c9f5e3; }
+    .beta { font-size: .62rem; font-weight: 700; letter-spacing: .6px; padding: 1px 6px; border-radius: 999px; color: #1a0d00; background: var(--orange); vertical-align: 3px; }
 
     @media (max-width: 1600px) { .hide-md { display: none; } }
     @media (max-width: 960px) {
@@ -185,6 +192,17 @@
           </div>
           <div class="suggest" id="suggest" hidden></div>
           <div class="alerts" id="alerts"></div>
+        </div>
+
+        <div class="card panel espn" style="--c: var(--blue)">
+          <h3><span class="dot"></span>Sync with ESPN <span class="beta">BETA</span></h3>
+          <p class="help" style="margin:4px 0 0">Draft in the ESPN app or website as usual; picks fill in here by themselves.
+            Paste your ESPN league ID (or the league's URL). Public leagues work anywhere; private ones only if you're logged
+            into ESPN's website in this same browser.</p>
+          <div class="row"><input id="espn-league" placeholder="League ID or URL" autocomplete="off" spellcheck="false">
+            <button class="btn small" id="espn-go">Connect</button></div>
+          <div class="row" id="espn-team-row" hidden><select id="espn-team" aria-label="Your ESPN team"></select></div>
+          <div class="status" id="espn-status"></div>
         </div>
 
         <div class="card panel" style="--c: var(--t-super)">
@@ -264,7 +282,7 @@
       state.teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, state.teams));
       state.slot = Math.min(state.slot, state.teams);
     }
-    function switchLeague() { restore(); lookCache = { key: null, value: null }; writeSettings(); render(); }
+    function switchLeague() { restore(); lookCache = { key: null, value: null }; writeSettings(); render(); espnResume(); }
 
     const totalPicks = () => state.teams * state.rounds;
     const teamOf = (n) => {                       // snake order, 1-based pick -> 1-based team
@@ -772,6 +790,134 @@
     document.getElementById('suggest').addEventListener('click', e => draft(+e.currentTarget.dataset.id));
     ['set-teams', 'set-slot', 'set-rounds', 'set-lineup'].forEach(id => document.getElementById(id).addEventListener('change', readSettings));
 
+    // ---------- ESPN sync (beta)
+    // Reads the league's draft from ESPN's (undocumented) fantasy API straight from this browser; ESPN allows requests
+    // from this site. Picks are placed by overall pick number, so ESPN's order wins over anything entered by hand.
+    const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/fba/seasons';
+    const ESPN_POLL_MS = 8000;
+    const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false };
+    const espnKey = (n) => normalizeString(String(n)).replace(/\./g, '').replace(/-/g, ' ').replace(/'/g, '')
+      .replace(/\s+(jr|sr|ii|iii|iv)$/, '').replace(/\s+/g, ' ').trim();          // same as ratings._espn_key
+    const espnYear = () => {
+      const season = loadedMeta?.mode === 'in-season' ? loadedMeta.season : loadedMeta?.target_season;
+      return season ? +season.slice(0, 4) + 1 : null;
+    };
+    const parseLeagueId = (text) => { const m = String(text).match(/leagueId=(\d+)/i) || String(text).match(/^\s*(\d+)\s*$/); return m ? m[1] : null; };
+
+    function espnStatus(text, cls = '') { const el = document.getElementById('espn-status'); el.textContent = text; el.className = `status ${cls}`; }
+
+    async function espnGet(url, headers = {}) {
+      const r = await fetch(url, { headers, credentials: 'include' });
+      if (r.status === 401 || r.status === 403) throw new Error('private');
+      if (r.status === 404) throw new Error('notfound');
+      if (!r.ok) throw new Error(`ESPN answered ${r.status}`);
+      return r.json();
+    }
+
+    // ESPN player id -> name for players not yet on a roster in the answer (one request, the 1,500 most-owned players).
+    async function espnPlayerNames(year) {
+      const filter = JSON.stringify({ players: { limit: 1500, sortPercOwned: { sortPriority: 1, sortAsc: false } } });
+      const d = await espnGet(`${ESPN_API}/${year}/segments/0/leaguedefaults/3?view=kona_player_info`, { 'X-Fantasy-Filter': filter });
+      (d.players || []).forEach(p => { if (p.player?.id) espn.names.set(p.player.id, p.player.fullName); });
+    }
+
+    async function espnSync() {
+      const cfg = state.espn;
+      if (!cfg || espn.busy || !players.length) return;
+      const year = espnYear();
+      if (!year) return;
+      espn.busy = true;
+      try {
+        const d = await espnGet(`${ESPN_API}/${year}/segments/0/leagues/${cfg.league}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`);
+        espn.leagueName = d.settings?.name || `League ${cfg.league}`;
+        espn.teams = (d.teams || []).map(t => ({ id: t.id, name: t.name || [t.location, t.nickname].filter(Boolean).join(' ') || t.abbrev || `Team ${t.id}` }));
+        (d.teams || []).forEach(t => (t.roster?.entries || []).forEach(e => {
+          const pl = e.playerPoolEntry?.player; if (pl?.id) espn.names.set(pl.id, pl.fullName);
+        }));
+        const order = d.settings?.draftSettings?.pickOrder?.length ? d.settings.draftSettings.pickOrder : espn.teams.map(t => t.id);
+        const nTeams = order.length;
+        const made = (d.draftDetail?.picks || []).filter(p => p.playerId > 0);
+        made.forEach(p => { p.overall = p.overallPickNumber || ((p.roundId - 1) * nTeams + p.roundPickNumber); });
+        if (made.some(p => !espn.names.has(p.playerId))) await espnPlayerNames(year);
+        renderEspnTeams();
+        if (nTeams < MIN_TEAMS || nTeams > MAX_TEAMS) throw new Error(`ESPN lists ${nTeams} teams; the tracker handles ${MIN_TEAMS}-${MAX_TEAMS}`);
+
+        // League shape: teams, rounds (roster size), your slot from ESPN's draft order.
+        const rosterSize = Object.values(d.settings?.rosterSettings?.lineupSlotCounts || {}).reduce((a, b) => a + b, 0);
+        const maxRound = Math.max(0, ...made.map(p => p.roundId || 0));
+        const before = JSON.stringify([state.picks, state.teams, state.slot, state.rounds]);
+        state.teams = nTeams;
+        state.rounds = Math.min(30, Math.max(rosterSize || state.rounds, maxRound, 1));
+        if (cfg.team != null && order.includes(cfg.team)) state.slot = order.indexOf(cfg.team) + 1;
+
+        const byKey = new Map(players.map(p => [espnKey(p.name), p.id]));
+        let unmatched = 0, offSnake = 0;
+        const picks = {};
+        for (const p of made) {
+          const name = espn.names.get(p.playerId) || `ESPN player ${p.playerId}`;
+          let id = byKey.get(espnKey(name));
+          if (id == null) { id = -p.playerId; unmatched++; }          // not in the rankings: shown by name, worth 0
+          picks[p.overall] = id;
+          state.names[id] = name;
+          if (order[teamOf(p.overall) - 1] !== p.teamId) offSnake++;
+        }
+        state.picks = picks;
+        state.history = Object.keys(picks).map(Number).sort((a, b) => a - b);
+        if (JSON.stringify([state.picks, state.teams, state.slot, state.rounds]) !== before) {
+          lookCache = { key: null, value: null }; save(); writeSettings(); render();
+        }
+        const done = !!d.draftDetail?.drafted, live = !!d.draftDetail?.inProgress;
+        const notes = [`${espn.leagueName}: ${made.length} pick${made.length === 1 ? '' : 's'} synced`,
+          done ? 'draft complete' : live ? 'draft live' : 'draft not started',
+          `checked ${new Date().toLocaleTimeString()}`];
+        if (cfg.team == null) notes.push('pick your team above');
+        if (unmatched) notes.push(`${unmatched} player${unmatched === 1 ? '' : 's'} not in the rankings`);
+        if (offSnake) notes.push(`${offSnake} pick${offSnake === 1 ? " doesn't" : "s don't"} follow a plain snake (traded picks?): placed by pick number`);
+        espnStatus(notes.join(' · '), done ? '' : 'live');
+        espn.done = done;
+      } catch (e) {
+        const msg = e.message === 'private' ? "This league is private. Make it viewable to the public in ESPN's league settings, or log into ESPN's website in this browser."
+          : e.message === 'notfound' ? `No ESPN league ${cfg.league} for the ${espnYear() - 1}-${String(espnYear()).slice(2)} season. Check the ID.`
+          : e instanceof TypeError ? "Couldn't reach ESPN. Check the connection; trying again." : e.message;
+        espnStatus(msg, 'bad');
+        espn.done = e.message === 'private' || e.message === 'notfound';
+      } finally {
+        espn.busy = false;
+      }
+      clearTimeout(espn.timer);
+      if (state.espn && !espn.done) espn.timer = setTimeout(() => { if (!document.hidden) espnSync(); else espn.timer = null; }, ESPN_POLL_MS);
+    }
+
+    function renderEspnTeams() {
+      const row = document.getElementById('espn-team-row'), sel = document.getElementById('espn-team');
+      row.hidden = !espn.teams.length;
+      sel.innerHTML = '<option value="">Which team is yours?</option>' + espn.teams.map(t =>
+        `<option value="${t.id}"${t.id === state.espn?.team ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
+    }
+
+    function espnResume() {
+      clearTimeout(espn.timer); espn.timer = null; espn.done = false; espn.teams = [];
+      document.getElementById('espn-league').value = state.espn?.league || '';
+      document.getElementById('espn-go').textContent = state.espn ? 'Disconnect' : 'Connect';
+      renderEspnTeams();
+      espnStatus(state.espn ? 'Connecting...' : '');
+      if (state.espn) espnSync();
+    }
+
+    document.getElementById('espn-go').addEventListener('click', () => {
+      if (state.espn) { state.espn = null; save(); espnResume(); return; }
+      const id = parseLeagueId(document.getElementById('espn-league').value);
+      if (!id) { espnStatus('Paste the number after leagueId= in your ESPN league URL.', 'bad'); return; }
+      state.espn = { league: id, team: null }; save(); espnResume();
+    });
+    document.getElementById('espn-team').addEventListener('change', e => {
+      if (!state.espn) return;
+      state.espn.team = e.target.value === '' ? null : +e.target.value;
+      save(); espn.done = false; espnSync();
+    });
+    // Phones pause background tabs: check again as soon as the page is back on screen.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && state.espn && !espn.busy) espnSync(); });
+
     async function load() {
       leagueBar(document.getElementById('league-bar'), switchLeague);
       restore();
@@ -799,6 +945,7 @@
         document.getElementById('season-notice').textContent = 'Could not load NBA data. Make sure app.py is running, then refresh.';
       }
       writeSettings(); render();
+      espnResume();
     }
     load();
   </script>
