@@ -524,6 +524,8 @@ By the pre-set rule the blend is confirmed (best per-game error and ranking in b
 
 The season before alone (ignoring the short season) was worse than pooling (3 of 15). All four still predict low on average (e.g. 9.3 vs 11.6 FPTS/game in season), partly because only players who went on to play were scored. Returners with the ESPN blend: 6 cases in the four ESPN seasons, too few to judge (error 7.4 → 6.8, better for 2 of 6).
 
+**In season vs the experts (2026-10-20).** FantasyPros' rest-of-season consensus (archived captures, 32 dates in 2021-22 to 2025-26) against BPV rebuilt on the same dates, scored on realized value for the rest of the season (`docs/prereg-ros-experts.md`, `analysis/ros_experts.py`): rank correlation BPV 0.724, experts 0.684, their rank average 0.727. BPV beat the experts on 26 of 32 dates (difference −0.025 to −0.054 for the experts), and blending them in didn't help (+0.003, not significant). Before a season the experts are better (Round 10); once games are played, BPV is. Caveats: the experts' list is for category leagues, some in-season constants were fitted on these seasons, and 30 of the 32 dates are from 2021-22 and 2022-23.
+
 The average drops are shown on the injury page as context ("players back from absences this long produced X%"), not used in BPV.
 | **Incoming rookies, season totals: veterans' ESPN rule** (37.5% ESPN per game, ESPN games × 0.86; pool = every draftee ESPN projected preseason, never-played = 0; docs/prereg-rookie-espn.md, analysis/rookie_espn.py) | −82 season FPTS (−121 to −41), 3 of 4 seasons, top 10% −73, 103 rookies (2021-22 has only 8 and was +5). ESPN alone −49 (−138 to +43), not significant. Per game (20+ games) −0.67 | **Added** |
 

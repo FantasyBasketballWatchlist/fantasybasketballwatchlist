@@ -1,0 +1,396 @@
+{
+ "rules": "docs/prereg-ros-experts.md",
+ "dates": 32,
+ "skipped": [
+  {
+   "capture": "2024-25_20241201095454.html",
+   "heading": "",
+   "players": 0
+  },
+  {
+   "capture": "2024-25_20250126142307.html",
+   "heading": "",
+   "players": 0
+  },
+  {
+   "capture": "2025-26_20251121082218.html",
+   "heading": "",
+   "players": 0
+  }
+ ],
+ "mean": {
+  "bpv": 0.723630962206796,
+  "ecr": 0.6838749999882707,
+  "blend": 0.7267628165286567
+ },
+ "blend_vs_bpv": {
+  "mean_diff": 0.0031318543218606214,
+  "ci": [
+   -0.00444001275011552,
+   0.010577360716098032
+  ],
+  "dates_better": "16 of 32",
+  "by_season": {
+   "2021-22": -0.0071,
+   "2022-23": 0.0162,
+   "2024-25": 0.0408,
+   "2025-26": -0.0538
+  },
+  "seasons_better": "2 of 4",
+  "passes": false
+ },
+ "ecr_vs_bpv": {
+  "mean_diff": -0.03975596221852537,
+  "ci": [
+   -0.0541136766695657,
+   -0.025422891773639992
+  ],
+  "dates_better": "6 of 32",
+  "by_season": {
+   "2021-22": -0.0636,
+   "2022-23": -0.0126,
+   "2024-25": 0.0424,
+   "2025-26": -0.12
+  },
+  "seasons_better": "1 of 4",
+  "passes": false
+ },
+ "blend_vs_ecr": {
+  "mean_diff": 0.042887816540385995,
+  "ci": [
+   0.03560395369539947,
+   0.05015560502960663
+  ],
+  "dates_better": "31 of 32",
+  "by_season": {
+   "2021-22": 0.0565,
+   "2022-23": 0.0288,
+   "2024-25": -0.0016,
+   "2025-26": 0.0661
+  },
+  "seasons_better": "3 of 4",
+  "passes": true
+ },
+ "per_date": [
+  {
+   "season": "2021-22",
+   "date": "2021-11-08",
+   "pool": 163,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.7759721681501236,
+   "ecr": 0.7086306090994237,
+   "blend": 0.7684813017821978,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-11-15",
+   "pool": 164,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.7810939047378483,
+   "ecr": 0.7438133223085279,
+   "blend": 0.7857866268110795,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-11-22",
+   "pool": 165,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.8001864669877805,
+   "ecr": 0.7412730512490088,
+   "blend": 0.795444224005932,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-11-29",
+   "pool": 161,
+   "ecr_matched_in_pool": 160,
+   "bpv": 0.8022808850077449,
+   "ecr": 0.7191847245118639,
+   "blend": 0.7832442729493139,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-12-13",
+   "pool": 164,
+   "ecr_matched_in_pool": 163,
+   "bpv": 0.774360997374614,
+   "ecr": 0.7102308435242746,
+   "blend": 0.7631888607389145,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-12-21",
+   "pool": 163,
+   "ecr_matched_in_pool": 163,
+   "bpv": 0.7730094414585025,
+   "ecr": 0.7384468735259234,
+   "blend": 0.7802909071736392,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2021-12-29",
+   "pool": 163,
+   "ecr_matched_in_pool": 161,
+   "bpv": 0.7709600926295376,
+   "ecr": 0.7173319533749781,
+   "blend": 0.7651482770924227,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-01-06",
+   "pool": 166,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.7504987899825186,
+   "ecr": 0.687938368987289,
+   "blend": 0.7500219724064972,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-01-13",
+   "pool": 167,
+   "ecr_matched_in_pool": 166,
+   "bpv": 0.7336637840872046,
+   "ecr": 0.6465999967858057,
+   "blend": 0.7174057983371589,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-01-24",
+   "pool": 166,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.715262629428545,
+   "ecr": 0.672606051664889,
+   "blend": 0.7131976469338651,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-01-31",
+   "pool": 171,
+   "ecr_matched_in_pool": 169,
+   "bpv": 0.6785978430576175,
+   "ecr": 0.6590494165464568,
+   "blend": 0.6935074220961377,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-02-07",
+   "pool": 170,
+   "ecr_matched_in_pool": 168,
+   "bpv": 0.683154941714846,
+   "ecr": 0.6288117340806105,
+   "blend": 0.6759838691413091,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-02-15",
+   "pool": 175,
+   "ecr_matched_in_pool": 171,
+   "bpv": 0.7094754710203147,
+   "ecr": 0.6185823619030903,
+   "blend": 0.6922334540632599,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-02-22",
+   "pool": 164,
+   "ecr_matched_in_pool": 163,
+   "bpv": 0.6551621677598606,
+   "ecr": 0.6112778092906953,
+   "blend": 0.6631658812255078,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-03-01",
+   "pool": 174,
+   "ecr_matched_in_pool": 171,
+   "bpv": 0.6780905964543279,
+   "ecr": 0.5722473077348484,
+   "blend": 0.6549844449838969,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2021-22",
+   "date": "2022-03-08",
+   "pool": 176,
+   "ecr_matched_in_pool": 172,
+   "bpv": 0.6852895229198667,
+   "ecr": 0.5735569063827837,
+   "blend": 0.6517976987258507,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-11-09",
+   "pool": 160,
+   "ecr_matched_in_pool": 159,
+   "bpv": 0.788831594984179,
+   "ecr": 0.8155689675377944,
+   "blend": 0.8269665329427519,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-11-26",
+   "pool": 162,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.7985014698805043,
+   "ecr": 0.8067745755129058,
+   "blend": 0.8318323661234233,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-12-03",
+   "pool": 162,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.7753274246366535,
+   "ecr": 0.7975160889699711,
+   "blend": 0.8071763725644437,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-12-10",
+   "pool": 162,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.7633914111782052,
+   "ecr": 0.7557787937658581,
+   "blend": 0.7779060538614343,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-12-17",
+   "pool": 160,
+   "ecr_matched_in_pool": 160,
+   "bpv": 0.7519572951148217,
+   "ecr": 0.7413748272346518,
+   "blend": 0.7676222540969616,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2022-12-24",
+   "pool": 160,
+   "ecr_matched_in_pool": 160,
+   "bpv": 0.7755724475170156,
+   "ecr": 0.7379009989182282,
+   "blend": 0.7750953127627611,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-01-07",
+   "pool": 164,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.7437198097211588,
+   "ecr": 0.67380146885847,
+   "blend": 0.7287581545587961,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-01-14",
+   "pool": 165,
+   "ecr_matched_in_pool": 165,
+   "bpv": 0.7575592026850126,
+   "ecr": 0.6885970477857537,
+   "blend": 0.7447057473019433,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-01-31",
+   "pool": 164,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.6936838590120071,
+   "ecr": 0.688165065936666,
+   "blend": 0.7180221941207074,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-02-08",
+   "pool": 165,
+   "ecr_matched_in_pool": 164,
+   "bpv": 0.6287540773657914,
+   "ecr": 0.646297340472343,
+   "blend": 0.6640037484802026,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-02-15",
+   "pool": 164,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.6540867243959343,
+   "ecr": 0.6553291577352635,
+   "blend": 0.676798580882515,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-02-22",
+   "pool": 163,
+   "ecr_matched_in_pool": 162,
+   "bpv": 0.6680794317459345,
+   "ecr": 0.6432163380922542,
+   "blend": 0.6697188344417504,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-03-01",
+   "pool": 163,
+   "ecr_matched_in_pool": 161,
+   "bpv": 0.6499738830276346,
+   "ecr": 0.6410363167964588,
+   "blend": 0.6667181633123055,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2022-23",
+   "date": "2023-03-08",
+   "pool": 165,
+   "ecr_matched_in_pool": 165,
+   "bpv": 0.6159815382174568,
+   "ecr": 0.5969642532167904,
+   "blend": 0.6365748136100886,
+   "heading": "Rest of Season Fantasy Basketball Rankings | Roto / Categories | FantasyPros"
+  },
+  {
+   "season": "2024-25",
+   "date": "2024-12-12",
+   "pool": 158,
+   "ecr_matched_in_pool": 158,
+   "bpv": 0.677509549576411,
+   "ecr": 0.7198699645094995,
+   "blend": 0.7182768090254937,
+   "heading": "Fantasy Basketball ROS Rankings (2024-25)"
+  },
+  {
+   "season": "2025-26",
+   "date": "2026-02-13",
+   "pool": 179,
+   "ecr_matched_in_pool": 178,
+   "bpv": 0.6462013687875012,
+   "ecr": 0.5262274633112852,
+   "blend": 0.5923515323644531,
+   "heading": "Fantasy Basketball ROS Rankings (2025-26)"
+  }
+ ]
+}
