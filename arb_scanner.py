@@ -15,6 +15,7 @@ live outside the repository:
                                                      a PropLine scan if its key is saved, otherwise nothing (it never
                                                      spends The Odds API credits)
     python -m arb_scanner test                       arbitrage math on the saved 2024-25 prices (no requests)
+    python -m arb_scanner off / on                   turn the scheduled scans (and phone alerts) off or back on
 
 Only books licensed in Virginia are used. Alerts are sent once per opportunity (again only if it gets better by 0.5
 points). Every scan and alert is logged to data/lines/arb_log.csv / arb_alerts.csv (gitignored); a summary without odds
@@ -318,7 +319,16 @@ if __name__ == "__main__":
     s.add_argument("--dry-run", action="store_true")
     sub.add_parser("test")
     sub.add_parser("scheduled")
+    sub.add_parser("on")
+    sub.add_parser("off")
     a = ap.parse_args()
+    if a.cmd in ("on", "off"):
+        import subprocess
+        verb = "Enable-ScheduledTask" if a.cmd == "on" else "Disable-ScheduledTask"
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", f"{verb} -TaskName 'Hoopothesis arb scanner' | Select-Object -ExpandProperty State"],
+                           capture_output=True, text=True)
+        print(f"Arb scanner: {r.stdout.strip() or r.stderr.strip()}")
+        sys.exit(0)
     if a.cmd == "test":
         test()
     elif a.cmd == "scheduled":
