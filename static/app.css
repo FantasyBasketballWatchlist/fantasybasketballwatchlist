@@ -17,6 +17,7 @@
   --ice: #7dd3fc;
   /* player tiers */
   --t-super: #fbbf24;
+  --t-chef: #38c8ff;           /* Curry mode: splash blue */
   --t-allstar: #c084fc;
   --t-starter: #38bdf8;
   --t-roster: #34d399;
@@ -118,6 +119,7 @@ a { color: inherit; }
 /* ---------- tiers ---------- */
 .tier { --c: var(--t-waiver); }
 .tier-super { --c: var(--t-super); }
+.tier-chef { --c: var(--t-chef); }
 .tier-allstar { --c: var(--t-allstar); }
 .tier-starter { --c: var(--t-starter); }
 .tier-roster { --c: var(--t-roster); }
@@ -133,7 +135,7 @@ a { color: inherit; }
 }
 .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
 /* gold sheen for the very best (one small element, transform-only) */
-.tier-super.badge::after, .tier-super .rank-pill::after {
+.tier-super.badge::after, .tier-super .rank-pill::after, .tier-chef.badge::after, .tier-chef .rank-pill::after, .tier-chef .badge::after {
   content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%;
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent);
   transform: skewX(-20deg); animation: sheen 3.2s var(--ease) infinite;
@@ -148,6 +150,11 @@ a { color: inherit; }
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
 }
 .tier-super .rank-pill { color: #1f1300; background: linear-gradient(135deg, #fde68a, var(--t-super)); border-color: transparent; }
+.tier-chef .rank-pill { color: #031a26; background: linear-gradient(135deg, #c7f0ff, var(--t-chef) 55%, #1d6fff); border-color: transparent;
+  box-shadow: 0 0 14px rgba(56, 200, 255, .55); }
+.tier-chef .badge, .badge.tier-chef { position: relative; overflow: hidden; font-weight: 700; box-shadow: 0 0 12px rgba(56, 200, 255, .35); }
+.tier-chef .big-stat .num { text-shadow: 0 0 28px rgba(56, 200, 255, .6); }
+.alert.joke { border-color: rgba(56, 200, 255, .45); background: rgba(56, 200, 255, .08); color: #d6f4ff; }
 
 /* ---------- player card ---------- */
 .player { margin-top: 30px; padding: 28px; position: relative; overflow: hidden; }

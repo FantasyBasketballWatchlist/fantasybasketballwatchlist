@@ -1121,11 +1121,52 @@ def injury_list(df, meta):
                                for lo, hi, f, m, n in RETURN_HISTORY]}
 
 
+# Curry mode (2026-10-20, a joke, "just for right now"). Display only: applied to what the site serves through get(),
+# never to snapshots, accuracy scoring, the preseason prior or refresh.py's in-season checks (they use get_real()).
+# Set to False to turn it off.
+CURRY_MODE = True
+CURRY_BPV = 203.0           # comfortably ahead of everyone (Jokic is ~53)
+
+
+def apply_jokes(df):
+    """Steph Curry #1 by a comical margin. Returns df unchanged when CURRY_MODE is off or he isn't listed."""
+    if not CURRY_MODE or "name" not in df:
+        return df
+    hit = df["name"] == "Stephen Curry"
+    if not hit.any():
+        return df
+    df = df.copy()
+    if "joke_note" not in df:
+        df["joke_note"] = None
+    i = df.index[hit][0]
+    real_bpv, real_rank = float(df.at[i, "bpv"]), int(df.at[i, "rank"])
+    replacement = float(df.at[i, "bpv"] - df.at[i, "value_over_replacement"])
+    df.at[i, "bpv"] = CURRY_BPV
+    df.at[i, "production"] = 210.0
+    df.at[i, "availability"] = 1.0
+    df.at[i, "value_over_replacement"] = CURRY_BPV - replacement
+    df.at[i, "range_low"], df.at[i, "range_high"] = 195.0, 230.0
+    df.at[i, "joke_note"] = (f"Night night. The model refuses to project a ceiling. (Joke mode: his real BPV is "
+                             f"{real_bpv:.1f}, #{real_rank}.)")
+    top = df[~hit].sort_values("bpv", ascending=False).index[0]
+    df.at[top, "joke_note"] = "Still the best player in the world who isn't Stephen Curry."
+    df = df.sort_values("bpv", ascending=False).reset_index(drop=True)
+    df["rank"] = np.arange(1, len(df) + 1)
+    df["heat_check_index"] = (100 * df["bpv"] / df["bpv"].max()).clip(lower=0).astype(int)
+    return df
+
+
 _cache = {"at": 0, "day": None, "value": None}
 _cache_lock = threading.Lock()
 
 
 def get():
+    """Cached (players, meta) as the site shows them (apply_jokes on top of get_real())."""
+    players, meta = get_real()
+    return apply_jokes(players), meta
+
+
+def get_real():
     """Cached (players, meta).
 
     Offline (the live site) the data only changes on a deploy, so the ratings are rebuilt only when the date changes

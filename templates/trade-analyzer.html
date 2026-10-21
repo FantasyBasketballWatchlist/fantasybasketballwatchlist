@@ -98,7 +98,7 @@
 
     function renderRoster(side) {
       document.getElementById(`roster-${side}`).innerHTML = teams[side].map(p => {
-        const t = tierOf(p.rank);
+        const t = tierOf(p.rank, p.name);
         return `<div class="pchip tier tier-${t.key}"><span><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.team || '')} · #${p.rank ?? '—'}</small></span>
           <span style="display:flex;align-items:center;gap:8px"><span class="badge">${t.label}</span><button data-side="${side}" data-id="${p.id}" title="Remove">×</button></span></div>`;
       }).join('');
@@ -121,7 +121,7 @@
 
     function sideHtml(title, color, side) {
       const rows = side.players.map(p => {
-        const t = tierOf(p.rank);
+        const t = tierOf(p.rank, p.name);
         const v = p.value_over_replacement;
         return `<div class="list-row tier tier-${t.key}">
           <span class="who"><span class="rank-pill">${p.rank ?? '—'}</span><span><b>${escapeHtml(p.name)}</b>${p.injury_note ? ` <span class="chip inj" title="${escapeHtml(p.injury_note)}">injury</span>` : ''}<br><small>${fmt(p.bpv)} BPV</small></span></span>

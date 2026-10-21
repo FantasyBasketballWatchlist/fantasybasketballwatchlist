@@ -654,7 +654,7 @@
       // Mark players who fill a missing starting position, once only one or two are missing (early on it'd be everyone).
       const needSet = new Set(mineIds.length && adv.needPositions.length <= 2 ? adv.needPositions : []);
       if (players.length) paintRows(document.querySelector('#avail tbody'), rows.length ? rows.map(p => {
-        const n = taken.get(p.id), tier = tierOf(p.rank);
+        const n = taken.get(p.id), tier = tierOf(p.rank, p.name);
         const isCut = n == null && cutoffAt != null && availIndex++ === cutoffAt;
         const notes = [p.injury_note, p.rookie ? 'rookie' : ''].filter(Boolean).join(' · ');
         return `<tr data-id="${p.id}" class="tier-${tier.key}${n != null ? ' taken' : ''}${isCut ? ' cutoff' : ''}">

@@ -187,7 +187,7 @@
     function renderRankings(n) {
       const body = document.querySelector('#rankingsTable tbody');
       body.innerHTML = allRanked.slice(0, n).map((p, i) => {
-        const t = tierOf(p.rank);
+        const t = tierOf(p.rank, p.name);
         const note = p.injury_note ? `<span class="chip inj" title="${escapeHtml(p.injury_note)}">injury</span>` : '';
         const rookie = p.rookie ? '<span class="chip rookie">rookie</span>' : '';
         return `<tr class="tier tier-${t.key} row-in" style="animation-delay:${Math.min(i, 30) * 18}ms" data-id="${p.id}">
@@ -230,7 +230,7 @@
     }
 
     function renderPlayer(p, m) {
-      const t = tierOf(p.rank);
+      const t = tierOf(p.rank, p.name);
       const card = document.getElementById('player');
       card.className = `card player tier tier-${t.key} fade-up`;
       const vor = p.value_over_replacement;
@@ -260,6 +260,7 @@
         ${p.report_status ? `<div class="alert"><b>Official injury report: ${escapeHtml(p.report_status)}</b>
             (${Math.round(p.play_probability * 100)}% of players with this status played) · ${escapeHtml(p.report_reason || '')}</div>` : ''}
         ${p.injury_note ? `<div class="alert">${escapeHtml(p.injury_note)}</div>` : ''}
+        ${p.joke_note ? `<div class="alert joke">${escapeHtml(p.joke_note)}</div>` : ''}
         <div class="tiles">
           ${tile('Production (FPTS/game)', fmt(p.production))}
           ${tile('Season average', fmt(p.season_fpts))}

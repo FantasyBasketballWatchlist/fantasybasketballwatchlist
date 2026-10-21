@@ -100,7 +100,7 @@ PUBLIC_META = ["mode", "season", "target_season", "league_teams", "roster_size",
 PUBLIC_PLAYER = ["id", "name", "team", "rank", "games", "bpv", "production", "availability", "season_fpts", "recent_fpts",
                  "value_over_replacement", "range_low", "range_high", "games_missed", "playoff_games", "playoff_fpts",
                  "week_games", "week_fpts", "espn_fpg", "espn_games", "heat_check_index", "report_status", "report_reason",
-                 "play_probability", "injury_note", "rookie", "per_game"]
+                 "play_probability", "injury_note", "rookie", "per_game", "joke_note"]
 
 
 def _meta(meta):

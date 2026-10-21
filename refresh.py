@@ -101,7 +101,7 @@ def rebuild():
         resp = client.get(route)
         if resp.status_code != 200:
             raise RuntimeError(f"{route} returned {resp.status_code}: {resp.get_data(as_text=True)[:300]}")
-    players, meta = ratings.get()
+    players, meta = ratings.get_real()          # the in-season checks and logs use the real ratings, not apply_jokes
     return nba_data.CACHE_DIR, sorted(nba_data.used), players, meta
 
 
@@ -148,7 +148,8 @@ def offline_problems(players):
     except (ValueError, IndexError):
         return [f"offline copy of the site failed to run: {(r.stderr or r.stdout)[-400:]}"]
     problems = [f"offline {route} returned {code}" for route, code in out["status"].items() if code != 200]
-    online = players.sort_values("rank")["id"].head(50).astype(int).tolist()
+    import ratings
+    online = ratings.apply_jokes(players).sort_values("rank")["id"].head(50).astype(int).tolist()   # as the site serves it
     if out["top50"] != online:
         problems.append("offline rankings differ from the online build (a data file is probably missing)")
     return problems

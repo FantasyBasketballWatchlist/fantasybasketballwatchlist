@@ -6,7 +6,9 @@ const normalizeString = (str) => str.normalize('NFD').replace(/[̀-ͯ]/g, '').to
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Tiers by overall rank. 130 = every roster spot in a 10-team, 13-player league.
-function tierOf(rank) {
+// name: Stephen Curry gets his own tier while ratings.CURRY_MODE is on (he only ranks first when it is).
+function tierOf(rank, name) {
+  if (name === 'Stephen Curry' && rank === 1) return { key: 'chef', label: 'Stephen Curry' };
   if (rank == null) return { key: 'waiver', label: 'Unranked' };
   if (rank <= 5) return { key: 'super', label: 'Superstar' };
   if (rank <= 20) return { key: 'allstar', label: 'All-Star' };
