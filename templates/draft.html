@@ -197,6 +197,7 @@
         <div class="card panel espn" style="--c: var(--blue)">
           <h3><span class="dot"></span>Sync with ESPN <span class="beta">BETA</span></h3>
           <p class="help" style="margin:4px 0 0">Draft in the ESPN app or website as usual; picks fill in here by themselves.
+            You can still enter picks by hand: ESPN's pick replaces yours once ESPN has that pick.
             Paste your ESPN league ID (or the league's URL). Public leagues work anywhere; private ones only if you're logged
             into ESPN's website in this same browser.</p>
           <div class="row"><input id="espn-league" placeholder="League ID or URL" autocomplete="off" spellcheck="false">
@@ -792,7 +793,8 @@
 
     // ---------- ESPN sync (beta)
     // Reads the league's draft from ESPN's (undocumented) fantasy API straight from this browser; ESPN allows requests
-    // from this site. Picks are placed by overall pick number, so ESPN's order wins over anything entered by hand.
+    // from this site. Picks are placed by overall pick number: ESPN's pick wins where it has one, and picks entered by hand
+    // are kept for the pick numbers ESPN hasn't filled (state.espn.synced = the pick numbers the last sync filled).
     const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/fba/seasons';
     const ESPN_POLL_MS = 8000;
     const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false };
@@ -807,7 +809,7 @@
     function espnStatus(text, cls = '') { const el = document.getElementById('espn-status'); el.textContent = text; el.className = `status ${cls}`; }
 
     async function espnGet(url, headers = {}) {
-      const r = await fetch(url, { headers, credentials: 'include' });
+      const r = await fetch(url, { headers, credentials: 'include', cache: 'no-store' });
       if (r.status === 401 || r.status === 403) throw new Error('private');
       if (r.status === 404) throw new Error('notfound');
       if (!r.ok) throw new Error(`ESPN answered ${r.status}`);
@@ -855,17 +857,24 @@
 
         const byKey = new Map(players.map(p => [espnKey(p.name), p.id]));
         let unmatched = 0, offSnake = 0;
-        const picks = {};
+        const picks = {}, fromEspn = new Set();
         for (const p of made) {
           const name = espn.names.get(p.playerId) || `ESPN player ${p.playerId}`;
           let id = byKey.get(espnKey(name));
           if (id == null) { id = -p.playerId; unmatched++; }          // not in the rankings: shown by name, worth 0
           picks[p.overall] = id;
+          fromEspn.add(id);
           state.names[id] = name;
           if (order[teamOf(p.overall) - 1] !== p.teamId) offSnake++;
         }
+        // Keep hand-entered picks (pick numbers the last sync didn't fill) unless ESPN now has that pick or that player.
+        const synced = new Set(cfg.synced || []);
+        const espnNumbers = Object.keys(picks).map(Number).sort((a, b) => a - b);
+        const manual = state.history.filter(n => !synced.has(n) && n in state.picks && !(n in picks) && !fromEspn.has(state.picks[n]));
+        manual.forEach(n => { picks[n] = state.picks[n]; });
+        cfg.synced = espnNumbers;
         state.picks = picks;
-        state.history = Object.keys(picks).map(Number).sort((a, b) => a - b);
+        state.history = [...espnNumbers, ...manual];
         if (JSON.stringify([state.picks, state.teams, state.slot, state.rounds]) !== before) {
           lookCache = { key: null, value: null }; save(); writeSettings(); render();
         }
@@ -873,6 +882,7 @@
         const notes = [`${espn.leagueName}: ${made.length} pick${made.length === 1 ? '' : 's'} synced`,
           done ? 'draft complete' : live ? 'draft live' : 'draft not started',
           `checked ${new Date().toLocaleTimeString()}`];
+        if (manual.length) notes.push(`${manual.length} entered by hand`);
         if (cfg.team == null) notes.push('pick your team above');
         if (unmatched) notes.push(`${unmatched} player${unmatched === 1 ? '' : 's'} not in the rankings`);
         if (offSnake) notes.push(`${offSnake} pick${offSnake === 1 ? " doesn't" : "s don't"} follow a plain snake (traded picks?): placed by pick number`);
