@@ -9,6 +9,8 @@ the API's terms forbid passing its raw data on as downloadable files, and the re
     python -m odds_lines history 2024-11-01 2025-02-28 [--markets ...] [--budget 18000]
                                                       past lines, one snapshot an hour before each tip-off
                                                       (paid plans only; 10 credits per market per game)
+    python -m odds_lines spreads 2024-11-06 2025-01-29  past point spreads for every game, one snapshot per day at
+                                                      6 PM ET (paid plans only; 10 credits per day)
 """
 import argparse
 import csv
@@ -160,6 +162,47 @@ def history(start, end, markets, budget, regions="us"):
     print(f"Done. Saved {saved_games} games this run to {path}.")
 
 
+def spreads(start, end, budget):
+    """Point spreads for every game, from one historical snapshot per day at 22:00 UTC (6 PM ET, before most tip-offs):
+    one row per game and book with the home team's spread. Resumable by date."""
+    path = os.path.join(LINES_DIR, "spreads.csv")
+    fields = ["game_date", "event_id", "commence", "home", "away", "snapshot", "bookmaker", "home_spread"]
+    done = set()
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            done = {r["game_date"] for r in csv.DictReader(f)}
+    day, last, spent = datetime.date.fromisoformat(start), datetime.date.fromisoformat(end), 0
+    while day <= last:
+        if day.isoformat() not in done:
+            if spent + 10 > budget:
+                print(f"Stopping at {day}: budget {budget} reached.")
+                return
+            data = get(f"/historical/sports/{SPORT}/odds", date=f"{day.isoformat()}T22:00:00Z", regions="us",
+                       markets="spreads", oddsFormat="american")
+            spent += 10
+            rows = []
+            for ev in (data or {}).get("data", []):
+                if et_date(ev["commence_time"]) != day.isoformat():
+                    continue
+                for bk in ev.get("bookmakers", []):
+                    for mk in bk.get("markets", []):
+                        for o in mk.get("outcomes", []):
+                            if o.get("name") == ev.get("home_team") and o.get("point") is not None:
+                                rows.append({"game_date": day.isoformat(), "event_id": ev["id"], "commence": ev["commence_time"],
+                                             "home": ev["home_team"], "away": ev["away_team"], "snapshot": data.get("timestamp"),
+                                             "bookmaker": bk["key"], "home_spread": o["point"]})
+            if rows:
+                os.makedirs(LINES_DIR, exist_ok=True)
+                new = not os.path.exists(path)
+                with open(path, "a", newline="", encoding="utf-8") as f:
+                    w = csv.DictWriter(f, fieldnames=fields)
+                    if new:
+                        w.writeheader()
+                    w.writerows(rows)
+            print(f"{day}: {len({r['event_id'] for r in rows})} games · remaining {Quota.remaining}", flush=True)
+        day += datetime.timedelta(days=1)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -171,11 +214,17 @@ def main():
     h.add_argument("end")
     h.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
     h.add_argument("--budget", type=int, default=18000)
+    sp = sub.add_parser("spreads")
+    sp.add_argument("start")
+    sp.add_argument("end")
+    sp.add_argument("--budget", type=int, default=2000)
     a = ap.parse_args()
     if a.cmd == "check":
         check()
     elif a.cmd == "today":
         today(a.markets)
+    elif a.cmd == "spreads":
+        spreads(a.start, a.end, a.budget)
     else:
         history(a.start, a.end, a.markets, a.budget)
 

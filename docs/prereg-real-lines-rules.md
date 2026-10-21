@@ -46,3 +46,10 @@ The model doesn't know when teammates are out (R3), projects hours before tip-of
 ignores game context like blowouts (R5), and its biggest disagreements with the books were its worst calls (R4).
 Shopping the best price is arithmetic: across 2024-25 it cut the books' two-sided margin from 6.8% to 3.5% (R1).
 Sportsbook lines are sharper than the model on their own, so the market is the base and the model only nudges it.
+
+## Amendment (2026-10-21, before any test-season data was downloaded)
+
+R1 now shops **only US state-licensed books** (DraftKings, FanDuel, BetMGM, Caesars, BetRivers, ESPN Bet, Fanatics,
+Bally, Hard Rock, betPARX); props with no licensed price are skipped. Reason: on the 2024-25 reference data about 18%
+of the best prices came from offshore books (Bovada, BetOnline), which aren't legal in US states, and the bets have
+to be placeable. The market's median price still uses every book.
