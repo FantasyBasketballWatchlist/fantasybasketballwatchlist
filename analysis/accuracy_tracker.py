@@ -113,13 +113,20 @@ _refresh_lock = threading.Lock()
 
 
 def refresh(max_age=REFRESH_SECONDS):
-    """Rescore if the results are missing, older than max_age, or older than the newest snapshot."""
+    """Rescore if the results are missing, older than max_age, older than the newest snapshot, or about a different
+    set of snapshots (a deploy gives every file the same time, so times alone can't tell a stale results file)."""
     with _refresh_lock:
         paths = snapshot_paths()
         newest = max((os.path.getmtime(p) for p in paths), default=0)
         if os.path.exists(OUT):
             age = os.path.getmtime(OUT)
-            if time.time() - age < max_age and age >= newest:
+            try:
+                with open(OUT, encoding="utf-8") as f:
+                    scored = {s.get("snapshot") for s in json.load(f).get("snapshots", [])}
+            except (OSError, ValueError):
+                scored = None
+            same_files = scored == {os.path.basename(p) for p in paths}
+            if time.time() - age < max_age and age >= newest and same_files:
                 return
         run(verbose=False)
 
