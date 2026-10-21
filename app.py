@@ -301,6 +301,10 @@ def get_games():
 def get_betting_status():
     """The corner search's latest results (data/tracking/corners_*.json, written by refresh.py on the PC)."""
     out = {}
+    arb = os.path.join(ROOT, "data", "tracking", "arb_status.json")
+    if os.path.exists(arb):
+        with open(arb, encoding="utf-8") as f:
+            out["arbs"] = json.load(f)
     for src in ("history", "live", "morning"):
         path = os.path.join(ROOT, "data", "tracking", f"corners_{src}.json")
         if os.path.exists(path):

@@ -185,6 +185,9 @@
         <div class="rec"><h4>Model fixes (two rounds)</h4><div class="num meh">closer, still behind</div>
           <p>Better than each player's season average, but still less accurate than the books (Brier 0.2547 vs 0.2470;
             lower is better).</p></div>
+        <div class="rec"><h4>Arbitrage scanner</h4><div class="num" id="rec-arb" style="color:var(--good)">1.3 a game</div>
+          <p id="rec-arb-p">Both sides of a prop at two Virginia books, priced so either result pays: 754 in 592 games of
+            2024-25, median 0.8% locked in. The scanner checks every few minutes in the evening and alerts our phones.</p></div>
         <div class="rec"><h4>Corner search, 2024-25</h4><div class="num meh" id="rec-hist">0 of 201</div>
           <p id="rec-hist-p">Every book / stat / side / price / value / model combination and pair: none survived the
             correction for testing so many at once.</p></div>
@@ -391,7 +394,11 @@
     }
     // ---------- track record: the corner search's latest status
     fetch('/api/betting-status').then(r => r.json()).then(st => {
-      const h = st.history, l = st.live;
+      const h = st.history, l = st.live, ar = st.arbs;
+      if (ar && ar.alerts_total != null) {
+        document.getElementById('rec-arb-p').textContent = `${ar.alerts_total} alert${ar.alerts_total === 1 ? '' : 's'} so far (${ar.alerts_last_7_days} in the last 7 days)` +
+          (ar.median_profit != null ? `, median ${(100 * ar.median_profit).toFixed(1)}% locked in` : '') + `. Last scan ${ar.updated.replace('T', ' ')}: ${ar.last_scan_games} games, ${ar.last_scan_arbs} arbs.`;
+      }
       if (h && h.corners_tested) {
         document.getElementById('rec-hist').textContent = `${(h.confirmed || []).length} of ${h.corners_tested}`;
       }
