@@ -34,7 +34,7 @@ STATS = ["PTS", "REB", "AST"]
 MIN_BETS = 300
 FDR_Q = 0.10
 CONFIRM_P = 0.05
-TAGS = ["book", "stat", "side", "price", "value", "size", "model"]
+TAGS = ["time", "book", "stat", "side", "price", "value", "size", "model"]
 
 
 def decimal(a):
@@ -203,7 +203,7 @@ def tag_model_and_outcome(b, tabs):
 
 def history():
     prices = pd.read_csv(os.path.join(LINES, "history.csv"))
-    b = bets_from(wide(prices))
+    b = bets_from(wide(prices)).assign(time="pre-tip")
     tabs = model_over_history("2024-25", "2023-24")
     b = tag_model_and_outcome(b, tabs)
     d, c = b[b["game_date"] < "2025-01-01"], b[b["game_date"] >= "2025-01-01"]
@@ -248,7 +248,11 @@ def live():
     d = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
     both = set(d.loc[d["kind"] == "morning", "event_id"]) & set(d.loc[d["kind"] == "close", "event_id"])
     d = d[d["event_id"].isin(both)]
-    b = model_tag_live(clv_bets(d[d["kind"] == "morning"], d[d["kind"] == "close"])) if len(d) else pd.DataFrame(columns=["game_date", "clv"])
+    early = []
+    for kind in ("morning", "afternoon"):                          # bets placed at each early snapshot, judged at the close
+        if (d["kind"] == kind).any():
+            early.append(clv_bets(d[d["kind"] == kind], d[d["kind"] == "close"]).assign(time=kind))
+    b = model_tag_live(pd.concat(early, ignore_index=True)) if early else pd.DataFrame(columns=["game_date", "clv"])
     days = sorted(b["game_date"].unique())
     if len(days) < 4:
         print(f"Only {len(days)} game day(s) with morning and closing prices; the search needs more.")
@@ -265,7 +269,7 @@ def live():
 def morning():
     m = pd.read_csv(os.path.join(LINES, "history_morning.csv"))
     c = pd.read_csv(os.path.join(LINES, "history.csv"))
-    b = clv_bets(m, c).assign(model="n/a")
+    b = clv_bets(m, c).assign(model="n/a", time="morning")
     seasons = b["game_date"].map(lambda d: d[:4] if d[5:7] >= "07" else str(int(d[:4]) - 1))
     first = sorted(seasons.unique())
     if len(first) < 2:

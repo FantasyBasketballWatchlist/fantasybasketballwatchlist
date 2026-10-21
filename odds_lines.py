@@ -14,9 +14,10 @@ the API's terms forbid passing its raw data on as downloadable files, and the re
     python -m odds_lines spreads 2024-11-06 2025-01-29  past point spreads for every game, one snapshot per day at
                                                       6 PM ET (paid plans only; 10 credits per day)
     python -m odds_lines auto                         forward collection, run every 15 minutes by a scheduled task:
-                                                      a morning snapshot of each of today's games (10 AM-1 PM ET) and
-                                                      a closing one 0-20 minutes before its tip-off, 3 credits a game
-                                                      each, into data/lines/live/<date>.csv (for closing-line value)
+                                                      a morning snapshot of each of today's games (10 AM-1 PM ET), an
+                                                      afternoon one after the official injury report (2:30-4 PM ET)
+                                                      and a closing one 0-20 minutes before its tip-off, 3 credits a
+                                                      game each, into data/lines/live/<date>.csv (closing-line value)
 """
 import argparse
 import csv
@@ -218,6 +219,7 @@ def spreads(start, end, budget):
 
 LIVE_DIR = os.path.join(LINES_DIR, "live")
 MORNING_HOURS_ET = (10, 13)          # the morning snapshot is taken in this window (lines are softest early)
+AFTERNOON_ET = ((14, 30), (16, 0))   # after teams' game-day injury report (due 11 AM-1 PM local): do lines lag the news?
 CLOSE_WINDOW = datetime.timedelta(minutes=20)
 
 
@@ -246,6 +248,9 @@ def auto(markets=DEFAULT_MARKETS):
             continue
         if MORNING_HOURS_ET[0] <= et.hour < MORNING_HOURS_ET[1] and (ev["id"], "morning") not in have:
             todo.append((ev, "morning"))
+        hm = (et.hour, et.minute)
+        if AFTERNOON_ET[0] <= hm < AFTERNOON_ET[1] and (ev["id"], "afternoon") not in have and tip - utc_now > CLOSE_WINDOW:
+            todo.append((ev, "afternoon"))
         if tip - utc_now <= CLOSE_WINDOW and (ev["id"], "close") not in have:
             todo.append((ev, "close"))
     saved = 0

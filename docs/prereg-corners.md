@@ -43,3 +43,9 @@ Kelly fraction at the confirmed edge, at most 1% of the bankroll per bet.
 
 The 2024-25 single snapshot is an hour before tip, and profit needs many bets: expect little power there. Corners
 overlap (the same bet sits in several), so confirmed corners can be redundant.
+
+## Amendment (2026-10-21, before any live closing-line data existed)
+
+The forward collection adds an **afternoon** snapshot (2:30-4 PM ET, after teams' game-day injury reports), so bets can
+be placed at the morning or the afternoon snapshot. A **time** tag (morning / afternoon) joins the corner tags, so the
+search also asks *when* any edge is. Everything else is unchanged.
