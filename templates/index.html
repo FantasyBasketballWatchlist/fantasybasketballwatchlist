@@ -55,12 +55,15 @@
       <h2>How accurate has BPV been?</h2>
       <small id="accuracy-note">Loading...</small>
     </div>
-    <p class="acc-explain" style="margin:0 4px 12px">Every check is a prediction BPV made, then what actually happened.
-      The pass rules were written down before any results
-      (<a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-accuracy-checks.md" target="_blank" rel="noopener">rules</a>).
-      A check stays grey until there's enough to judge: 2 weeks of games, and enough players.</p>
-    <div id="acc-flags"></div>
-    <div id="acc-groups"></div>
+    <div class="acc-wrap">
+      <div class="acc-board" id="acc-board"></div>
+      <p class="acc-intro">Each card is a prediction BPV made and what actually happened. Pass rules were
+        <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-accuracy-checks.md" target="_blank" rel="noopener">written down before any results</a>;
+        a check waits for 2 weeks of games and a fair sample before it's judged.</p>
+      <div id="acc-flags"></div>
+      <div class="acc-tabs" id="acc-tabs" role="tablist"></div>
+      <div id="acc-groups"></div>
+    </div>
     <details class="card table-wrap acc-details" id="accuracy-container" hidden>
       <summary>Every saved snapshot (details)</summary>
       <table class="data" id="accuracyTable">
@@ -107,9 +110,13 @@
     const EARLY_DAYS = 14;           // snapshot checks wait for 2 weeks of games
     const MIN_LISTINGS = 20;         // injury-report statuses
     const MIN_GROUP = 15;            // preseason groups
-    const VERDICT = { pass: '✓ On target', fail: '✗ Missed', soon: 'Too soon to judge', wait: 'Not started yet' };
+    const VERDICT = { pass: 'On target', fail: 'Missed', soon: 'Too soon', wait: 'Coming up' };
+    const SHORT_NAMES = { 'ESPN crowd (draft position)': 'ESPN draft spot', 'ESPN crowd (% rostered)': 'ESPN % rostered',
+                          'Last season FPTS/game': 'Last season', 'Season so far FPTS/game': 'Season so far' };
+    const VERDICT_ICON = { pass: '✓', fail: '✗', soon: '◔', wait: '○' };
 
-    const check = (name, prediction, result, verdict) => ({ name, prediction, result, verdict });
+    // extra: {stat: [predicted, actual, unit]} for a big "predicted → actual" line, or {bars: [[label, value, isBpv]]}
+    const check = (name, prediction, result, verdict, extra = {}) => ({ name, prediction, result, verdict, ...extra });
     const waiting = (name, prediction, when) => check(name, prediction, when, 'wait');
 
     function rankingChecks(s, h, summary, kind) {
@@ -120,46 +127,43 @@
       if (sum && sum.BPV) {
         const others = Object.entries(sum).filter(([k]) => k !== 'BPV');
         const best = others.every(([, v]) => sum.BPV.ranking >= v.ranking);
+        const rank = 1 + others.filter(([, v]) => v.ranking > sum.BPV.ranking).length;
         out.push(check('Order of the rankings',
-          `BPV's order (who scores more than whom) beats ${others.map(([k]) => escapeHtml(k)).join(', ')}.`,
-          `Rank correlation with actual points (1 = perfect): <b>BPV ${fmt(sum.BPV.ranking, 3)}</b>` +
-            others.map(([k, v]) => ` · ${escapeHtml(k)} ${fmt(v.ranking, 3)}`).join('') +
-            `. Top-130 hits: BPV ${pct(sum.BPV.top130_hits)}.`,
-          sum.BPV.early ? 'soon' : best ? 'pass' : 'fail'));
+          'BPV puts players in a better order (who outscores whom) than every other list.',
+          `BPV ranks ${rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : rank + 'th'} of ${others.length + 1}. ` +
+            'Bars: rank correlation with actual fantasy points (1 = perfect order).',
+          sum.BPV.early ? 'soon' : best ? 'pass' : 'fail',
+          { bars: [['BPV', sum.BPV.ranking, true], ...others.map(([k, v]) => [SHORT_NAMES[k] || k, v.ranking, false])].sort((x, y) => y[1] - x[1]) }));
       }
       const pg = s.per_game;
       if (pg && pg.benchmark_mean_error != null) {
         const err = pg.bpv_mean_error_same_players ?? pg.bpv_mean_error;
-        out.push(check('Points per game',
-          `BPV's per-game projections miss by less than a simple guess (${escapeHtml(pg.benchmark)}).`,
-          `BPV missed by ${fmt(err, 2)} FPTS/game, the simple guess by ${fmt(pg.benchmark_mean_error, 2)} (${pg.players} players with 10+ games).`,
-          judge(err < pg.benchmark_mean_error)));
+        out.push(check('Points per game', `BPV's per-game projections miss by less than a simple guess (${escapeHtml(pg.benchmark)}).`,
+          `Average miss for ${pg.players} players with 10+ games: BPV ${fmt(err, 2)}, simple guess ${fmt(pg.benchmark_mean_error, 2)}.`,
+          judge(err < pg.benchmark_mean_error), { stat: [fmt(err, 2), fmt(pg.benchmark_mean_error, 2), 'BPV miss vs simple guess'] }));
       } else out.push(waiting('Points per game', 'BPV\'s per-game projections miss by less than a simple guess.',
-        'Starts once players have 10+ games since the snapshot (about 3 weeks).'));
+        'about 3 weeks in (10+ games per player)'));
       const rc = s.range_coverage;
-      if (rc && rc.inside != null) out.push(check('Likely range',
-        '80% of players finish inside their likely range.', `${pct(rc.inside)} did (${rc.players} players with 10+ games).`,
-        judge(rc.inside >= 0.7 && rc.inside <= 0.9)));
-      if (s.top50) out.push(check('Top 50',
-        `BPV's top 50 average ${fmt(s.top50.projected_fpg)} FPTS/game.`, `They've averaged ${fmt(s.top50.actual_fpg)} so far.`,
-        judge(Math.abs(s.top50.projected_fpg - s.top50.actual_fpg) <= 2)));
+      if (rc && rc.inside != null) out.push(check('Likely range', '80% of players finish inside their likely range.',
+        `${rc.players} players with 10+ games.`, judge(rc.inside >= 0.7 && rc.inside <= 0.9), { stat: ['80%', pct(rc.inside), 'inside their range'] }));
+      if (s.top50) out.push(check('Top 50', 'BPV\'s top 50 players average this many fantasy points per game.',
+        'What they\'ve averaged so far.', judge(Math.abs(s.top50.projected_fpg - s.top50.actual_fpg) <= 2),
+        { stat: [fmt(s.top50.projected_fpg), fmt(s.top50.actual_fpg), 'FPTS per game'] }));
       const av = s.availability;
-      if (av && av.players) out.push(check('Games played',
-        `BPV's top 150 play ${pct(av.predicted)} of their team's games.`,
-        `They've played ${pct(av.actual)} (${av.players} players whose teams have played).`,
-        judge(Math.abs(av.predicted - av.actual) <= 0.05)));
-      if (h && h.bpv.per_game_error != null) out.push(check('Head to head with ESPN',
-        'BPV\'s per-game projections miss by less than ESPN\'s.',
-        `BPV missed by ${fmt(h.bpv.per_game_error, 2)}, ESPN by ${fmt(h.espn.per_game_error, 2)} (${h.bpv.players} players both projected).`,
-        judge(h.bpv.per_game_error < h.espn.per_game_error)));
+      if (av && av.players) out.push(check('Games played', 'BPV\'s top 150 play this share of their team\'s games.',
+        `So far, from ${av.players} players whose teams have played.`, judge(Math.abs(av.predicted - av.actual) <= 0.05),
+        { stat: [pct(av.predicted), pct(av.actual), 'of team games'] }));
+      if (h && h.bpv.per_game_error != null) out.push(check('Head to head with ESPN', 'BPV\'s per-game projections miss by less than ESPN\'s.',
+        `Average miss on ${h.bpv.players} players both projected.`, judge(h.bpv.per_game_error < h.espn.per_game_error),
+        { stat: [fmt(h.bpv.per_game_error, 2), fmt(h.espn.per_game_error, 2), 'BPV miss vs ESPN miss'] }));
       else if (h) out.push(waiting('Head to head with ESPN', 'BPV\'s per-game projections miss by less than ESPN\'s.',
-        'Starts once players have 10+ games since the snapshot (about 3 weeks).'));
+        'about 3 weeks in (10+ games per player)'));
       const d = h && h.disagreements;
       if (d && d.players) out.push(check('Where we disagree with ESPN most',
-        `On the ${d.players} players BPV and ESPN rank most differently, BPV's rank is closer to how they finish.`,
-        `BPV closer on ${d.bpv_closer} of ${d.players}. For example: ` + d.examples.slice(0, 3).map(x =>
+        `On the ${d.players} players BPV and ESPN rank most differently, BPV's rank ends up closer.`,
+        'For example: ' + d.examples.slice(0, 3).map(x =>
           `${escapeHtml(x.name)} (BPV #${x.bpv_rank}, ESPN #${x.espn_rank}, ${x.games ? `so far #${x.actual_rank}` : "hasn't played yet"})`).join(', ') + '.',
-        judge(d.bpv_closer > d.players / 2)));
+        judge(d.bpv_closer > d.players / 2), { stat: [`${Math.floor(d.players / 2) + 1}+`, `${d.bpv_closer}`, `of ${d.players} closer`] }));
       return out;
     }
 
@@ -167,27 +171,57 @@
       const out = [];
       const inj = lc && lc.injury;
       if (inj && inj.status === 'scored') Object.entries(inj.by_status).forEach(([st, v]) => out.push(check(`Injury report: ${escapeHtml(st)}`,
-        `Players listed ${escapeHtml(st)} play ${pct(v.predicted)} of the time.`, `${pct(v.actual)} did (${v.n} listing${v.n === 1 ? '' : 's'}).`,
-        v.n < MIN_LISTINGS ? 'soon' : Math.abs(v.predicted - v.actual) <= 0.1 ? 'pass' : 'fail')));
-      else out.push(waiting('Injury report', 'Players listed Out / Doubtful / Questionable / Probable play as often as predicted.',
-        'Starts after the first evening injury report is followed by games.'));
+        `Players listed ${escapeHtml(st)} suit up this often.`, `${v.n} listing${v.n === 1 ? '' : 's'} so far.`,
+        v.n < MIN_LISTINGS ? 'soon' : Math.abs(v.predicted - v.actual) <= 0.1 ? 'pass' : 'fail',
+        { stat: [pct(v.predicted), pct(v.actual), 'played'] })));
+      else out.push(waiting('Injury report', 'Out / Doubtful / Questionable / Probable players play as often as predicted.',
+        'after the first injury report is followed by games'));
       const w = lc && lc.weekly;
       if (w && w.status === 'scored') out.push(check('This week\'s projections',
-        'BPV\'s projections for the week beat a simple guess (season average × games left).',
-        `BPV missed by ${fmt(w.model_error)} FPTS, the simple guess by ${fmt(w.benchmark_error)}; better in ${w.weeks_model_better} of ${w.weeks_scored} weeks.`,
-        w.weeks_scored < 3 ? 'soon' : w.weeks_model_better * 2 > w.weeks_scored ? 'pass' : 'fail'));
-      else out.push(waiting('This week\'s projections', 'BPV\'s projections for the week beat a simple guess (season average × games left).',
-        'Starts after the first full Monday–Sunday week.'));
+        'BPV\'s weekly projections beat a simple guess (season average × games left).',
+        `Better in ${w.weeks_model_better} of ${w.weeks_scored} weeks.`,
+        w.weeks_scored < 3 ? 'soon' : w.weeks_model_better * 2 > w.weeks_scored ? 'pass' : 'fail',
+        { stat: [fmt(w.model_error), fmt(w.benchmark_error), 'FPTS miss: BPV vs simple guess'] }));
+      else out.push(waiting('This week\'s projections', 'BPV\'s weekly projections beat a simple guess (season average × games left).',
+        'after the first full Monday–Sunday week'));
       const pre = lc && lc.preseason;
-      const groups = pre && pre.groups ? Object.entries(pre.groups) : [];
-      if (groups.some(([, g]) => g.players)) groups.filter(([, g]) => g.players).forEach(([name, g]) => out.push(check(`Preseason: ${escapeHtml(name)}`,
-        `BPV's preseason per-game projections for ${escapeHtml(name)} beat ESPN's.`,
-        `BPV missed by ${fmt(g.bpv_error)} FPTS/game, ESPN by ${fmt(g.espn_error)} (${g.players} players with 10+ games).`,
-        g.players < MIN_GROUP ? 'soon' : g.bpv_error < g.espn_error ? 'pass' : 'fail')));
-      else out.push(waiting('Preseason: rookies, returners, everyone else',
-        'BPV\'s preseason per-game projections beat ESPN\'s for incoming rookies, players back from a missed season, and everyone else.',
-        'Starts once players have 10+ games.'));
+      const groups = pre && pre.groups ? Object.entries(pre.groups).filter(([, g]) => g.players) : [];
+      if (groups.length) groups.forEach(([name, g]) => out.push(check(`Preseason: ${escapeHtml(name)}`,
+        `BPV's preseason per-game projections for ${escapeHtml(name)} beat ESPN's.`, `Average miss, ${g.players} players with 10+ games.`,
+        g.players < MIN_GROUP ? 'soon' : g.bpv_error < g.espn_error ? 'pass' : 'fail',
+        { stat: [fmt(g.bpv_error), fmt(g.espn_error), 'BPV miss vs ESPN miss'] })));
+      else out.push(waiting('Rookies, returners and everyone else',
+        'BPV\'s preseason projections beat ESPN\'s for incoming rookies, players back from a missed season, and everyone else.',
+        'about 3 weeks in (10+ games per player)'));
       return out;
+    }
+
+    function cardHtml(c) {
+      const stat = c.stat ? `<div class="check-stat"><div><small>Predicted</small><span class="num">${c.stat[0]}</span></div>
+          <div class="check-arrow">→</div><div><small>Actual</small><span class="num">${c.stat[1]}</span></div>
+          <div class="check-unit">${c.stat[2]}</div></div>` : '';
+      const top = c.bars ? Math.max(0.3, ...c.bars.map(b => b[1])) : 1;
+      const bars = c.bars ? `<div class="check-bars">${c.bars.map(([label, v, bpvBar]) => `
+          <div class="bar-row${bpvBar ? ' is-bpv' : ''}"><span class="bar-label">${escapeHtml(label)}</span>
+            <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, 100 * Math.max(0, v) / top)}%"></span></span>
+            <span class="bar-val">${fmt(v, 3)}</span></div>`).join('')}</div>` : '';
+      return `<article class="check v-${c.verdict}">
+          <header class="check-head"><h4>${c.name}</h4>
+            <span class="check-pill">${VERDICT_ICON[c.verdict]} ${VERDICT[c.verdict]}</span></header>
+          <p class="check-pred"><span class="check-lbl">Our prediction</span>${c.prediction}</p>
+          ${stat}${bars}
+          <p class="check-res"><span class="check-lbl">Result</span>${c.result}</p>
+        </article>`;
+    }
+
+    function groupHtml(g) {
+      const live = g.checks.filter(c => c.verdict !== 'wait');
+      const later = g.checks.filter(c => c.verdict === 'wait');
+      return `${g.note ? `<p class="acc-note"><b>ⓘ</b> ${g.note}</p>` : ''}
+        ${g.sub ? `<p class="acc-sub">${g.sub}</p>` : ''}
+        ${live.length ? `<div class="check-grid">${live.map(cardHtml).join('')}</div>` : ''}
+        ${later.length ? `<div class="acc-later"><h4>Coming up</h4><ul>${later.map(c => `
+          <li><b>${c.name}</b><span>${c.prediction}</span><em>${c.result}</em></li>`).join('')}</ul></div>` : ''}`;
     }
 
     function renderChecks(data) {
@@ -195,30 +229,53 @@
       const bpvSnaps = snaps.filter(s => s.source === 'bpv' && s.status === 'scored');
       const h2hFor = name => (snaps.find(s => s.source === 'espn' && s.head_to_head && s.head_to_head.bpv_snapshot === name) || {}).head_to_head;
       const summary = data.benchmarks && data.benchmarks.summary;
-      const groups = [];
       const pre = bpvSnaps.filter(s => s.snapshot.includes('_pre_')).pop();
       const rosAll = bpvSnaps.filter(s => !s.snapshot.includes('_pre_') && s.date >= (pre ? pre.date : ''));
       const ros = rosAll.filter(s => (s.days_of_games || 0) >= EARLY_DAYS).pop() || rosAll.pop();
-      groups.push({ title: 'Rest-of-season rankings', sub: ros ? `weekly snapshot from ${escapeHtml(ros.date)} · ${ros.days_of_games} day(s) of games since` : 'BPV saves a ranking every week',
-        checks: ros ? rankingChecks(ros, h2hFor(ros.snapshot), summary, 'in-season')
-          : [waiting('Rest-of-season checks', 'The same checks as the preseason ones below, on the weekly in-season rankings.',
-              'The first weekly snapshot is scored once games are played after it.')] });
-      groups.push({ title: 'Preseason rankings', sub: pre ? `final ranking before opening night (${escapeHtml(pre.date)}) · ${pre.days_of_games} day(s) of games since` : '',
-        checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
-        note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded as published: this ranking was saved the morning of Oct 20, before that evening&rsquo;s fix for players coming off short or injured seasons (e.g. Trae Young 28.5 then, 36.8 after the fix). The live rankings include the fix; this snapshot is left as it was rather than corrected after the fact.' : '' });
-      groups.push({ title: 'Nightly and weekly checks', sub: 'single inputs, not the rankings', checks: nightlyChecks(data.live_checks) });
-      document.getElementById('acc-groups').innerHTML = groups.filter(g => g.checks.length).map(g => `
-        <div class="acc-group"><h3>${g.title} <small>${g.sub}</small></h3>${g.note ? `<p class="acc-explain">${g.note}</p>` : ''}<div class="check-grid">${g.checks.map(c => `
-          <div class="check v-${c.verdict}">
-            <div class="check-head"><b>${c.name}</b><span class="check-verdict">${VERDICT[c.verdict]}</span></div>
-            <p><span class="check-lbl">Our prediction:</span> ${c.prediction}</p>
-            <p><span class="check-lbl">Result:</span> ${c.result}</p>
-          </div>`).join('')}</div></div>`).join('');
+      const days = n => `${n} day${n === 1 ? '' : 's'} of games since`;
+      const groups = [
+        { key: 'ros', title: 'Rest of season', sub: ros ? `Weekly ranking from ${escapeHtml(ros.date)} · ${days(ros.days_of_games)}` : '',
+          checks: ros ? rankingChecks(ros, h2hFor(ros.snapshot), summary, 'in-season')
+            : [waiting('Rest-of-season rankings', 'The same checks as the preseason tab, run on each weekly in-season ranking.',
+                'once games are played after the first weekly ranking (Oct 27)')] },
+        { key: 'pre', title: 'Preseason', sub: pre ? `Final ranking before opening night (${escapeHtml(pre.date)}) · ${days(pre.days_of_games)}` : '',
+          checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
+          note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded as published. This ranking was saved the morning of Oct 20, before that evening&rsquo;s fix for players coming off short or injured seasons (Trae Young: 28.5 then, 36.8 after). The live rankings include the fix; this snapshot is left as it was rather than corrected after the fact.' : '' },
+        { key: 'night', title: 'Nightly & weekly', sub: 'Single inputs to the model, not the rankings', checks: nightlyChecks(data.live_checks) },
+      ].filter(g => g.checks.length);
+
+      const all = groups.flatMap(g => g.checks);
+      const count = v => all.filter(c => c.verdict === v).length;
+      const n = { pass: count('pass'), fail: count('fail'), soon: count('soon'), wait: count('wait') };
+      const seg = v => n[v] ? `<span class="seg seg-${v}" style="flex:${n[v]}"></span>` : '';
+      document.getElementById('acc-board').innerHTML = `
+        ${['pass', 'fail', 'soon', 'wait'].map(v => `<div class="board-tile t-${v}"><span class="num">${n[v]}</span><small>${VERDICT_ICON[v]} ${VERDICT[v]}</small></div>`).join('')}
+        <div class="board-bar">${seg('pass')}${seg('fail')}${seg('soon')}${seg('wait')}</div>`;
+
+      // Open the tab with the most judged checks; ties go to the earlier tab (rest of season first).
+      const judged = g => g.checks.filter(c => c.verdict === 'pass' || c.verdict === 'fail').length * 100 + g.checks.filter(c => c.verdict === 'soon').length;
+      let active = groups.reduce((best, g) => judged(g) > judged(best) ? g : best, groups[0]).key;
+      const tabs = document.getElementById('acc-tabs');
+      const draw = () => {
+        tabs.innerHTML = groups.map(g => {
+          const w = g.checks.filter(c => c.verdict !== 'wait').length;
+          return `<button role="tab" class="acc-tab${g.key === active ? ' active' : ''}" data-key="${g.key}" aria-selected="${g.key === active}">
+            ${g.title}<span class="tab-count">${w}/${g.checks.length}</span></button>`;
+        }).join('');
+        document.getElementById('acc-groups').innerHTML = groupHtml(groups.find(g => g.key === active));
+      };
+      tabs.onclick = e => { const b = e.target.closest('.acc-tab'); if (b) { active = b.dataset.key; draw(); } };
+      draw();
+
       const flags = (data.live_checks && data.live_checks.flags) || [];
       document.getElementById('acc-flags').innerHTML = flags.map(f => `<div class="alert">⚠ ${escapeHtml(f)}</div>`).join('');
-      const all = groups.flatMap(g => g.checks);
-      const judged = all.filter(c => c.verdict === 'pass' || c.verdict === 'fail');
-      return { judged: judged.length, passed: judged.filter(c => c.verdict === 'pass').length, total: all.length };
+      return { judged: n.pass + n.fail, passed: n.pass, total: all.length };
+    }
+
+    // data.updated is the server's clock (UTC on the live site): show it in the viewer's time.
+    function updatedText(u) {
+      const d = new Date(/Z|[+-]\d\d:?\d\d$/.test(u) ? u : u + 'Z');
+      return isNaN(d) ? u : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     }
 
     async function loadAccuracy() {
@@ -228,9 +285,9 @@
         if (!res.ok) throw new Error('bad response');
         const data = await res.json();
         const c = renderChecks(data);
-        note.textContent = `Updated ${data.updated} · ` + (c.judged
+        note.textContent = `Updated ${updatedText(data.updated)} · ` + (c.judged
           ? `${c.passed} of ${c.judged} judged checks on target`
-          : `${c.total} checks, none ready to judge yet`);
+          : 'nothing judged yet, it\'s early');
         const scored = data.snapshots.filter(s => s.status === 'scored' && s.per_game);
         if (!scored.length) return;
         document.querySelector('#accuracyTable tbody').innerHTML = scored.map(s => {
