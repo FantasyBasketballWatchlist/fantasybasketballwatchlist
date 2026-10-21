@@ -4,8 +4,21 @@
   "status": "no weeks logged yet"
  },
  "injury": {
-  "status": "waiting for games",
-  "logged": 79
+  "status": "scored",
+  "listings": 12,
+  "brier": 0.06335833333333334,
+  "by_status": {
+   "Out": {
+    "n": 9,
+    "predicted": 0.0,
+    "actual": 0.0
+   },
+   "Questionable": {
+    "n": 3,
+    "predicted": 0.49,
+    "actual": 0.6666666666666666
+   }
+  }
  },
  "preseason": {
   "status": "scored",
@@ -30,5 +43,5 @@
   }
  },
  "flags": [],
- "updated": "2026-10-20"
+ "updated": "2026-10-21"
 }
