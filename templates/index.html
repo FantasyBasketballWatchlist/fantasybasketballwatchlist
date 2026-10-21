@@ -55,38 +55,24 @@
       <h2>How accurate has BPV been?</h2>
       <small id="accuracy-note">Loading...</small>
     </div>
-    <div class="card table-wrap" id="accuracy-container" hidden>
-      <p class="acc-explain">The rankings test: BPV's saved rankings against what players actually scored afterwards.
-        A player counts once he has 10+ games since the snapshot.</p>
+    <p class="acc-explain" style="margin:0 4px 12px">Every check is a prediction BPV made, then what actually happened.
+      The pass rules were written down before any results
+      (<a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-accuracy-checks.md" target="_blank" rel="noopener">rules</a>).
+      A check stays grey until there's enough to judge: 2 weeks of games, and enough players.</p>
+    <div id="acc-flags"></div>
+    <div id="acc-groups"></div>
+    <details class="card table-wrap acc-details" id="accuracy-container" hidden>
+      <summary>Every saved snapshot (details)</summary>
       <table class="data" id="accuracyTable">
         <thead>
           <tr><th>Snapshot</th><th>Source</th><th class="r" title="Players with 10+ games since the snapshot">Players</th>
               <th class="r" title="Average miss in FPTS per game">Error</th><th class="r">Simple benchmark</th>
-              <th class="r" title="Rank correlation of BPV with actual total FPTS since the snapshot">Ranking</th>
-              <th class="r" title="Share inside the likely range (target 80%)">In range</th>
-              <th title="BPV and ESPN from the same day, on the players both projected">Head to head</th></tr>
+              <th class="r" title="Rank correlation with actual total FPTS since the snapshot">Ranking</th>
+              <th class="r" title="Share inside the likely range (target 80%)">In range</th></tr>
         </thead>
         <tbody></tbody>
       </table>
-    </div>
-    <div class="card table-wrap" id="benchmarks" style="margin-top:14px" hidden>
-      <p class="acc-explain">BPV against every other ranking we can collect, on the same players: did higher-ranked players
-        go on to score more fantasy points? <b>Ranking</b> is the rank correlation with actual points (1 = perfect order),
-        <b>Top-130 hits</b> the share of each list's top 130 who finished top 130.
-        <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-ros-benchmarks.md" target="_blank" rel="noopener">Rules, written before any results</a>.</p>
-      <table class="data">
-        <thead><tr><th>Ranking source</th><th class="r">Ranking</th><th class="r">Top-130 hits</th><th class="r">BPV better on</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="card table-wrap" id="live-checks" style="margin-top:14px" hidden>
-      <p class="acc-explain">Smaller checks on single inputs (not the rankings), scored after every night of games.
-        Checks with fewer than 20 players are greyed out: too few to judge yet.</p>
-      <table class="data">
-        <thead><tr><th>In-season check</th><th class="r">Sample</th><th>Result</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    </details>
 
     <p class="footer-note">
       BPV = expected fantasy points per game, counting the games a player is likely to miss (and the free agent you can
@@ -116,59 +102,123 @@
       return `Preseason · based on ${m.season} until games are played`;
     }
 
-    function h2h(h) {
-      if (!h || h.bpv.per_game_error == null) return '';
-      const won = h.bpv.per_game_error < h.espn.per_game_error;
-      return `<span style="color:${won ? 'var(--good)' : 'var(--bad)'}">BPV ${fmt(h.bpv.per_game_error, 2)} vs ESPN ${fmt(h.espn.per_game_error, 2)}</span>
-        <small style="color:var(--dim)"> · ranking ${fmt(h.bpv.ranking, 3)} vs ${fmt(h.espn.ranking, 3)}, ${h.common_players} players</small>`;
+    // "How accurate has BPV been?": each check = our prediction, the result, and a verdict
+    // (rules: docs/prereg-accuracy-checks.md and docs/prereg-ros-benchmarks.md).
+    const EARLY_DAYS = 14;           // snapshot checks wait for 2 weeks of games
+    const MIN_LISTINGS = 20;         // injury-report statuses
+    const MIN_GROUP = 15;            // preseason groups
+    const VERDICT = { pass: '✓ On target', fail: '✗ Missed', soon: 'Too soon to judge', wait: 'Not started yet' };
+
+    const check = (name, prediction, result, verdict) => ({ name, prediction, result, verdict });
+    const waiting = (name, prediction, when) => check(name, prediction, when, 'wait');
+
+    function rankingChecks(s, h, summary, kind) {
+      const out = [];
+      const soon = (s.days_of_games || 0) < EARLY_DAYS;
+      const judge = ok => soon ? 'soon' : ok ? 'pass' : 'fail';
+      const sum = summary && summary[kind];
+      if (sum && sum.BPV) {
+        const others = Object.entries(sum).filter(([k]) => k !== 'BPV');
+        const best = others.every(([, v]) => sum.BPV.ranking >= v.ranking);
+        out.push(check('Order of the rankings',
+          `BPV's order (who scores more than whom) beats ${others.map(([k]) => escapeHtml(k)).join(', ')}.`,
+          `Rank correlation with actual points (1 = perfect): <b>BPV ${fmt(sum.BPV.ranking, 3)}</b>` +
+            others.map(([k, v]) => ` · ${escapeHtml(k)} ${fmt(v.ranking, 3)}`).join('') +
+            `. Top-130 hits: BPV ${pct(sum.BPV.top130_hits)}.`,
+          sum.BPV.early ? 'soon' : best ? 'pass' : 'fail'));
+      }
+      const pg = s.per_game;
+      if (pg && pg.benchmark_mean_error != null) {
+        const err = pg.bpv_mean_error_same_players ?? pg.bpv_mean_error;
+        out.push(check('Points per game',
+          `BPV's per-game projections miss by less than a simple guess (${escapeHtml(pg.benchmark)}).`,
+          `BPV missed by ${fmt(err, 2)} FPTS/game, the simple guess by ${fmt(pg.benchmark_mean_error, 2)} (${pg.players} players with 10+ games).`,
+          judge(err < pg.benchmark_mean_error)));
+      } else out.push(waiting('Points per game', 'BPV\'s per-game projections miss by less than a simple guess.',
+        'Starts once players have 10+ games since the snapshot (about 3 weeks).'));
+      const rc = s.range_coverage;
+      if (rc && rc.inside != null) out.push(check('Likely range',
+        '80% of players finish inside their likely range.', `${pct(rc.inside)} did (${rc.players} players with 10+ games).`,
+        judge(rc.inside >= 0.7 && rc.inside <= 0.9)));
+      if (s.top50) out.push(check('Top 50',
+        `BPV's top 50 average ${fmt(s.top50.projected_fpg)} FPTS/game.`, `They've averaged ${fmt(s.top50.actual_fpg)} so far.`,
+        judge(Math.abs(s.top50.projected_fpg - s.top50.actual_fpg) <= 2)));
+      const av = s.availability;
+      if (av && av.players) out.push(check('Games played',
+        `BPV's top 150 play ${pct(av.predicted)} of their team's games.`,
+        `They've played ${pct(av.actual)} (${av.players} players whose teams have played).`,
+        judge(Math.abs(av.predicted - av.actual) <= 0.05)));
+      if (h && h.bpv.per_game_error != null) out.push(check('Head to head with ESPN',
+        'BPV\'s per-game projections miss by less than ESPN\'s.',
+        `BPV missed by ${fmt(h.bpv.per_game_error, 2)}, ESPN by ${fmt(h.espn.per_game_error, 2)} (${h.bpv.players} players both projected).`,
+        judge(h.bpv.per_game_error < h.espn.per_game_error)));
+      else if (h) out.push(waiting('Head to head with ESPN', 'BPV\'s per-game projections miss by less than ESPN\'s.',
+        'Starts once players have 10+ games since the snapshot (about 3 weeks).'));
+      const d = h && h.disagreements;
+      if (d && d.players) out.push(check('Where we disagree with ESPN most',
+        `On the ${d.players} players BPV and ESPN rank most differently, BPV's rank is closer to how they finish.`,
+        `BPV closer on ${d.bpv_closer} of ${d.players}. For example: ` + d.examples.slice(0, 3).map(x =>
+          `${escapeHtml(x.name)} (BPV #${x.bpv_rank}, ESPN #${x.espn_rank}, ${x.games ? `so far #${x.actual_rank}` : "hasn't played yet"})`).join(', ') + '.',
+        judge(d.bpv_closer > d.players / 2)));
+      return out;
     }
 
-    // BPV vs ESPN's projections, ESPN's crowd and simple baselines (docs/prereg-ros-benchmarks.md).
-    function renderBenchmarks(b) {
-      if (!b || !b.summary) return;
-      const rows = [];
-      [['in-season', 'Rest of season'], ['preseason', 'Preseason']].forEach(([kind, label]) => {
-        const sum = b.summary[kind];
-        if (!sum) return;
-        const early = Object.values(sum).every(v => v.early);
-        const n = sum.BPV ? sum.BPV.snapshots : 0;
-        rows.push(`<tr><td colspan="4" style="white-space:normal"><b>${label}</b> <small style="color:var(--dim)">· ${n} snapshot${n === 1 ? '' : 's'}${early ? ' · early: under 2 weeks of games, too soon to judge' : ''}</small></td></tr>`);
-        Object.entries(sum).forEach(([name, v]) => {
-          const isBpv = name === 'BPV';
-          const color = early ? 'var(--dim)' : isBpv ? 'var(--orange)' : v.bpv_better > v.snapshots / 2 ? 'var(--good)' : 'var(--bad)';
-          rows.push(`<tr style="${early ? 'color:var(--dim)' : ''}"><td>${isBpv ? '<b style="color:var(--orange)">BPV</b>' : escapeHtml(name)}</td>
-            <td class="r">${fmt(v.ranking, 3)}${!isBpv && sum.BPV && v.snapshots !== sum.BPV.snapshots
-              ? ` <small style="color:var(--dim)">(BPV ${fmt(v.bpv_ranking_same, 3)} on the same ${v.snapshots})</small>` : ''}</td><td class="r">${pct(v.top130_hits)}</td>
-            <td class="r" style="color:${color}">${isBpv ? '—' : `${v.bpv_better} of ${v.snapshots}`}</td></tr>`);
-        });
-      });
-      if (!rows.length) return;
-      document.querySelector('#benchmarks tbody').innerHTML = rows.join('');
-      document.getElementById('benchmarks').hidden = false;
+    function nightlyChecks(lc) {
+      const out = [];
+      const inj = lc && lc.injury;
+      if (inj && inj.status === 'scored') Object.entries(inj.by_status).forEach(([st, v]) => out.push(check(`Injury report: ${escapeHtml(st)}`,
+        `Players listed ${escapeHtml(st)} play ${pct(v.predicted)} of the time.`, `${pct(v.actual)} did (${v.n} listing${v.n === 1 ? '' : 's'}).`,
+        v.n < MIN_LISTINGS ? 'soon' : Math.abs(v.predicted - v.actual) <= 0.1 ? 'pass' : 'fail')));
+      else out.push(waiting('Injury report', 'Players listed Out / Doubtful / Questionable / Probable play as often as predicted.',
+        'Starts after the first evening injury report is followed by games.'));
+      const w = lc && lc.weekly;
+      if (w && w.status === 'scored') out.push(check('This week\'s projections',
+        'BPV\'s projections for the week beat a simple guess (season average × games left).',
+        `BPV missed by ${fmt(w.model_error)} FPTS, the simple guess by ${fmt(w.benchmark_error)}; better in ${w.weeks_model_better} of ${w.weeks_scored} weeks.`,
+        w.weeks_scored < 3 ? 'soon' : w.weeks_model_better * 2 > w.weeks_scored ? 'pass' : 'fail'));
+      else out.push(waiting('This week\'s projections', 'BPV\'s projections for the week beat a simple guess (season average × games left).',
+        'Starts after the first full Monday–Sunday week.'));
+      const pre = lc && lc.preseason;
+      const groups = pre && pre.groups ? Object.entries(pre.groups) : [];
+      if (groups.some(([, g]) => g.players)) groups.filter(([, g]) => g.players).forEach(([name, g]) => out.push(check(`Preseason: ${escapeHtml(name)}`,
+        `BPV's preseason per-game projections for ${escapeHtml(name)} beat ESPN's.`,
+        `BPV missed by ${fmt(g.bpv_error)} FPTS/game, ESPN by ${fmt(g.espn_error)} (${g.players} players with 10+ games).`,
+        g.players < MIN_GROUP ? 'soon' : g.bpv_error < g.espn_error ? 'pass' : 'fail')));
+      else out.push(waiting('Preseason: rookies, returners, everyone else',
+        'BPV\'s preseason per-game projections beat ESPN\'s for incoming rookies, players back from a missed season, and everyone else.',
+        'Starts once players have 10+ games.'));
+      return out;
     }
 
-    // Parts of BPV that could only be tested once the season started, scored by refresh.py as games finish.
-    function renderLiveChecks(lc) {
-      if (!lc) return;
-      const MIN_SAMPLE = 20;   // below this, a hit or miss is mostly luck
-      const good = (a, b, n) => `style="color:${n != null && n < MIN_SAMPLE ? 'var(--dim)' : a <= b ? 'var(--good)' : 'var(--bad)'}"`;
-      const few = n => n < MIN_SAMPLE ? ' <small style="color:var(--dim)">(too few to judge yet)</small>' : '';
-      const rows = [];
-      (lc.flags || []).forEach(f => rows.push(`<tr><td colspan="3" style="color:var(--bad);white-space:normal">⚠ ${escapeHtml(f)}</td></tr>`));
-      const w = lc.weekly;
-      if (w && w.status === 'scored') rows.push(`<tr><td>Weekly projections</td><td class="r">${w.weeks_scored} week${w.weeks_scored === 1 ? '' : 's'}</td>
-        <td><span ${good(w.model_error, w.benchmark_error)}>${fmt(w.model_error)} FPTS error</span> vs ${fmt(w.benchmark_error)} for season average × games left
-        <small style="color:var(--dim)">(better in ${w.weeks_model_better} of ${w.weeks_scored})</small></td></tr>`);
-      const inj = lc.injury;
-      if (inj && inj.status === 'scored') Object.entries(inj.by_status).forEach(([st, v]) => rows.push(`<tr><td>Injury report: ${escapeHtml(st)}</td>
-        <td class="r">${v.n}</td><td><span ${good(Math.abs(v.predicted - v.actual), 0.1, v.n)}>predicted ${pct(v.predicted)} to play</span>, ${pct(v.actual)} did${few(v.n)}</td></tr>`));
-      const pre = lc.preseason;
-      if (pre && pre.status === 'scored') Object.entries(pre.groups).filter(([, g]) => g.players).forEach(([name, g]) => rows.push(`<tr>
-        <td>Preseason: ${escapeHtml(name)}</td><td class="r">${g.players}</td>
-        <td><span ${good(g.bpv_error, g.espn_error, g.players)}>${fmt(g.bpv_error)} FPTS/game error</span> vs ESPN ${fmt(g.espn_error)}${few(g.players)}</td></tr>`));
-      if (!rows.length) return;
-      document.querySelector('#live-checks tbody').innerHTML = rows.join('');
-      document.getElementById('live-checks').hidden = false;
+    function renderChecks(data) {
+      const snaps = data.snapshots || [];
+      const bpvSnaps = snaps.filter(s => s.source === 'bpv' && s.status === 'scored');
+      const h2hFor = name => (snaps.find(s => s.source === 'espn' && s.head_to_head && s.head_to_head.bpv_snapshot === name) || {}).head_to_head;
+      const summary = data.benchmarks && data.benchmarks.summary;
+      const groups = [];
+      const pre = bpvSnaps.filter(s => s.snapshot.includes('_pre_')).pop();
+      const rosAll = bpvSnaps.filter(s => !s.snapshot.includes('_pre_') && s.date >= (pre ? pre.date : ''));
+      const ros = rosAll.filter(s => (s.days_of_games || 0) >= EARLY_DAYS).pop() || rosAll.pop();
+      groups.push({ title: 'Rest-of-season rankings', sub: ros ? `weekly snapshot from ${escapeHtml(ros.date)} · ${ros.days_of_games} day(s) of games since` : 'BPV saves a ranking every week',
+        checks: ros ? rankingChecks(ros, h2hFor(ros.snapshot), summary, 'in-season')
+          : [waiting('Rest-of-season checks', 'The same checks as the preseason ones below, on the weekly in-season rankings.',
+              'The first weekly snapshot is scored once games are played after it.')] });
+      groups.push({ title: 'Preseason rankings', sub: pre ? `final ranking before opening night (${escapeHtml(pre.date)}) · ${pre.days_of_games} day(s) of games since` : '',
+        checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
+        note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded as published: this ranking was saved the morning of Oct 20, before that evening&rsquo;s fix for players coming off short or injured seasons (e.g. Trae Young 28.5 then, 36.8 after the fix). The live rankings include the fix; this snapshot is left as it was rather than corrected after the fact.' : '' });
+      groups.push({ title: 'Nightly and weekly checks', sub: 'single inputs, not the rankings', checks: nightlyChecks(data.live_checks) });
+      document.getElementById('acc-groups').innerHTML = groups.filter(g => g.checks.length).map(g => `
+        <div class="acc-group"><h3>${g.title} <small>${g.sub}</small></h3>${g.note ? `<p class="acc-explain">${g.note}</p>` : ''}<div class="check-grid">${g.checks.map(c => `
+          <div class="check v-${c.verdict}">
+            <div class="check-head"><b>${c.name}</b><span class="check-verdict">${VERDICT[c.verdict]}</span></div>
+            <p><span class="check-lbl">Our prediction:</span> ${c.prediction}</p>
+            <p><span class="check-lbl">Result:</span> ${c.result}</p>
+          </div>`).join('')}</div></div>`).join('');
+      const flags = (data.live_checks && data.live_checks.flags) || [];
+      document.getElementById('acc-flags').innerHTML = flags.map(f => `<div class="alert">⚠ ${escapeHtml(f)}</div>`).join('');
+      const all = groups.flatMap(g => g.checks);
+      const judged = all.filter(c => c.verdict === 'pass' || c.verdict === 'fail');
+      return { judged: judged.length, passed: judged.filter(c => c.verdict === 'pass').length, total: all.length };
     }
 
     async function loadAccuracy() {
@@ -177,16 +227,12 @@
         const res = await fetch('/api/accuracy');
         if (!res.ok) throw new Error('bad response');
         const data = await res.json();
-        renderLiveChecks(data.live_checks);
-        renderBenchmarks(data.benchmarks);
+        const c = renderChecks(data);
+        note.textContent = `Updated ${data.updated} · ` + (c.judged
+          ? `${c.passed} of ${c.judged} judged checks on target`
+          : `${c.total} checks, none ready to judge yet`);
         const scored = data.snapshots.filter(s => s.status === 'scored' && s.per_game);
-        if (!scored.length) {
-          note.textContent = data.snapshots.length
-            ? `${data.snapshots.length} saved rankings snapshot(s). First rankings results once players have 10+ games (about 3 weeks into the season).`
-            : 'No snapshots saved yet (python -m analysis.snapshot).';
-          return;
-        }
-        note.textContent = `Updated ${data.updated} · early-season numbers are noisy`;
+        if (!scored.length) return;
         document.querySelector('#accuracyTable tbody').innerHTML = scored.map(s => {
           const bpvErr = s.per_game.bpv_mean_error_same_players ?? s.per_game.bpv_mean_error;
           const better = s.per_game.benchmark_mean_error != null && bpvErr < s.per_game.benchmark_mean_error;
@@ -197,8 +243,7 @@
             <td class="r" style="color:${better ? 'var(--good)' : 'var(--bad)'}">${fmt(bpvErr, 2)}</td>
             <td class="r" title="${escapeHtml(s.per_game.benchmark)}">${fmt(s.per_game.benchmark_mean_error, 2)}</td>
             <td class="r">${fmt(s.ranking.spearman_bpv_vs_actual_total, 3)}</td>
-            <td class="r">${!s.range_coverage || s.range_coverage.inside == null ? '—' : pct(s.range_coverage.inside)}</td>
-            <td>${h2h(s.head_to_head)}</td></tr>`;
+            <td class="r">${!s.range_coverage || s.range_coverage.inside == null ? '—' : pct(s.range_coverage.inside)}</td></tr>`;
         }).join('');
         document.getElementById('accuracy-container').hidden = false;
       } catch (error) {

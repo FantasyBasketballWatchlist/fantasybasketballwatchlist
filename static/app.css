@@ -346,3 +346,23 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 .alert-item.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.06); color: #c9f5e3; }
 
 .acc-explain { margin: 4px 4px 10px; font-size: 13px; color: var(--dim); }
+
+/* Accuracy checks: our prediction, the result, a verdict */
+.acc-group { margin-bottom: 18px; }
+.acc-group h3 { font-size: 15px; margin: 0 4px 8px; }
+.acc-group h3 small { color: var(--dim); font-weight: 400; font-size: 12px; margin-left: 6px; }
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.check { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--dim);
+  border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.45; }
+.check p { margin-top: 6px; color: var(--muted); }
+.check-lbl { color: var(--text); font-weight: 600; }
+.check-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.check-verdict { font-size: 12px; white-space: nowrap; color: var(--dim); }
+.check.v-pass { border-left-color: var(--good); }
+.check.v-pass .check-verdict { color: var(--good); }
+.check.v-fail { border-left-color: var(--bad); }
+.check.v-fail .check-verdict { color: var(--bad); }
+.check.v-soon, .check.v-wait { opacity: .78; }
+.acc-details summary { cursor: pointer; color: var(--muted); padding: 4px; }
+.acc-details[open] summary { margin-bottom: 8px; }
+@media (max-width: 760px) { .check-grid { grid-template-columns: 1fr; } }

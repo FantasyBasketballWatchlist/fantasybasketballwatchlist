@@ -36,6 +36,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SNAPSHOT_DIR = os.path.join(ROOT, "data", "snapshots")
 OUT = os.path.join(ROOT, "data", "accuracy.json")
 MIN_GAMES = 10
+AVAIL_TOP = 150           # availability check: BPV's top 150
+DISAGREE_N = 20           # disagreements check: the 20 players BPV and ESPN rank most differently
 TARGET_COVERAGE = 0.8
 
 
@@ -107,6 +109,16 @@ def score(path, only_ids=None):
     result["top50"] = {"projected_fpg": float(top["production"].mean()),
                        "actual_fpg": float(actual["mean"].reindex(top.index).mean()),
                        "share_with_10_games": float((actual["size"].reindex(top.index).fillna(0) >= MIN_GAMES).mean())}
+    if "availability" in snap and "team" in snap:
+        # Availability (docs/prereg-accuracy-checks.md): BPV's top 150, share of their team's games played since.
+        top = snap.nsmallest(AVAIL_TOP, "rank") if "rank" in snap else snap.nlargest(AVAIL_TOP, "bpv")
+        team_games = after.groupby("TEAM_ABBREVIATION")["GAME_ID"].nunique()
+        tg = top["team"].map(team_games)
+        top = top[tg > 0]
+        played = actual["size"].reindex(top.index).fillna(0) / top["team"].map(team_games)
+        result["availability"] = {"players": len(top), "predicted": float(top["availability"].mean()),
+                                  "actual": float(played.clip(upper=1).mean())}
+    result["days_of_games"] = int((pd.Timestamp(after["GAME_DATE"].max()) - pd.Timestamp(after["GAME_DATE"].min())).days + 1)
     result["status"] = "scored"
     return result
 
@@ -152,7 +164,35 @@ def head_to_head(espn_path, paths, date):
     pick = lambda r: {"players": r.get("per_game", {}).get("players"),
                       "per_game_error": r.get("per_game", {}).get("bpv_mean_error"),
                       "ranking": r.get("ranking", {}).get("spearman_bpv_vs_actual_total")}
-    return {"bpv_snapshot": os.path.basename(bpv_same_day[0]), "common_players": len(common), "bpv": pick(b), "espn": pick(e)}
+    return {"bpv_snapshot": os.path.basename(bpv_same_day[0]), "common_players": len(common), "bpv": pick(b), "espn": pick(e),
+            "disagreements": disagreements(bpv_same_day[0], espn_path, date, pre)}
+
+
+def disagreements(bpv_path, espn_path, date, pre):
+    """The players BPV and ESPN rank most differently: whose rank was closer to how they actually finished?"""
+    b = pd.read_csv(bpv_path).drop_duplicates("id").set_index("id")
+    e = pd.read_csv(espn_path).drop_duplicates("id").set_index("id")
+    common = b.index.intersection(e.index)
+    pool = set(b.loc[common, "bpv"].nlargest(BENCH_POOL_TOP).index) | set(e.loc[common, "bpv"].nlargest(BENCH_POOL_TOP).index)
+    pool = sorted(pool)
+    season = b["target_season"].iloc[0] if "target_season" in b else projected_season(datetime.date.fromisoformat(date))
+    games = nba_data.player_game_logs(season)
+    games = bpv.add_fpts(games) if "FPTS" not in games else games
+    after = games if pre else games[games["GAME_DATE"] > date]
+    if after.empty or not pool:
+        return None
+    totals = after.groupby("PLAYER_ID")["FPTS"].sum().reindex(pool).fillna(0)
+    played = after.groupby("PLAYER_ID").size().reindex(pool).fillna(0)
+    actual = totals.rank(ascending=False)
+    br = b.loc[pool, "bpv"].rank(ascending=False)
+    er = e.loc[pool, "bpv"].rank(ascending=False)
+    top = (br - er).abs().nlargest(DISAGREE_N).index
+    db, de = (br[top] - actual[top]).abs(), (er[top] - actual[top]).abs()
+    wins = float((db < de).sum() + 0.5 * (db == de).sum())
+    names = b.loc[top, "name"]
+    examples = [{"name": names[i], "bpv_rank": int(br[i]), "espn_rank": int(er[i]), "actual_rank": int(actual[i]), "games": int(played[i])}
+                for i in top[:5]]
+    return {"players": len(top), "bpv_closer": wins, "pool": len(pool), "examples": examples}
 
 
 BENCH_POOL_TOP = 150      # pool: union of each ranker's top 150 on the snapshot date
