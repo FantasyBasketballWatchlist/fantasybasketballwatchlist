@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hoopothesis: live ESPN draft picks
 // @namespace    https://hoopothesis.cc/
-// @version      0.1.0
+// @version      0.1.1
 // @description  Reads picks from ESPN's fantasy basketball draft room as they happen and sends them to the Hoopothesis draft tracker (open in another tab). Beta: shows a debug panel you can copy if it misses picks.
 // @match        https://fantasy.espn.com/*
 // @match        https://hoopothesis.cc/*
@@ -35,7 +35,7 @@
  */
 (function () {
   'use strict';
-  const VERSION = '0.1.0';
+  const VERSION = '0.1.1';
   const KEY = 'hoop-espn-bridge-v1';
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   const host = location.hostname;
@@ -212,7 +212,8 @@
     // Debug panel (bottom right).
     let panel;
     function render() {
-      if (!document.body || !isDraftRoom()) return;
+      if (!document.body) return;
+      dbg.page = location.pathname;
       if (!panel) {
         panel = document.createElement('div');
         panel.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;background:#0f1628;color:#eef2f8;' +
@@ -227,7 +228,8 @@
         panel.querySelector('#hoop-copy').onclick = copyDebug;
       }
       const ids = [...picks.values()];
-      panel.querySelector('#hoop-s').textContent =
+      panel.querySelector('#hoop-s').textContent = (isDraftRoom() || dbg.sockets.length ? '' :
+        `Running, but this doesn't look like a draft room (${location.pathname}). `) +
         `${ids.length} pick${ids.length === 1 ? '' : 's'} seen · ${dbg.sockets.length} live feed${dbg.sockets.length === 1 ? '' : 's'}, ` +
         `${dbg.wsMessages} messages · ${dbg.http.length} data requests` + (dbg.errors.length ? ` · ${dbg.errors.length} errors` : '');
     }
