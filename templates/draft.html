@@ -955,7 +955,7 @@
     // own list still wins once the draft is over (espnSync).
     const BRIDGE_STALE_MS = 6 * 3600 * 1000;        // ignore picks from a draft room left open hours ago
     const bridge = {
-      installed: null, last: null, applied: 0, warn: '',
+      installed: null, last: null, applied: 0, unconfirmed: 0, warn: '',
       live() { return !!this.last && Date.now() - Date.parse(this.last.at) < 10 * 60 * 1000; },
     };
     function bridgeStatus() {
@@ -965,8 +965,9 @@
       if (el.hidden) return;
       el.className = `status ${bridge.warn ? 'bad' : b && bridge.live() ? 'live' : ''}`;
       el.textContent = bridge.warn || (b
-        ? `ESPN draft room script v${b.version}: ${b.picks.length} pick${b.picks.length === 1 ? '' : 's'} seen, ${bridge.applied} placed · last ${new Date(b.at).toLocaleTimeString()}` +
-          (b.picks.length ? '' : ` · ${b.summary.sockets} live feed(s), ${b.summary.wsMessages} messages so far`)
+        ? `ESPN draft room script v${b.version}: ${bridge.applied} pick${bridge.applied === 1 ? '' : 's'} placed · last ${new Date(b.at).toLocaleTimeString()}` +
+          (b.picks.length ? '' : ` · ${b.summary.sockets} live feed(s), ${b.summary.wsMessages} messages so far`) +
+          (bridge.unconfirmed ? ` · ${bridge.unconfirmed} pick number${bridge.unconfirmed === 1 ? '' : 's'} not yet confirmed by ESPN's board` : '')
         : `ESPN draft room script v${bridge.installed} installed: open your draft on ESPN's website in another tab.`);
     }
     async function applyBridge(b) {
@@ -981,7 +982,7 @@
       }
       const byKey = new Map(players.map(p => [espnKey(p.name), p.id]));
       const synced = new Set(state.espn?.synced || []);       // pick numbers ESPN's own list filled: those stay
-      let placed = 0;
+      const exact = new Set(), guessed = new Set();
       for (const p of b.picks) {
         const n = p.overall || p.seq;
         if (!n || n > totalPicks() || synced.has(n)) continue;
@@ -992,9 +993,10 @@
         state.picks[n] = id;
         state.names[id] = name;
         if (!state.history.includes(n)) state.history.push(n);
-        placed++;
+        (p.guessed ? guessed : exact).add(id);
       }
-      bridge.applied = placed;
+      bridge.applied = new Set([...exact, ...guessed]).size;     // the live feed and the board can both report a pick
+      bridge.unconfirmed = [...guessed].filter(id => !exact.has(id)).length;   // live picks the board hasn't shown yet
       lookCache = { key: null, value: null }; save(); render(); bridgeStatus();
     }
     window.addEventListener('message', (ev) => {

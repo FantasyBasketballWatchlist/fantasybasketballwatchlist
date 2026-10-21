@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hoopothesis: live ESPN draft picks
 // @namespace    https://hoopothesis.cc/
-// @version      0.1.1
+// @version      0.2.0
 // @description  Reads picks from ESPN's fantasy basketball draft room as they happen and sends them to the Hoopothesis draft tracker (open in another tab). Beta: shows a debug panel you can copy if it misses picks.
 // @match        https://fantasy.espn.com/*
 // @match        https://hoopothesis.cc/*
@@ -22,11 +22,14 @@
  * whole draft, then all 130 at once when it ended). The draft room itself gets every pick live, so this script runs
  * inside it and passes the picks on.
  *
- * How it finds picks (three ways, because ESPN's draft room isn't documented and this was written without seeing it):
- *   1. WebSocket messages: the draft room's live feed. Any text like "SELECTED <team> <player>" counts as a pick.
- *   2. JSON the page fetches (fetch / XHR): any object with a playerId and a pick number counts.
- *   3. Nothing is parsed from the page's HTML yet; the debug export records what the pick list looks like so a parser
- *      can be written from a real draft.
+ * How it finds picks (from a mock draft's debug export, 2026-10-21):
+ *   1. The live feed (WebSocket to fantasydraft.espn.com): "SELECTED <teamId> <espnPlayerId> ..." for every pick, instantly,
+ *      but with no pick number. Its number is guessed: picks already on the board when the first one arrived + order seen.
+ *   2. The draft board on screen: each finished pick is a cell ".draft-board-grid-pick-cell.completedPick" with
+ *      ".roundPick" = "<round>.<pick in round>" and the name in ".pickCellMiddle"; the pick feed (".pick__message-information",
+ *      "Name / TEAM POS" + "R<round>, P<pick>") is read too. These give exact numbers, including picks made before the
+ *      draft room was opened, and correct the guesses (read every 2 s and right after each live pick).
+ *   3. JSON the page fetches (fetch / XHR) with a playerId and a pick number (none seen so far; kept as a fallback).
  * The debug panel (bottom right of the draft room) shows what each way has seen; "Copy debug" puts it all on the
  * clipboard (long tokens and query strings removed) to send over.
  *
@@ -35,7 +38,7 @@
  */
 (function () {
   'use strict';
-  const VERSION = '0.1.1';
+  const VERSION = '0.2.0';
   const KEY = 'hoop-espn-bridge-v1';
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   const host = location.hostname;
@@ -59,23 +62,34 @@
     const params = new URLSearchParams(location.search);
     const dbg = {
       version: VERSION, started: new Date().toISOString(), page: location.pathname, league: params.get('leagueId'),
-      hooks: {}, sockets: [], wsMessages: 0, wsSamples: [], wsKeywords: {}, http: [], picks: [], errors: [], dom: null,
+      hooks: {}, sockets: [], wsMessages: 0, wsSamples: [], wsKeywords: {}, http: [], picks: [], errors: [], board: null, dom: null,
     };
-    const picks = new Map();            // key -> {overall, teamId, playerId, name, source, at}
-    let seq = 0;
+    const picks = new Map();            // key -> {overall, guessed, teamId, playerId, name, source, at}
+    let seq = 0, liveSeq = 0, liveOffset = null;
 
     const note = (where, e) => { dbg.errors.push(`${where}: ${clip(e && e.message || e, 200)}`); if (dbg.errors.length > 50) dbg.errors.shift(); };
 
     function addPick(p, source) {
       if (!p.playerId && !p.name) return;
-      const key = p.playerId ? `id:${p.playerId}` : `name:${p.name}`;
-      if (picks.has(key)) {                                   // already known: keep it, fill in a missing pick number
+      const key = p.playerId ? `id:${p.playerId}` : `name:${normName(p.name)}`;
+      if (picks.has(key)) {                                   // already known: an exact number replaces a guess
         const old = picks.get(key);
-        if (old.overall == null && p.overall != null) old.overall = p.overall;
+        if (p.overall != null && !p.guessed && (old.overall !== p.overall || old.guessed)) {
+          old.overall = p.overall; old.guessed = false; publish();
+        }
         return;
       }
+      if (source === 'websocket' && p.overall == null) {
+        // The live feed has no pick numbers: count the picks already on the board when the first one arrives, then add
+        // the order seen. The board read right after corrects it if that was off.
+        if (liveOffset == null) liveOffset = scanBoard(false);
+        liveSeq += 1;
+        p.overall = liveOffset + liveSeq;
+        p.guessed = true;
+        setTimeout(() => { try { scanBoard(true); } catch (e) { note('board', e); } }, 600);
+      }
       seq += 1;
-      const pick = { overall: p.overall ?? null, seq, teamId: p.teamId ?? null, playerId: p.playerId ?? null,
+      const pick = { overall: p.overall ?? null, guessed: !!p.guessed, seq, teamId: p.teamId ?? null, playerId: p.playerId ?? null,
         name: p.name ?? null, source, at: new Date().toISOString() };
       picks.set(key, pick);
       dbg.picks.push({ ...pick });
@@ -183,7 +197,36 @@
       dbg.hooks.xhr = true;
     }
 
-    // Way 3 (record only): what the page shows, for writing a parser later.
+    const normName = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+
+    // Way 2: the draft board and pick feed on screen. Returns how many finished picks the board shows; with add=true the
+    // picks found are recorded (exact numbers).
+    function scanBoard(add) {
+      const teams = document.querySelectorAll('.draft-board-grid-header-cell').length || maxTeam() || null;
+      const found = [];
+      document.querySelectorAll('.draft-board-grid-pick-cell.completedPick').forEach((cell) => {
+        const rp = (cell.querySelector('.roundPick')?.textContent || '').trim().match(/^(\d+)\.(\d+)$/);
+        const mid = cell.querySelector('.pickCellMiddle');
+        if (!rp || !mid) return;
+        const name = mid.children.length ? [...mid.children].map((c) => c.textContent.trim()).filter(Boolean).join(' ') : mid.textContent.trim();
+        found.push({ round: +rp[1], pick: +rp[2], name, from: 'board' });
+      });
+      document.querySelectorAll('.pick__message-information').forEach((el) => {
+        const info = (el.querySelector('.pick-info')?.textContent || el.textContent || '').match(/R(\d+),\s*P(\d+)/);
+        const name = (el.textContent || '').split(' / ')[0].trim();
+        if (info && name) found.push({ round: +info[1], pick: +info[2], name, from: 'feed' });
+      });
+      dbg.board = { teams, cells: document.querySelectorAll('.draft-board-grid-pick-cell').length,
+        completed: document.querySelectorAll('.draft-board-grid-pick-cell.completedPick').length,
+        feed: document.querySelectorAll('.pick__message-information').length, parsed: found.length,
+        sample: found.slice(-3).map((f) => `${f.round}.${f.pick} ${f.name} (${f.from})`) };
+      if (add && teams) for (const f of found) addPick({ overall: (f.round - 1) * teams + f.pick, name: f.name }, f.from);
+      return dbg.board.completed;
+    }
+    const maxTeam = () => Math.max(0, ...[...picks.values()].map((p) => p.teamId || 0));
+
+    // Record only: what the page shows, for writing a parser later.
     function snapshotDom() {
       const out = { title: document.title, at: new Date().toISOString(), candidates: [] };
       const seen = new Set();
@@ -201,10 +244,13 @@
     }
 
     function publish() {
-      const list = [...picks.values()].sort((a, b) => (a.overall ?? 1e9) - (b.overall ?? 1e9) || a.seq - b.seq);
+      // Guessed numbers first, exact ones after: the draft page places picks in this order, so an exact number wins.
+      const list = [...picks.values()].sort((a, b) => (a.guessed === b.guessed ? 0 : a.guessed ? -1 : 1) ||
+        (a.overall ?? 1e9) - (b.overall ?? 1e9) || a.seq - b.seq);
       const payload = { v: 1, version: VERSION, at: new Date().toISOString(), started: dbg.started, league: dbg.league, page: dbg.page,
-        picks: list.map(({ overall, seq, teamId, playerId, name, source }) => ({ overall, seq, teamId, playerId, name, source })),
-        summary: { sockets: dbg.sockets.length, wsMessages: dbg.wsMessages, http: dbg.http.length, hooks: dbg.hooks, errors: dbg.errors.length } };
+        picks: list.map(({ overall, guessed, seq, teamId, playerId, name, source }) => ({ overall, guessed, seq, teamId, playerId, name, source })),
+        summary: { sockets: dbg.sockets.length, wsMessages: dbg.wsMessages, http: dbg.http.length, hooks: dbg.hooks,
+          errors: dbg.errors.length, board: dbg.board ? { completed: dbg.board.completed, parsed: dbg.board.parsed, teams: dbg.board.teams } : null } };
       gmSet(KEY, JSON.stringify(payload)).catch((e) => note('storage', e));
       render();
     }
@@ -246,9 +292,12 @@
     try { hookFetch(); } catch (e) { note('hook fetch', e); }
     try { hookXhr(); } catch (e) { note('hook xhr', e); }
     // The panel needs <body>; ESPN's app can also change the page without a reload, so check every 2 s.
-    setInterval(() => { try { render(); } catch (e) { note('render', e); } }, 2000);
+    setInterval(() => {
+      try { if (isDraftRoom()) scanBoard(true); } catch (e) { note('board', e); }
+      try { render(); } catch (e) { note('render', e); }
+    }, 2000);
     setTimeout(() => { try { snapshotDom(); } catch (e) { note('dom', e); } }, 15000);
-    W.__hoopBridge = { dbg, picks, scanText, scanJson, snapshotDom, publish };   // for testing in the console
+    W.__hoopBridge = { dbg, picks, scanText, scanJson, scanBoard, snapshotDom, publish };   // for testing in the console
   }
 
   // ------------------------------------------------------------------ Hoopothesis draft page
