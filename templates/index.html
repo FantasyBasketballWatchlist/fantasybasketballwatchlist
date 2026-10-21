@@ -69,6 +69,16 @@
         <tbody></tbody>
       </table>
     </div>
+    <div class="card table-wrap" id="benchmarks" style="margin-top:14px" hidden>
+      <p class="acc-explain">BPV against every other ranking we can collect, on the same players: did higher-ranked players
+        go on to score more fantasy points? <b>Ranking</b> is the rank correlation with actual points (1 = perfect order),
+        <b>Top-130 hits</b> the share of each list's top 130 who finished top 130.
+        <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-ros-benchmarks.md" target="_blank" rel="noopener">Rules, written before any results</a>.</p>
+      <table class="data">
+        <thead><tr><th>Ranking source</th><th class="r">Ranking</th><th class="r">Top-130 hits</th><th class="r">BPV better on</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <div class="card table-wrap" id="live-checks" style="margin-top:14px" hidden>
       <p class="acc-explain">Smaller checks on single inputs (not the rankings), scored after every night of games.
         Checks with fewer than 20 players are greyed out: too few to judge yet.</p>
@@ -113,6 +123,30 @@
         <small style="color:var(--dim)"> · ranking ${fmt(h.bpv.ranking, 3)} vs ${fmt(h.espn.ranking, 3)}, ${h.common_players} players</small>`;
     }
 
+    // BPV vs ESPN's projections, ESPN's crowd and simple baselines (docs/prereg-ros-benchmarks.md).
+    function renderBenchmarks(b) {
+      if (!b || !b.summary) return;
+      const rows = [];
+      [['in-season', 'Rest of season'], ['preseason', 'Preseason']].forEach(([kind, label]) => {
+        const sum = b.summary[kind];
+        if (!sum) return;
+        const early = Object.values(sum).every(v => v.early);
+        const n = sum.BPV ? sum.BPV.snapshots : 0;
+        rows.push(`<tr><td colspan="4" style="white-space:normal"><b>${label}</b> <small style="color:var(--dim)">· ${n} snapshot${n === 1 ? '' : 's'}${early ? ' · early: under 2 weeks of games, too soon to judge' : ''}</small></td></tr>`);
+        Object.entries(sum).forEach(([name, v]) => {
+          const isBpv = name === 'BPV';
+          const color = early ? 'var(--dim)' : isBpv ? 'var(--orange)' : v.bpv_better > v.snapshots / 2 ? 'var(--good)' : 'var(--bad)';
+          rows.push(`<tr style="${early ? 'color:var(--dim)' : ''}"><td>${isBpv ? '<b style="color:var(--orange)">BPV</b>' : escapeHtml(name)}</td>
+            <td class="r">${fmt(v.ranking, 3)}${!isBpv && sum.BPV && v.snapshots !== sum.BPV.snapshots
+              ? ` <small style="color:var(--dim)">(BPV ${fmt(v.bpv_ranking_same, 3)} on the same ${v.snapshots})</small>` : ''}</td><td class="r">${pct(v.top130_hits)}</td>
+            <td class="r" style="color:${color}">${isBpv ? '—' : `${v.bpv_better} of ${v.snapshots}`}</td></tr>`);
+        });
+      });
+      if (!rows.length) return;
+      document.querySelector('#benchmarks tbody').innerHTML = rows.join('');
+      document.getElementById('benchmarks').hidden = false;
+    }
+
     // Parts of BPV that could only be tested once the season started, scored by refresh.py as games finish.
     function renderLiveChecks(lc) {
       if (!lc) return;
@@ -144,6 +178,7 @@
         if (!res.ok) throw new Error('bad response');
         const data = await res.json();
         renderLiveChecks(data.live_checks);
+        renderBenchmarks(data.benchmarks);
         const scored = data.snapshots.filter(s => s.status === 'scored' && s.per_game);
         if (!scored.length) {
           note.textContent = data.snapshots.length

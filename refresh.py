@@ -305,6 +305,12 @@ def main():
                 log(f"ESPN snapshot: {os.path.basename(saved)}")
         except Exception as e:                       # ESPN is optional; the BPV refresh goes on without it
             log(f"ESPN snapshot skipped: {type(e).__name__}: {e}")
+        try:
+            saved = collect.save_crowd(meta, datetime.date.today(), players)
+            if saved:
+                log(f"ESPN crowd snapshot: {os.path.basename(saved)}")
+        except Exception as e:                       # a benchmark only (docs/prereg-ros-benchmarks.md)
+            log(f"ESPN crowd snapshot skipped: {type(e).__name__}: {e}")
 
         from analysis import live_checks
         live_checks.record(players, meta)

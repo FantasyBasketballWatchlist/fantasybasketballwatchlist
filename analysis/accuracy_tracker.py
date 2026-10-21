@@ -13,6 +13,8 @@ For each data/snapshots/bpv_<date>.csv it compares the snapshot with the games p
   the ranges are meant to hold about 80%.
 ESPN snapshots (espn_<date>*.csv, saved by analysis/collect.py) are scored the same way, and each is
 compared head to head with the BPV snapshot from the same day on the players both cover.
+Each BPV snapshot is also ranked against every benchmark we can collect without permission (ESPN projections,
+ESPN's crowd, last season, season so far), on one shared pool: see benchmarks() and docs/prereg-ros-benchmarks.md.
 Results early in a season are noisy; the numbers mean little before ~20 games.
 """
 import datetime
@@ -153,6 +155,90 @@ def head_to_head(espn_path, paths, date):
     return {"bpv_snapshot": os.path.basename(bpv_same_day[0]), "common_players": len(common), "bpv": pick(b), "espn": pick(e)}
 
 
+BENCH_POOL_TOP = 150      # pool: union of each ranker's top 150 on the snapshot date
+BENCH_TOP_HITS = 130      # every roster spot in a 10-team, 13-player league
+BENCH_EARLY_DAYS = 14     # results before 14 days of games are labelled early
+
+
+def _same_day(prefix, date, pre):
+    names = [f for f in os.listdir(SNAPSHOT_DIR) if f.startswith(f"{prefix}_{date}") and ("_pre_" in f) == pre]
+    return os.path.join(SNAPSHOT_DIR, names[0]) if names else None
+
+
+def _spearman(a, b):
+    return float(a.rank().corr(b.rank()))       # Pearson on ranks (no scipy on the live server)
+
+
+def benchmarks(bpv_path):
+    """BPV's snapshot against every other ranker known on its date, on one pool (docs/prereg-ros-benchmarks.md).
+    Returns None if nothing has been played since."""
+    name = os.path.basename(bpv_path)
+    date = re.search(r"bpv_(\d{4}-\d{2}-\d{2})", name).group(1)
+    pre = "_pre_" in name
+    snap = pd.read_csv(bpv_path).drop_duplicates("id").set_index("id")
+    season = snap["target_season"].iloc[0] if "target_season" in snap and len(snap) else projected_season(datetime.date.fromisoformat(date))
+    games = nba_data.player_game_logs(season)
+    if games.empty:
+        return None
+    games = bpv.add_fpts(games) if "FPTS" not in games else games
+    before = games.iloc[0:0] if pre else games[games["GAME_DATE"] <= date]
+    after = games if pre else games[games["GAME_DATE"] > date]
+    if after.empty:
+        return None
+    older = before.empty and not pre      # an earlier preseason snapshot (not the final one before opening night)
+    pre = pre or older
+
+    scores = {"BPV": snap["bpv"]}
+    espn = _same_day("espn", date, pre)
+    if espn:
+        scores["ESPN projections"] = pd.read_csv(espn).drop_duplicates("id").set_index("id")["bpv"]
+    crowd = _same_day("crowd", date, pre)
+    if crowd:
+        c = pd.read_csv(crowd).drop_duplicates("id").set_index("id")
+        if pre:
+            scores["ESPN crowd (draft position)"] = -c["adp"].dropna()
+        else:
+            scores["ESPN crowd (% rostered)"] = c["pct_owned"] + c["pct_started"] / 1000   # % started breaks ties
+    prev = nba_data.player_game_logs(nba_data.previous_season(season))
+    prev = bpv.add_fpts(prev) if "FPTS" not in prev else prev
+    scores["Last season FPTS/game"] = prev.groupby("PLAYER_ID")["FPTS"].mean()
+    if not before.empty:
+        scores["Season so far FPTS/game"] = before.groupby("PLAYER_ID")["FPTS"].mean()
+
+    pool = sorted(set().union(*(set(s.nlargest(BENCH_POOL_TOP).index) for s in scores.values())))
+    outcome = after.groupby("PLAYER_ID")["FPTS"].sum().reindex(pool).fillna(0)
+    actual_top = set(outcome.nlargest(BENCH_TOP_HITS).index)
+    out = {}
+    for k, s in scores.items():
+        s = s.reindex(pool)
+        filled = s.fillna(s.min() - 1 if s.notna().any() else 0)   # unscored pool players rank below everyone it scores
+        top = set(filled.sort_values(ascending=False).index[:BENCH_TOP_HITS])
+        out[k] = {"ranking": _spearman(filled, outcome), "top130_hits": len(top & actual_top) / BENCH_TOP_HITS,
+                  "scored_in_pool": int(s.notna().sum())}
+    days = (pd.Timestamp(after["GAME_DATE"].max()) - pd.Timestamp(after["GAME_DATE"].min())).days + 1
+    return {"bpv_snapshot": name, "date": date, "preseason": pre, "pool": len(pool), "days_of_games": int(days),
+            "early": days < BENCH_EARLY_DAYS, "older_preseason": older, "rankers": out}
+
+
+def benchmark_summary(rows):
+    """Average over snapshots (in-season and preseason separately) and how often BPV beat each ranker. Preseason uses
+    only the final snapshot before opening night. bpv_ranking_same: BPV's average on the snapshots that ranker has."""
+    summary = {}
+    for kind in ("preseason", "in-season"):
+        rs = [r for r in rows if r["preseason"] == (kind == "preseason") and not r.get("older_preseason")]
+        if not rs:
+            continue
+        names = sorted({k for r in rs for k in r["rankers"]}, key=lambda k: (k != "BPV", k))
+        summary[kind] = {k: {"snapshots": len(v := [r for r in rs if k in r["rankers"]]),
+                             "ranking": float(np.mean([r["rankers"][k]["ranking"] for r in v])),
+                             "top130_hits": float(np.mean([r["rankers"][k]["top130_hits"] for r in v])),
+                             "bpv_ranking_same": float(np.mean([r["rankers"]["BPV"]["ranking"] for r in v])),
+                             "bpv_better": None if k == "BPV" else
+                             sum(r["rankers"]["BPV"]["ranking"] > r["rankers"][k]["ranking"] for r in v),
+                             "early": all(r["early"] for r in v)} for k in names}
+    return summary
+
+
 def run(verbose=True):
     warnings.filterwarnings("ignore")
     paths = snapshot_paths()
@@ -165,7 +251,18 @@ def run(verbose=True):
             results.append(r)
         except Exception as e:                        # one bad file shouldn't stop the rest
             results.append({"snapshot": os.path.basename(p), "status": f"error: {e}"})
-    out = {"updated": datetime.datetime.now().isoformat(timespec="minutes"), "snapshots": results}
+    bench = []
+    for p in paths:
+        if os.path.basename(p).startswith("bpv_"):
+            try:
+                b = benchmarks(p)
+                if b:
+                    bench.append(b)
+            except Exception as e:
+                bench.append({"bpv_snapshot": os.path.basename(p), "error": str(e)})
+    good = [b for b in bench if "error" not in b]
+    out = {"updated": datetime.datetime.now().isoformat(timespec="minutes"), "snapshots": results,
+           "benchmarks": {"rules": "docs/prereg-ros-benchmarks.md", "by_snapshot": bench, "summary": benchmark_summary(good)}}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     for r in (results if verbose else []):

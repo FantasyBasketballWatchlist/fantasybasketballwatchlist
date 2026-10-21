@@ -346,6 +346,28 @@ def espn_projections(season):
     return _cached(f"espn_projections_{season}", fetch, True)
 
 
+def espn_ownership(season):
+    """ESPN's crowd numbers for a season: PLAYER_NAME, PCT_OWNED, PCT_STARTED (% of ESPN leagues), ADP (average
+    draft position, NaN if undrafted). Same public API as espn_projections; a benchmark for docs/prereg-ros-benchmarks.md."""
+    def fetch():
+        import requests
+        year = season_start_year(season) + 1
+        r = requests.get(ESPN_URL.format(year=year), headers={"X-Fantasy-Filter": ESPN_FILTER,
+                                                              "User-Agent": "Mozilla/5.0"}, timeout=30)
+        r.raise_for_status()
+        rows = []
+        for p in r.json().get("players", []):
+            own = p["player"].get("ownership") or {}
+            if own.get("percentOwned") is None:
+                continue
+            adp = own.get("averageDraftPosition")
+            rows.append({"PLAYER_NAME": p["player"]["fullName"], "PCT_OWNED": own["percentOwned"],
+                         "PCT_STARTED": own.get("percentStarted", 0.0),
+                         "ADP": adp if adp and adp < 140 else float("nan")})   # ESPN gives undrafted players 140 (10 teams x 14 rounds)
+        return pd.DataFrame(rows, columns=["PLAYER_NAME", "PCT_OWNED", "PCT_STARTED", "ADP"])
+    return _cached(f"espn_ownership_{season}", fetch, True)
+
+
 ESPN_POSITION_SLOTS = {0: "PG", 1: "SG", 2: "SF", 3: "PF", 4: "C"}
 
 
