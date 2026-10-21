@@ -35,3 +35,14 @@ of games after it.
 | Injury report, per status | listed players play X% of the time | share who played | within 10 points, 20+ listings |
 | This week's projections | beat season FPTS/game x games left | both average misses | better in most weeks, 3+ weeks |
 | Preseason groups (rookies, returners, everyone else) | BPV's per-game miss beats ESPN's | ESPN's miss | BPV's smaller, 15+ players |
+
+## Addendum (2026-10-21): which preseason ranking is graded
+
+The preseason snapshot first saved (`bpv_2026-10-20_pre_2026-27.csv`, 8 AM on Oct 20) predates that evening's fix for
+players returning from short seasons (commits aac2103 and ada6e3a). With only two people using the site, the checks
+are for learning whether the current model works, so the graded snapshot was replaced by the opening-day version: the
+fixed code (ada6e3a) run on the same 8 AM data (commit 39163c7, `data/live`), with no 2026-27 games. Checks on the
+rebuild: the 8 AM code on the same data reproduces the published file exactly (650 players, identical values), and the
+rebuilt per-game projections equal the frozen preseason prior (`data/preseason/prior_2026-27.csv`) for all 308 players
+in it. The fix used no game results; one opening-night game had finished before it went live. The published file is
+kept as `data/snapshots/archive/bpv_2026-10-20_pre_2026-27_as_published_8am.csv`.

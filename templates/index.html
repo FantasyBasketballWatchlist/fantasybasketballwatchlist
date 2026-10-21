@@ -238,8 +238,7 @@
     function groupHtml(g) {
       const live = g.checks.filter(c => c.verdict !== 'wait');
       const later = g.checks.filter(c => c.verdict === 'wait');
-      return `${g.note ? `<p class="acc-note"><b>ⓘ</b> ${g.note}</p>` : ''}
-        ${g.sub ? `<p class="acc-sub">${g.sub}</p>` : ''}
+      return `${g.sub ? `<p class="acc-sub">${g.sub}${g.note ? `<br>${g.note}` : ''}</p>` : ''}
         ${live.length ? `<div class="check-grid">${live.map(cardHtml).join('')}</div>` : ''}
         ${later.length ? `<div class="acc-later"><h4>Coming up</h4><ul>${later.map(c => `
           <li><b>${c.name}</b><span>${c.prediction}</span><em>${c.result}</em></li>`).join('')}</ul></div>` : ''}`;
@@ -261,7 +260,7 @@
                 'once games are played after the first weekly ranking (Oct 27)')] },
         { key: 'pre', title: 'Preseason', sub: pre ? `Final ranking before opening night (${escapeHtml(pre.date)}) · ${days(pre.days_of_games)}` : '',
           checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
-          note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded as published. This ranking was saved the morning of Oct 20, before that evening&rsquo;s fix for players coming off short or injured seasons (Trae Young: 28.5 then, 36.8 after). The live rankings include the fix; this snapshot is left as it was rather than corrected after the fact.' : '' },
+          note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded on the opening-day version, after a fix for players returning from short seasons (the 8 AM version is archived).' : '' },
         { key: 'night', title: 'Nightly & weekly', sub: 'Single inputs to the model, not the rankings', checks: nightlyChecks(data.live_checks) },
       ].filter(g => g.checks.length);
 
