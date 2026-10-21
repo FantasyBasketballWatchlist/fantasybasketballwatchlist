@@ -14,3 +14,6 @@ data/accuracy.json
 
 # ESPN draft recordings (analysis/espn_draft_recorder.py): local only
 data/draft_recordings/
+
+# Sportsbook lines (odds_lines.py): the provider forbids redistributing raw data, and this repo is public
+data/lines/
