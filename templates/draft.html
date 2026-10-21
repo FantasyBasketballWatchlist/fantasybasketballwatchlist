@@ -116,6 +116,10 @@
     .espn .status { font-size: .8rem; color: var(--muted); margin-top: 8px; }
     .espn .status.bad { color: #fecaca; }
     .espn .status.live { color: #c9f5e3; }
+    .espn-debug { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: .75rem; color: var(--dim); }
+    .espn-debug .btn { flex: none; }
+    #espn-debug-text { width: 100%; height: 120px; margin-top: 8px; font: .7rem/1.4 ui-monospace, monospace; color: var(--muted);
+      background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
     .beta { font-size: .62rem; font-weight: 700; letter-spacing: .6px; padding: 1px 6px; border-radius: 999px; color: #1a0d00; background: var(--orange); vertical-align: 3px; }
 
     @media (max-width: 1600px) { .hide-md { display: none; } }
@@ -204,6 +208,11 @@
             <button class="btn small" id="espn-go">Connect</button></div>
           <div class="row" id="espn-team-row" hidden><select id="espn-team" aria-label="Your ESPN team"></select></div>
           <div class="status" id="espn-status"></div>
+          <div class="espn-debug" id="espn-debug-row" hidden>
+            <button class="btn small ghost" id="espn-debug">Copy debug info</button>
+            <span id="espn-debug-note">If the sync misbehaves, copy this and send it over.</span>
+          </div>
+          <textarea id="espn-debug-text" readonly hidden aria-label="Debug info"></textarea>
         </div>
 
         <div class="card panel" style="--c: var(--t-super)">
@@ -800,7 +809,18 @@
     // Whether ESPN's API shows picks during a live draft (or only once it's over) hasn't been confirmed: if the draft is
     // live and ESPN still lists no picks after this long, say so and point to entering picks by hand.
     const ESPN_SILENT_MS = 2 * 60 * 1000;
+    const ESPN_RETRY_MS = 2000;           // while the rankings or season info are still loading
     const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false, silentSince: null };
+
+    // Debug log: one line per check, kept in this browser only (localStorage, last ESPN_LOG_MAX lines), copied on request.
+    const ESPN_LOG_KEY = 'hoop-espn-log-v1', ESPN_LOG_MAX = 800;
+    let espnLog = [];
+    try { espnLog = JSON.parse(localStorage.getItem(ESPN_LOG_KEY) || '[]'); } catch { espnLog = []; }
+    function espnNote(event, fields = {}) {
+      espnLog.push({ t: new Date().toISOString(), event, ...fields });
+      if (espnLog.length > ESPN_LOG_MAX) espnLog = espnLog.slice(-ESPN_LOG_MAX);
+      try { localStorage.setItem(ESPN_LOG_KEY, JSON.stringify(espnLog)); } catch { /* storage full or blocked: keep it in memory */ }
+    }
     const espnKey = (n) => normalizeString(String(n)).replace(/\./g, '').replace(/-/g, ' ').replace(/'/g, '')
       .replace(/\s+(jr|sr|ii|iii|iv)$/, '').replace(/\s+/g, ' ').trim();          // same as ratings._espn_key
     const espnYear = () => {
@@ -813,6 +833,7 @@
 
     async function espnGet(url, headers = {}) {
       const r = await fetch(url, { headers, credentials: 'include', cache: 'no-store' });
+      espn.lastHttp = r.status;
       if (r.status === 401 || r.status === 403) throw new Error('private');
       if (r.status === 404) throw new Error('notfound');
       if (!r.ok) throw new Error(`ESPN answered ${r.status}`);
@@ -828,10 +849,17 @@
 
     async function espnSync() {
       const cfg = state.espn;
-      if (!cfg || espn.busy || !players.length) return;
+      if (!cfg || espn.busy) return;
       const year = espnYear();
-      if (!year) return;
+      if (!players.length || !year) {
+        espnStatus('Still loading the rankings; connecting to ESPN in a moment...');
+        espnNote('waiting', { players: players.length, year });
+        clearTimeout(espn.timer);
+        espn.timer = setTimeout(espnSync, ESPN_RETRY_MS);
+        return;
+      }
       espn.busy = true;
+      espn.lastHttp = null;
       try {
         const d = await espnGet(`${ESPN_API}/${year}/segments/0/leagues/${cfg.league}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`);
         espn.leagueName = d.settings?.name || `League ${cfg.league}`;
@@ -889,16 +917,24 @@
         if (cfg.team == null) notes.push('pick your team above');
         if (unmatched) notes.push(`${unmatched} player${unmatched === 1 ? '' : 's'} not in the rankings`);
         if (offSnake) notes.push(`${offSnake} pick${offSnake === 1 ? " doesn't" : "s don't"} follow a plain snake (traded picks?): placed by pick number`);
-        espn.silentSince = live && !made.length ? (espn.silentSince ?? Date.now()) : null;
+        // Quiet: no picks while ESPN says the draft is live, or once its scheduled start (draftSettings.date) has passed
+        // (in case ESPN doesn't flag a draft as live).
+        const draftAt = d.settings?.draftSettings?.date || null;
+        const started = live || (draftAt != null && Date.now() > draftAt);
+        espn.silentSince = started && !done && !made.length ? (espn.silentSince ?? (live ? Date.now() : Math.max(draftAt, Date.now() - ESPN_SILENT_MS))) : null;
         const silent = espn.silentSince != null && Date.now() - espn.silentSince >= ESPN_SILENT_MS;
-        espnStatus((silent ? "ESPN says the draft is live but isn't sharing picks yet. Enter them here by hand; " +
-          "they'll be checked against ESPN when it catches up. " : '') + notes.join(' · '), silent ? 'bad' : done ? '' : 'live');
+        espnStatus((silent ? `${live ? 'ESPN says the draft is live' : 'The draft was scheduled to start'} but ESPN isn't sharing picks yet. ` +
+          "Enter them here by hand; they'll be checked against ESPN when it catches up. " : '') + notes.join(' · '), silent ? 'bad' : done ? '' : 'live');
+        espnNote('ok', { http: espn.lastHttp, year, league: cfg.league, live, done, espnPicks: made.length, manual: manual.length,
+          board: Object.keys(state.picks).length, draftAt: draftAt ? new Date(draftAt).toISOString() : null, silent,
+          teams: nTeams, rounds: state.rounds, unmatched, offSnake });
         espn.done = done;
       } catch (e) {
         const msg = e.message === 'private' ? "This league is private. Make it viewable to the public in ESPN's league settings, or log into ESPN's website in this browser."
           : e.message === 'notfound' ? `No ESPN league ${cfg.league} for the ${espnYear() - 1}-${String(espnYear()).slice(2)} season. Check the ID.`
           : e instanceof TypeError ? "Couldn't reach ESPN. Check the connection; trying again." : e.message;
         espnStatus(msg, 'bad');
+        espnNote('error', { http: espn.lastHttp, year, league: cfg.league, error: e instanceof TypeError ? `network: ${e.message}` : e.message });
         espn.done = e.message === 'private' || e.message === 'notfound';
       } finally {
         espn.busy = false;
@@ -920,11 +956,12 @@
       document.getElementById('espn-go').textContent = state.espn ? 'Disconnect' : 'Connect';
       renderEspnTeams();
       espnStatus(state.espn ? 'Connecting...' : '');
-      if (state.espn) espnSync();
+      document.getElementById('espn-debug-row').hidden = !state.espn && !espnLog.length;
+      if (state.espn) { espnNote('connect', { league: state.espn.league, team: state.espn.team }); espnSync(); }
     }
 
     document.getElementById('espn-go').addEventListener('click', () => {
-      if (state.espn) { state.espn = null; save(); espnResume(); return; }
+      if (state.espn) { espnNote('disconnect', { league: state.espn.league }); state.espn = null; save(); espnResume(); return; }
       const id = parseLeagueId(document.getElementById('espn-league').value);
       if (!id) { espnStatus('Paste the number after leagueId= in your ESPN league URL.', 'bad'); return; }
       state.espn = { league: id, team: null }; save(); espnResume();
@@ -932,10 +969,25 @@
     document.getElementById('espn-team').addEventListener('change', e => {
       if (!state.espn) return;
       state.espn.team = e.target.value === '' ? null : +e.target.value;
+      espnNote('team', { team: state.espn.team });
       save(); espn.done = false; espnSync();
     });
     // Phones pause background tabs: check again as soon as the page is back on screen.
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && state.espn && !espn.busy) espnSync(); });
+    document.addEventListener('visibilitychange', () => {
+      if (state.espn) espnNote(document.hidden ? 'tab hidden (checks pause)' : 'tab visible');
+      if (!document.hidden && state.espn && !espn.busy) espnSync();
+    });
+    document.getElementById('espn-debug').addEventListener('click', async () => {
+      const head = [`Hoopothesis ESPN sync debug, copied ${new Date().toString()}`, `page: ${location.href}`,
+        `browser: ${navigator.userAgent}`, `season data: ${loadedMeta ? `${loadedMeta.season} ${loadedMeta.mode}` : 'not loaded'}`,
+        `connected: ${state.espn ? `league ${state.espn.league}, team ${state.espn.team}` : 'no'}`,
+        `board: ${Object.keys(state.picks).length} picks, ${state.teams} teams x ${state.rounds} rounds, your slot ${state.slot}`,
+        `status: ${document.getElementById('espn-status').textContent}`, `log (${espnLog.length} lines, oldest first):`];
+      const text = head.concat(espnLog.map(l => JSON.stringify(l))).join('\n');
+      const box = document.getElementById('espn-debug-text'), note = document.getElementById('espn-debug-note');
+      try { await navigator.clipboard.writeText(text); note.textContent = `Copied (${espnLog.length} lines). Paste it into a message.`; }
+      catch { box.hidden = false; box.value = text; box.select(); note.textContent = "Couldn't copy automatically: select the text below and copy it."; }
+    });
 
     async function load() {
       leagueBar(document.getElementById('league-bar'), switchLeague);
