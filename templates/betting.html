@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  {% set page_title = "Tonight's NBA Player Projections: Points, Rebounds, Assists, Threes | Hoopothesis" %}
-  {% set page_description = "Single-game projections for every NBA player playing tonight, with likely ranges and the chance of going over any line." %}
-  {% set canonical_path = '/games' %}
+  {% set page_title = "NBA Betting Tools: Player Projections, Bonus Hedge Calculator, Track Record | Hoopothesis" %}
+  {% set page_description = "Tonight's NBA player projections with a line checker, a sportsbook bonus and hedge calculator, and an honest record of every betting test." %}
+  {% set canonical_path = '/betting' %}
   {% include '_head.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -45,18 +45,51 @@
     .caveat { font-size: .78rem; color: var(--muted); line-height: 1.5; margin-top: 12px; padding: 9px 11px; border-radius: 10px;
       background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.25); }
     .empty { color: var(--dim); text-align: center; padding: 26px; }
+    .btabs { display: flex; gap: 6px; justify-content: center; border-bottom: 1px solid var(--border); margin: 0 0 18px; overflow-x: auto; scrollbar-width: none; }
+    .btabs::-webkit-scrollbar { display: none; }
+    .btab { background: none; border: 0; color: var(--muted); font: inherit; font-size: .95rem; font-weight: 600; padding: 10px 14px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
+    .btab:hover { color: var(--text); } .btab.on { color: var(--text); border-bottom-color: var(--orange); }
+    .hedge { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 860px) { .hedge { grid-template-columns: 1fr; } }
+    .hedge label { display: block; font-size: .8rem; color: var(--muted); margin-top: 12px; }
+    .hedge select, .hedge input { width: 100%; margin-top: 4px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 8px 10px; }
+    .hedge select:focus, .hedge input:focus { outline: none; border-color: var(--orange); }
+    .hedge .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hedge [hidden] { display: none; }
+    .hout { display: grid; gap: 10px; }
+    .hstat { padding: 12px 14px; border-radius: 12px; background: rgba(10,15,28,.45); border: 1px solid var(--border); }
+    .hstat small { display: block; color: var(--dim); font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; }
+    .hstat .num { font-size: 1.9rem; font-weight: 700; }
+    .hstat.big .num { color: var(--good); }
+    .hstat.bad .num { color: var(--bad); }
+    .books { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .books span { font-size: .8rem; padding: 4px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+    .record { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .rec { padding: 14px 16px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); font-size: .9rem; line-height: 1.5; }
+    .rec h4 { font-size: .95rem; margin-bottom: 4px; } .rec .num { font-size: 1.6rem; font-weight: 700; }
+    .rec .num.bad { color: var(--bad); } .rec .num.meh { color: var(--orange-2); } .rec .num.wait { color: var(--dim); }
+    .rec p { color: var(--muted); margin-top: 4px; }
   </style>
 </head>
 <body>
-  {% set active = 'games' %}{% include '_nav.html' %}
+  {% set active = 'betting' %}{% include '_nav.html' %}
 
   <main class="page">
     <section class="hero">
-      <h1>Game <span class="accent">Projections</span></h1>
-      <p>Every player in the next night's games: what he should put up if he plays, the likely range, and the chance of
-        going over any line</p>
-      <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
+      <h1><span class="accent">Betting</span> Tools</h1>
+      <p>Tonight's player projections and a line checker, a sportsbook bonus and hedge calculator, and an honest record of
+        every betting test we've run</p>
     </section>
+
+    <div class="btabs" role="tablist">
+      <button class="btab on" data-tab="proj" role="tab">Projections &amp; line checker</button>
+      <button class="btab" data-tab="hedge" role="tab">Bonus &amp; hedge calculator</button>
+      <button class="btab" data-tab="record" role="tab">Track record</button>
+    </div>
+
+    <section id="tab-proj">
+    <p class="notice" id="season-notice" style="text-align:center;margin:-6px 0 14px">Loading...</p>
 
     <div class="chips" id="games"></div>
     <div class="seg" id="stat-seg"></div>
@@ -94,6 +127,72 @@
     <p class="footer-note">Projection = his stat mix over his last 82 games, scaled to BPV's per-game value and adjusted for
       recent minutes, the opponent, back-to-backs and home/away. The range is the middle 80% of his likely outcomes. Its
       accuracy is tracked every night in "How accurate has BPV been?" on the Rankings page.</p>
+    </section>
+
+    <section id="tab-hedge" hidden>
+      <div class="hedge">
+        <div class="card panel" style="--c: var(--good)">
+          <h3><span class="dot"></span>Turn a sportsbook offer into cash</h3>
+          <p class="help">Bet the offer at one book and the <b>opposite side</b> of the same market at another book, sized so
+            you make the same amount whichever side wins.</p>
+          <label>Offer <select id="h-type">
+            <option value="bonus">Bonus bet (free bet: stake not returned)</option>
+            <option value="qual">Qualifying bet (your cash, to unlock an offer)</option>
+            <option value="nosweat">No-sweat / second-chance bet (refund as a bonus bet if it loses)</option>
+            <option value="boost">Profit boost</option>
+          </select></label>
+          <div class="row2">
+            <label><span id="h-amt-label">Bonus bet amount ($)</span><input id="h-amt" type="number" min="0" step="1" value="100" inputmode="decimal"></label>
+            <label id="h-extra-wrap" hidden><span id="h-extra-label">Boost (%)</span><input id="h-extra" type="number" min="0" step="1" value="50" inputmode="decimal"></label>
+          </div>
+          <div class="row2">
+            <label>Odds where you bet the offer<input id="h-a" placeholder="+300" value="+300" inputmode="numeric"></label>
+            <label>Odds of the other side, other book<input id="h-b" placeholder="-350" value="-350" inputmode="numeric"></label>
+          </div>
+          <p class="help" style="margin-top:12px" id="h-tip"></p>
+        </div>
+        <div class="card panel" style="--c: var(--orange)">
+          <h3><span class="dot"></span>Result</h3>
+          <div class="hout" id="h-out"></div>
+        </div>
+      </div>
+      <div class="card panel" style="margin-top:16px">
+        <h3>Virginia sportsbooks</h3>
+        <p class="help">Licensed in Virginia (check the <a href="https://www.valottery.com/" target="_blank" rel="noopener">Virginia Lottery</a>'s
+          list before signing up; skip offshore sites like Bovada and BetOnline, which aren't licensed):</p>
+        <div class="books"><span>DraftKings</span><span>FanDuel</span><span>BetMGM</span><span>Caesars</span><span>BetRivers</span>
+          <span>Fanatics</span><span>bet365</span><span>Hard Rock Bet</span><span>theScore Bet</span><span>Bally Bet</span></div>
+        <p class="help" style="margin-top:12px"><b>How people use this:</b> each book's new-customer offer once, the bonus bet
+          placed on longer odds (about +250 to +500) with the other side hedged at another book, usually keeps 65-80% of the
+          bonus as cash. Read each offer's rules (minimum odds, expiry, eligible markets) before betting. Books may limit
+          accounts that only take promotions. 21+. Winnings are taxable. If gambling stops being fun: 1-800-GAMBLER.</p>
+      </div>
+    </section>
+
+    <section id="tab-record" hidden>
+      <p class="help" style="text-align:center;margin:-4px 0 16px">Every betting test, with the rules written down before the
+        result. Profits are per $1 bet.</p>
+      <div class="record">
+        <div class="rec"><h4>Model vs real sportsbook lines</h4><div class="num bad">-1.8%</div>
+          <p>592 games of 2024-25, betting the model's side at a typical price: 12,479 bets, 52.4% won vs 53.4% needed.
+            The books' odds were more accurate than the model's.</p></div>
+        <div class="rec"><h4>Line shopping + filters</h4><div class="num meh">+1.0%</div>
+          <p>Best price at Virginia-type licensed books, market blend, injury-news and blowout filters: 773 bets, but the
+            95% range is -6% to +8%, so it can't be told apart from break-even.</p></div>
+        <div class="rec"><h4>Value betting (price vs the other books)</h4><div class="num meh">about 0%</div>
+          <p>Prices beating the other books' consensus an hour before tip-off: -0.9% to +1.3% depending on the threshold.
+            Fast-moving value needs live prices, which this test didn't have.</p></div>
+        <div class="rec"><h4>Model fixes (two rounds)</h4><div class="num meh">closer, still behind</div>
+          <p>Better than each player's season average, but still less accurate than the books (Brier 0.2547 vs 0.2470;
+            lower is better).</p></div>
+        <div class="rec"><h4>Morning prices vs the closing line</h4><div class="num wait">collecting</div>
+          <p>Since Oct 21, 2026: every game's lines in the morning and right before tip-off. Beating the closing line is
+            the standard sign of a real edge; first results in about 2-4 weeks.</p></div>
+      </div>
+      <p class="footer-note">Details: the docs/prereg-real-lines*.md and docs/prereg-game-projections*.md files in the
+        <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/tree/main/docs" target="_blank" rel="noopener">repository</a>.</p>
+    </section>
+
   </main>
 
   <script src="{{ url_for('static', filename='common.js') }}"></script>
@@ -235,6 +334,62 @@
     });
     ['ck-line', 'ck-odds'].forEach(id => document.getElementById(id).addEventListener('input', renderChecker));
     load();
+
+    // ---------- tabs (#hedge / #record in the address open that tab)
+    function showTab(t) {
+      document.querySelectorAll('.btab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+      ['proj', 'hedge', 'record'].forEach(k => { document.getElementById(`tab-${k}`).hidden = k !== t; });
+      if (location.hash.slice(1) !== (t === 'proj' ? '' : t)) history.replaceState(null, '', t === 'proj' ? location.pathname : `#${t}`);
+    }
+    document.querySelector('.btabs').addEventListener('click', e => { const b = e.target.closest('.btab'); if (b) showTab(b.dataset.tab); });
+    if (['hedge', 'record'].includes(location.hash.slice(1))) showTab(location.hash.slice(1));
+
+    // ---------- bonus & hedge calculator
+    // Decimal odds A (the offer's side) and B (the other side, another book). Hedge H is set so both outcomes pay the same.
+    //   bonus:   stake S isn't returned.        A wins: S(A-1) - H      B wins: H(B-1)            -> H = S(A-1)/B
+    //   qual:    cash stake S.                   A wins: S(A-1) - H      B wins: H(B-1) - S        -> H = S A / B
+    //   nosweat: cash S, refund S as a bonus      A wins: S(A-1) - H      B wins: H(B-1) - S + rS   -> H = (S A - r S) / B
+    //            worth r of face value if it loses.
+    //   boost:   winnings x (1 + b).            A' = 1 + (A-1)(1+b), then as qual.
+    const dec = (txt) => { const a = parseFloat(String(txt).replace('+', '')); return isFinite(a) && Math.abs(a) >= 100 ? (a > 0 ? 1 + a / 100 : 1 + 100 / Math.abs(a)) : null; };
+    const money = (x) => `${x < 0 ? '−' : ''}$${Math.abs(x).toFixed(2)}`;
+    function hedgeCalc() {
+      const type = document.getElementById('h-type').value;
+      const S = parseFloat(document.getElementById('h-amt').value) || 0;
+      const extra = parseFloat(document.getElementById('h-extra').value) || 0;
+      let A = dec(document.getElementById('h-a').value);
+      const B = dec(document.getElementById('h-b').value);
+      document.getElementById('h-extra-wrap').hidden = !(type === 'boost' || type === 'nosweat');
+      document.getElementById('h-extra-label').textContent = type === 'boost' ? 'Boost (%)' : 'Value of the refund (%)';
+      if (type === 'nosweat' && !document.getElementById('h-extra').dataset.touched) document.getElementById('h-extra').value = 70;
+      if (type === 'boost' && !document.getElementById('h-extra').dataset.touched) document.getElementById('h-extra').value = 50;
+      document.getElementById('h-amt-label').textContent = type === 'bonus' ? 'Bonus bet amount ($)' : 'Your stake ($)';
+      document.getElementById('h-tip').textContent = {
+        bonus: 'Longer odds keep more of a bonus bet: around +250 to +500, with a close price on the other side (the two odds near each other, e.g. +300 / -350).',
+        qual: 'A qualifying bet usually costs a little; pick near-even odds on both sides (e.g. -110 / +100) to keep the cost small.',
+        nosweat: 'If it loses you get a bonus bet back; "value of the refund" is what that bonus will be worth in cash after you hedge it (usually 65-75%).',
+        boost: 'A boost raises your winnings. Hedging locks in part of the boost; not hedging keeps more on average but risks the stake.',
+      }[type];
+      const out = document.getElementById('h-out');
+      if (!S || !A || !B) { out.innerHTML = '<p class="help" style="margin:0">Enter the amount and both odds (American, e.g. +300 and -350).</p>'; return; }
+      if (type === 'boost') A = 1 + (A - 1) * (1 + extra / 100);
+      const r = extra / 100;
+      const H = type === 'bonus' ? S * (A - 1) / B : type === 'nosweat' ? (S * A - r * S) / B : S * A / B;
+      const winA = type === 'bonus' ? S * (A - 1) - H : S * (A - 1) - H;
+      const winB = type === 'bonus' ? H * (B - 1) : type === 'nosweat' ? H * (B - 1) - S + r * S : H * (B - 1) - S;
+      const lock = Math.min(winA, winB);
+      const marketMargin = 1 / dec(document.getElementById('h-a').value) + 1 / B - 1;
+      out.innerHTML = `
+        <div class="hstat"><small>Bet at the other book</small><span class="num">${money(H)}</span> on the other side</div>
+        <div class="hstat ${lock >= 0 ? 'big' : 'bad'}"><small>${lock >= 0 ? 'Locked-in profit' : 'Cost'} (either way)</small><span class="num">${money(lock)}</span>
+          ${type === 'bonus' ? `<br><small>${Math.round(100 * lock / S)}% of the bonus kept as cash</small>` : ''}</div>
+        <div class="hstat"><small>If the offer's side wins / if the other side wins</small>${money(winA)} / ${money(winB)}${type === 'nosweat' ? ' (incl. the refund at its cash value)' : ''}</div>
+        ${marketMargin > 0.08 ? `<p class="help" style="margin:0;color:var(--bad)">These two prices have a big margin (${(marketMargin * 100).toFixed(1)}%): look for closer odds on the other side.</p>` : ''}`;
+    }
+    ['h-type', 'h-amt', 'h-extra', 'h-a', 'h-b'].forEach(id => document.getElementById(id).addEventListener('input', hedgeCalc));
+    document.getElementById('h-extra').addEventListener('input', e => { e.target.dataset.touched = '1'; });
+    document.getElementById('h-type').addEventListener('change', () => { document.getElementById('h-extra').dataset.touched = ''; hedgeCalc(); });
+    hedgeCalc();
   </script>
 </body>
 </html>

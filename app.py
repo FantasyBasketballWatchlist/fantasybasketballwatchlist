@@ -148,14 +148,19 @@ def injuries():
     return render_template("injuries.html")
 
 
+@app.route("/betting")
+def betting():
+    return render_template("betting.html")
+
+
 @app.route("/games")
 def games():
-    return render_template("games.html")
+    return redirect("/betting", code=301)                # the Games page became the Betting tab
 
 
 # ---------- search engines and icons ----------
 SITE_URL = "https://hoopothesis.cc"
-PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/games", "/trade-analyzer", "/waiver-wires"]
+PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/betting", "/trade-analyzer", "/waiver-wires"]
 
 
 @app.route("/hoopothesis-espn.user.js")

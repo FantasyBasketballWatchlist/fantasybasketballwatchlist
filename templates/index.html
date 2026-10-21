@@ -217,10 +217,10 @@
       return out;
     }
 
-    // Single-game projections (Games page; rules: docs/prereg-game-projections.md and -fix.md), from live_checks.
+    // Single-game projections (Betting page; rules: docs/prereg-game-projections.md and -fix.md), from live_checks.
     function gameChecks(g) {
       const PRED_ACC = 'Our single-game projections miss by less than each player’s season average (fantasy points, points, rebounds, assists).';
-      const PRED_RNG = '80% of results land inside the likely range shown on the Games page.';
+      const PRED_RNG = '80% of results land inside the likely range shown on the Betting page.';
       const PRED_LINE = 'When we give one side of a line X%, it wins about X% of the time (lines set at his average).';
       if (!g || g.status !== 'scored') {
         const when = 'after the first morning’s projections are followed by games';
@@ -292,7 +292,7 @@
           checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
           note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded on the opening-day version, after a fix for players returning from short seasons (the 8 AM version is archived).' : '' },
         { key: 'night', title: 'Nightly & weekly', sub: 'Single inputs to the model, not the rankings', checks: nightlyChecks(data.live_checks) },
-        { key: 'games', title: 'Single games', sub: 'The Games page: each player’s next-game projection, logged every morning before tip-off', checks: gameChecks(data.live_checks && data.live_checks.games) },
+        { key: 'games', title: 'Single games', sub: 'The Betting page: each player’s next-game projection, logged every morning before tip-off', checks: gameChecks(data.live_checks && data.live_checks.games) },
       ].filter(g => g.checks.length);
 
       const all = groups.flatMap(g => g.checks);
