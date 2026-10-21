@@ -1,0 +1,462 @@
+{
+ "rules": "docs/prereg-ecr-gap.md",
+ "seasons": {
+  "2021-22": {
+   "pool": 178,
+   "pairs": 15730,
+   "concordance_blend": 0.6855,
+   "concordance_ecr": 0.7121,
+   "ecr_extra_correct_pairs": 419.0,
+   "top50_pairs": {
+    "pairs": 1707,
+    "concordance_blend": 0.6462,
+    "concordance_ecr": 0.6356
+   }
+  },
+  "2023-24": {
+   "pool": 168,
+   "pairs": 14027,
+   "concordance_blend": 0.745,
+   "concordance_ecr": 0.7478,
+   "ecr_extra_correct_pairs": 40.0,
+   "top50_pairs": {
+    "pairs": 1596,
+    "concordance_blend": 0.683,
+    "concordance_ecr": 0.6673
+   }
+  },
+  "2024-25": {
+   "pool": 165,
+   "pairs": 13529,
+   "concordance_blend": 0.7066,
+   "concordance_ecr": 0.7103,
+   "ecr_extra_correct_pairs": 50.0,
+   "top50_pairs": {
+    "pairs": 1769,
+    "concordance_blend": 0.6512,
+    "concordance_ecr": 0.6382
+   }
+  },
+  "2025-26": {
+   "pool": 168,
+   "pairs": 14027,
+   "concordance_blend": 0.6816,
+   "concordance_ecr": 0.6882,
+   "ecr_extra_correct_pairs": 93.0,
+   "top50_pairs": {
+    "pairs": 1711,
+    "concordance_blend": 0.5938,
+    "concordance_ecr": 0.6622
+   }
+  }
+ },
+ "total_ecr_extra_correct_pairs": 602.0,
+ "by_group": {
+  "no NBA history": {
+   "players": 23,
+   "contribution": -14.5,
+   "share_of_ecr_edge": -0.024,
+   "per_player": -0.63,
+   "by_season": {
+    "2021-22": 25.5,
+    "2023-24": -10.5,
+    "2024-25": 7.0,
+    "2025-26": -36.5
+   },
+   "seasons_ecr_ahead": "2 of 4"
+  },
+  "injury / short season": {
+   "players": 24,
+   "contribution": 197.0,
+   "share_of_ecr_edge": 0.327,
+   "per_player": 8.21,
+   "by_season": {
+    "2021-22": 123.5,
+    "2023-24": 68.5,
+    "2024-25": -4.5,
+    "2025-26": 9.5
+   },
+   "seasons_ecr_ahead": "3 of 4"
+  },
+  "team changer": {
+   "players": 98,
+   "contribution": 12.0,
+   "share_of_ecr_edge": 0.02,
+   "per_player": 0.12,
+   "by_season": {
+    "2021-22": 41.5,
+    "2023-24": -16.5,
+    "2024-25": 11.5,
+    "2025-26": -24.5
+   },
+   "seasons_ecr_ahead": "2 of 4"
+  },
+  "second year": {
+   "players": 49,
+   "contribution": -2.5,
+   "share_of_ecr_edge": -0.004,
+   "per_player": -0.05,
+   "by_season": {
+    "2021-22": 9.0,
+    "2023-24": -1.5,
+    "2024-25": -10.5,
+    "2025-26": 0.5
+   },
+   "seasons_ecr_ahead": "2 of 4"
+  },
+  "settled veteran": {
+   "players": 485,
+   "contribution": 410.0,
+   "share_of_ecr_edge": 0.681,
+   "per_player": 0.85,
+   "by_season": {
+    "2021-22": 219.5,
+    "2023-24": 0.0,
+    "2024-25": 46.5,
+    "2025-26": 144.0
+   },
+   "seasons_ecr_ahead": "3 of 4"
+  }
+ },
+ "overlapping": {
+  "age 32+": {
+   "players": 121,
+   "contribution": 91.0,
+   "per_player": 0.75
+  },
+  "age <= 23": {
+   "players": 124,
+   "contribution": 118.5,
+   "per_player": 0.96
+  }
+ },
+ "top_ecr_gains": [
+  {
+   "season": "2025-26",
+   "name": "Jayson Tatum",
+   "group": "settled veteran",
+   "contrib": 65.0,
+   "ecr": NaN,
+   "base_rank": 6.0,
+   "act_rank": 152.0,
+   "base_fpg": 46.6,
+   "act_fpg": NaN,
+   "base_gp": 67.8,
+   "act_games": 16.0
+  },
+  {
+   "season": "2023-24",
+   "name": "Miles Bridges",
+   "group": "injury / short season",
+   "contrib": 31.0,
+   "ecr": 81.0,
+   "base_rank": 147.0,
+   "act_rank": 45.0,
+   "base_fpg": 30.9,
+   "act_fpg": 37.1,
+   "base_gp": 49.0,
+   "act_games": 69.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Jonathan Isaac",
+   "group": "injury / short season",
+   "contrib": 29.0,
+   "ecr": 122.0,
+   "base_rank": 64.0,
+   "act_rank": 175.5,
+   "base_fpg": 37.0,
+   "act_fpg": NaN,
+   "base_gp": 58.5,
+   "act_games": 0.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Evan Mobley",
+   "group": "no NBA history",
+   "contrib": 29.0,
+   "ecr": 105.0,
+   "base_rank": 167.0,
+   "act_rank": 48.0,
+   "base_fpg": 23.2,
+   "act_fpg": 33.7,
+   "base_gp": 61.9,
+   "act_games": 69.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Jordan Poole",
+   "group": "settled veteran",
+   "contrib": 26.5,
+   "ecr": 121.0,
+   "base_rank": 178.0,
+   "act_rank": 49.0,
+   "base_fpg": 19.5,
+   "act_fpg": 30.4,
+   "base_gp": 58.5,
+   "act_games": 76.0
+  },
+  {
+   "season": "2021-22",
+   "name": "T.J. Warren",
+   "group": "injury / short season",
+   "contrib": 26.0,
+   "ecr": 183.0,
+   "base_rank": 114.0,
+   "act_rank": 175.5,
+   "base_fpg": 29.4,
+   "act_fpg": NaN,
+   "base_gp": 57.6,
+   "act_games": 0.0
+  },
+  {
+   "season": "2024-25",
+   "name": "Reed Sheppard",
+   "group": "no NBA history",
+   "contrib": 26.0,
+   "ecr": 176.0,
+   "base_rank": 101.0,
+   "act_rank": 161.0,
+   "base_fpg": 30.8,
+   "act_fpg": 10.9,
+   "base_gp": 60.2,
+   "act_games": 52.0
+  },
+  {
+   "season": "2023-24",
+   "name": "Devin Vassell",
+   "group": "injury / short season",
+   "contrib": 25.5,
+   "ecr": 79.0,
+   "base_rank": 142.0,
+   "act_rank": 63.0,
+   "base_fpg": 35.2,
+   "act_fpg": 34.9,
+   "base_gp": 43.9,
+   "act_games": 68.0
+  },
+  {
+   "season": "2023-24",
+   "name": "Scoot Henderson",
+   "group": "no NBA history",
+   "contrib": 25.5,
+   "ecr": 140.0,
+   "base_rank": 59.0,
+   "act_rank": 138.0,
+   "base_fpg": 35.0,
+   "act_fpg": 22.9,
+   "base_gp": 60.2,
+   "act_games": 62.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Jalen Suggs",
+   "group": "no NBA history",
+   "contrib": 24.5,
+   "ecr": 118.0,
+   "base_rank": 55.0,
+   "act_rank": 142.0,
+   "base_fpg": 34.7,
+   "act_fpg": 21.5,
+   "base_gp": 64.5,
+   "act_games": 48.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Thomas Bryant",
+   "group": "injury / short season",
+   "contrib": 22.5,
+   "ecr": 177.0,
+   "base_rank": 112.0,
+   "act_rank": 165.0,
+   "base_fpg": 32.4,
+   "act_fpg": 16.2,
+   "base_gp": 52.5,
+   "act_games": 27.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Reggie Jackson",
+   "group": "settled veteran",
+   "contrib": 21.0,
+   "ecr": 107.0,
+   "base_rank": 161.0,
+   "act_rank": 69.0,
+   "base_fpg": 23.4,
+   "act_fpg": 27.5,
+   "base_gp": 62.8,
+   "act_games": 75.0
+  },
+  {
+   "season": "2025-26",
+   "name": "Kawhi Leonard",
+   "group": "settled veteran",
+   "contrib": 21.0,
+   "ecr": 39.0,
+   "base_rank": 81.0,
+   "act_rank": 13.0,
+   "base_fpg": 37.5,
+   "act_fpg": 48.7,
+   "base_gp": 52.5,
+   "act_games": 65.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Kyrie Irving",
+   "group": "settled veteran",
+   "contrib": 20.0,
+   "ecr": 78.0,
+   "base_rank": 24.0,
+   "act_rank": 126.5,
+   "base_fpg": 48.5,
+   "act_fpg": 48.1,
+   "base_gp": 56.8,
+   "act_games": 29.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Mo Bamba",
+   "group": "settled veteran",
+   "contrib": 19.5,
+   "ecr": 126.0,
+   "base_rank": 177.0,
+   "act_rank": 75.0,
+   "base_fpg": 21.7,
+   "act_fpg": 28.6,
+   "base_gp": 53.3,
+   "act_games": 71.0
+  }
+ ],
+ "top_blend_gains": [
+  {
+   "season": "2021-22",
+   "name": "Scottie Barnes",
+   "group": "no NBA history",
+   "contrib": -33.0,
+   "ecr": 191.0,
+   "base_rank": 106.0,
+   "act_rank": 35.0,
+   "base_fpg": 27.9,
+   "act_fpg": 33.2,
+   "base_gp": 64.5,
+   "act_games": 74.0
+  },
+  {
+   "season": "2025-26",
+   "name": "Zach Edey",
+   "group": "second year",
+   "contrib": -25.5,
+   "ecr": 107.0,
+   "base_rank": 164.0,
+   "act_rank": 161.0,
+   "base_fpg": 27.0,
+   "act_fpg": NaN,
+   "base_gp": 51.6,
+   "act_games": 11.0
+  },
+  {
+   "season": "2025-26",
+   "name": "D'Angelo Russell",
+   "group": "team changer",
+   "contrib": -22.0,
+   "ecr": 90.0,
+   "base_rank": 144.0,
+   "act_rank": 159.0,
+   "base_fpg": 27.9,
+   "act_fpg": 17.8,
+   "base_gp": 56.8,
+   "act_games": 26.0
+  },
+  {
+   "season": "2023-24",
+   "name": "Robert Williams III",
+   "group": "team changer",
+   "contrib": -21.5,
+   "ecr": 96.0,
+   "base_rank": 139.0,
+   "act_rank": 168.0,
+   "base_fpg": 29.1,
+   "act_fpg": NaN,
+   "base_gp": 53.3,
+   "act_games": 6.0
+  },
+  {
+   "season": "2024-25",
+   "name": "Jalen Suggs",
+   "group": "settled veteran",
+   "contrib": -21.0,
+   "ecr": 83.0,
+   "base_rank": 139.0,
+   "act_rank": 146.0,
+   "base_fpg": 27.0,
+   "act_fpg": 30.7,
+   "base_gp": 60.2,
+   "act_games": 35.0
+  },
+  {
+   "season": "2023-24",
+   "name": "Shaedon Sharpe",
+   "group": "second year",
+   "contrib": -20.5,
+   "ecr": 93.0,
+   "base_rank": 152.0,
+   "act_rank": 154.0,
+   "base_fpg": 22.3,
+   "act_fpg": 26.0,
+   "base_gp": 65.4,
+   "act_games": 32.0
+  },
+  {
+   "season": "2025-26",
+   "name": "Bradley Beal",
+   "group": "team changer",
+   "contrib": -20.0,
+   "ecr": 92.0,
+   "base_rank": 132.0,
+   "act_rank": 167.0,
+   "base_fpg": 29.3,
+   "act_fpg": NaN,
+   "base_gp": 55.9,
+   "act_games": 6.0
+  },
+  {
+   "season": "2025-26",
+   "name": "Cooper Flagg",
+   "group": "no NBA history",
+   "contrib": -19.5,
+   "ecr": 87.0,
+   "base_rank": 38.0,
+   "act_rank": 25.0,
+   "base_fpg": 38.1,
+   "act_fpg": 39.7,
+   "base_gp": 64.5,
+   "act_games": 70.0
+  },
+  {
+   "season": "2024-25",
+   "name": "Taylor Hendricks",
+   "group": "second year",
+   "contrib": -18.5,
+   "ecr": 127.0,
+   "base_rank": 164.0,
+   "act_rank": 165.0,
+   "base_fpg": 22.3,
+   "act_fpg": NaN,
+   "base_gp": 58.5,
+   "act_games": 3.0
+  },
+  {
+   "season": "2021-22",
+   "name": "Derrick Favors",
+   "group": "team changer",
+   "contrib": -17.5,
+   "ecr": 125.0,
+   "base_rank": 176.0,
+   "act_rank": 162.0,
+   "base_fpg": 19.2,
+   "act_fpg": 13.8,
+   "base_gp": 61.1,
+   "act_games": 39.0
+  }
+ ]
+}

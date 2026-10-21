@@ -133,6 +133,12 @@ ESPN_GAMES_SCALE = 0.86
 # -0.0033 to -0.0011, 4 of 4 seasons, stars not worse; most of the gain in the first two weeks.
 EARLY_ESPN_K = 41
 
+# Before a season, when ESPN expects a player to miss (most of) the season (0 projected games, or no projection while
+# listed OUT), he is expected to play this many games. The 15 regulars ESPN flagged this way in 2021-22 and 2023-24..
+# 2025-26 played 14 games on average (Tatum 2025-26: 16; Lillard: 0); BPV used to ignore the flag and project ~55-60.
+# Small sample; found by the expert-gap decomposition (docs/prereg-ecr-gap.md), where Tatum alone was 11% of the gap.
+ESPN_OUT_GAMES = 14
+
 # Between seasons, last season's FPTS/game is replaced by per-minute rates x last season's minutes. Each
 # scoring stat's rate uses the last 3 seasons, each game weighted 0.5 ** (days before the new season /
 # half-life), padded with `pad` minutes at the league-average rate. Half-lives and pads were fitted per
@@ -300,7 +306,7 @@ def build(today=None):
     debuts = bpv.debut_ids(seasons, pg, draft)[production_season]
     prev_season = hist[hist["season"] == seasons[-2]].set_index("PLAYER_ID")
     this_season = hist[hist["season"] == production_season].set_index("PLAYER_ID")
-    espn, frozen_prior, preseason_prior, fpts_rates = {}, {}, {}, {}
+    espn, frozen_prior, preseason_prior, fpts_rates, espn_out = {}, {}, {}, {}, set()
     if mode == "in-season":
         frozen_prior = _load_preseason_prior(production_season)
         ages = nba_data.player_ages(seasons[-2]).set_index("PLAYER_ID")["AGE"]
@@ -319,7 +325,9 @@ def build(today=None):
         draftees = draft[draft["SEASON"].astype(int) == nba_data.season_start_year(target_season)]
         draftees = draftees.drop_duplicates("PERSON_ID").set_index("PERSON_ID")["PLAYER_NAME"]
         names = pd.concat([names, returning[~returning.index.isin(names.index)]])
-        espn = _espn_by_player(pd.concat([names, draftees[~draftees.index.isin(names.index)]]), target_season)
+        espn_names = pd.concat([names, draftees[~draftees.index.isin(names.index)]])
+        espn = _espn_by_player(espn_names, target_season)
+        espn_out = _espn_out(espn_names, target_season)
         fpts_rates = _fpts_rates(pg, seasons, target_season)
 
     last_games = dict(tuple(pg[seasons[-2]].groupby("PLAYER_ID")))
@@ -560,9 +568,18 @@ def build(today=None):
             "per_game": None, "last_games": [],
         })
 
+    # ESPN expects him to miss (most of) the season: availability from ESPN_OUT_GAMES instead of his history.
+    for r in rows:
+        if r["id"] in espn_out:
+            r["availability"] = ESPN_OUT_GAMES / SEASON_GAMES
+            r["production_note"] += "; ESPN expects him to miss most of the season"
     if mode != "in-season" and live and not _season_started(target_season):
         _save_preseason_prior(target_season, preseason_prior)
-        _save_preseason_espn_games(target_season, {int(r["id"]): r["espn_games"] for r in rows if r.get("espn_games")})
+        # The early-season fade turns saved games into availability (x ESPN_GAMES_SCALE), so out players are saved
+        # at the games that give ESPN_OUT_GAMES.
+        saved_games = {int(r["id"]): r["espn_games"] for r in rows if r.get("espn_games")}
+        saved_games.update({int(r["id"]): ESPN_OUT_GAMES / ESPN_GAMES_SCALE for r in rows if r["id"] in espn_out})
+        _save_preseason_espn_games(target_season, saved_games)
     df = pd.DataFrame(rows)
     ranked = df[df["games"] >= MIN_GAMES_RANKED]
     if len(ranked) >= max(REPLACEMENT_POOL_MIN, REPLACEMENT_RANK + 100):
@@ -841,6 +858,19 @@ def _fpts_rates(pg, seasons, target_season):
         rate = (sums["s"] + pad * league_rate) / (sums["m"] + pad) * bpv.SCORING[stat]
         total = rate if total is None else total + rate
     return total.dropna().to_dict()
+
+
+def _espn_out(names, target_season):
+    """Player ids ESPN expects to miss (most of) the season (see ESPN_OUT_GAMES), or an empty set."""
+    try:
+        proj = nba_data.espn_projections(target_season)
+    except Exception:
+        return set()
+    if proj is None or proj.empty:
+        return set()
+    out = proj["ESPN_OUT"].astype(bool) if "ESPN_OUT" in proj else proj["ESPN_GP"].fillna(-1).eq(0)
+    keys = {_espn_key(n) for n in proj.loc[out, "PLAYER_NAME"]}
+    return {pid for pid, n in names.items() if _espn_key(n) in keys}
 
 
 def _espn_by_player(names, target_season):

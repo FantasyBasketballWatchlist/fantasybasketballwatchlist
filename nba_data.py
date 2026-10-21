@@ -321,6 +321,7 @@ def espn_projections(season):
 
     Uses ESPN's public (undocumented) fantasy API, read-only. Before a season these are ESPN's
     preseason projections; during a season ESPN updates them to rest-of-season values.
+    ESPN_OUT: ESPN expects him to miss (most of) the season: 0 projected games, or no projection while listed OUT.
     """
     def fetch():
         import requests
@@ -331,12 +332,17 @@ def espn_projections(season):
         rows = []
         for p in r.json().get("players", []):
             pl = p["player"]
+            projected = False
             for s in pl.get("stats", []):
                 if s.get("statSourceId") == 1 and s.get("statSplitTypeId") == 0 and s.get("seasonId") == year:
                     avg = s.get("averageStats") or {}
                     fpg = sum(w * avg.get(ESPN_STATS[k], 0.0) for k, w in ESPN_SCORING.items())
-                    rows.append({"PLAYER_NAME": pl["fullName"], "ESPN_FPG": fpg, "ESPN_GP": s["stats"].get("42", 0.0)})
-        return pd.DataFrame(rows, columns=["PLAYER_NAME", "ESPN_FPG", "ESPN_GP"])
+                    gp = s["stats"].get("42", 0.0)
+                    rows.append({"PLAYER_NAME": pl["fullName"], "ESPN_FPG": fpg, "ESPN_GP": gp, "ESPN_OUT": gp == 0})
+                    projected = True
+            if not projected and pl.get("injuryStatus") == "OUT":
+                rows.append({"PLAYER_NAME": pl["fullName"], "ESPN_FPG": float("nan"), "ESPN_GP": float("nan"), "ESPN_OUT": True})
+        return pd.DataFrame(rows, columns=["PLAYER_NAME", "ESPN_FPG", "ESPN_GP", "ESPN_OUT"])
     return _cached(f"espn_projections_{season}", fetch, True)
 
 
