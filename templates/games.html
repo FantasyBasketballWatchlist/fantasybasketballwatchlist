@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set page_title = "Tonight's NBA Player Projections: Points, Rebounds, Assists, Threes | Hoopothesis" %}
+  {% set page_description = "Single-game projections for every NBA player playing tonight, with likely ranges and the chance of going over any line." %}
+  {% set canonical_path = '/games' %}
+  {% include '_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <style>
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 0 0 14px; }
+    .chip { background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: .82rem; font-weight: 600;
+      padding: 6px 11px; border-radius: 999px; cursor: pointer; transition: color .15s var(--ease), border-color .15s var(--ease); }
+    .chip:hover { color: var(--text); }
+    .chip.on { color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); border-color: transparent; }
+    .seg { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0 0 12px; }
+    .seg button { background: none; border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: .8rem; font-weight: 600; padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+    .seg button.on { color: var(--text); border-color: var(--orange); background: rgba(255,122,26,.1); }
+    .tools { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .tools input { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 10px; padding: 8px 12px; min-width: 220px; }
+    .tools input:focus { outline: none; border-color: var(--orange); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .checker { order: -1; } }
+    .range { position: relative; height: 8px; border-radius: 99px; background: rgba(148,163,184,.12); min-width: 80px; }
+    .range i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: linear-gradient(90deg, rgba(255,176,32,.45), rgba(255,122,26,.75)); }
+    .range b { position: absolute; top: -3px; width: 3px; height: 14px; border-radius: 2px; background: var(--text); }
+    td .who { font-weight: 600; } td .sub { display: block; color: var(--dim); font-size: .76rem; font-weight: 400; }
+    .status { font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: uppercase; margin-left: 4px; }
+    .status.Out { color: #fecaca; background: rgba(248,113,113,.16); } .status.Doubtful { color: #fed7aa; background: rgba(251,146,60,.16); }
+    .status.Questionable { color: #fde7b0; background: rgba(255,176,32,.14); } .status.Probable, .status.Available { color: #c9f5e3; background: rgba(52,211,153,.13); }
+    tr.pickable { cursor: pointer; } tr.pickable:hover td { background: rgba(255,122,26,.05); } tr.sel td { background: rgba(255,122,26,.09); }
+    .diff.up { color: var(--good); } .diff.down { color: var(--bad); }
+    .checker { position: sticky; top: 84px; }
+    .checker h3 { margin-bottom: 8px; }
+    .checker label { display: block; font-size: .78rem; color: var(--muted); margin-top: 10px; }
+    .checker select, .checker input { width: 100%; margin-top: 4px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 7px 10px; }
+    .checker .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .odds-out { margin-top: 14px; display: grid; gap: 8px; }
+    .side { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 9px 11px; border-radius: 10px; background: rgba(10,15,28,.45); border: 1px solid var(--border); }
+    .side .num { font-size: 1.6rem; font-weight: 700; } .side small { color: var(--dim); display: block; font-size: .72rem; }
+    .side .ev.good { color: var(--good); } .side .ev.bad { color: var(--bad); }
+    .caveat { font-size: .78rem; color: var(--muted); line-height: 1.5; margin-top: 12px; padding: 9px 11px; border-radius: 10px;
+      background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.25); }
+    .empty { color: var(--dim); text-align: center; padding: 26px; }
+  </style>
+</head>
+<body>
+  {% set active = 'games' %}{% include '_nav.html' %}
+
+  <main class="page">
+    <section class="hero">
+      <h1>Game <span class="accent">Projections</span></h1>
+      <p>Every player in the next night's games: what he should put up if he plays, the likely range, and the chance of
+        going over any line</p>
+      <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
+    </section>
+
+    <div class="chips" id="games"></div>
+    <div class="seg" id="stat-seg"></div>
+    <div class="tools"><input id="search" placeholder="Find a player" autocomplete="off" spellcheck="false" aria-label="Find a player"></div>
+
+    <div class="layout">
+      <div class="card table-wrap">
+        <table class="data" id="table">
+          <thead><tr><th>Player</th><th class="r" title="Chance he plays">Plays</th><th class="r">Projection</th>
+            <th>Likely range <small style="color:var(--dim);font-weight:400">(80% of games)</small></th>
+            <th class="r" title="His average this season (last season's early on)">Season avg</th><th class="r">vs avg</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <aside class="card panel checker" style="--c: var(--orange)">
+        <h3><span class="dot"></span>Check a line</h3>
+        <label>Player <select id="ck-player"></select></label>
+        <div class="row2">
+          <label>Stat <select id="ck-stat"></select></label>
+          <label>Line <input id="ck-line" type="number" step="0.5" inputmode="decimal"></label>
+        </div>
+        <label>Odds (American, optional) <input id="ck-odds" placeholder="-110" inputmode="numeric"></label>
+        <div class="odds-out" id="ck-out"></div>
+        <p class="caveat"><b>Read this first.</b> Chances assume he plays (a bet on a player who sits is void). In
+          testing on a season the model never saw, its projections beat each player's season average and its ranges were
+          honest, but its over/under chances ran a little <b>overconfident</b> for points, rebounds and assists (and
+          underconfident for fantasy points), and nothing has been tested against real sportsbook lines yet. Treat it as
+          information, not a betting edge. <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-game-projections-fix.md" target="_blank" rel="noopener">How it was tested</a>.
+          Sports betting is 21+ and legal only in some states.</p>
+      </aside>
+    </div>
+
+    <p class="footer-note">Projection = his stat mix over his last 82 games, scaled to BPV's per-game value and adjusted for
+      recent minutes, the opponent, back-to-backs and home/away. The range is the middle 80% of his likely outcomes. Its
+      accuracy is tracked every night in "How accurate has BPV been?" on the Rankings page.</p>
+  </main>
+
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    let data = null, stat = 'PTS', game = 'all', query = '', selected = null;
+    const FALLBACK_LABELS = { PTS: 'Points', REB: 'Rebounds', AST: 'Assists', FG3M: 'Threes', PRA: 'Pts+Reb+Ast', STL: 'Steals', BLK: 'Blocks', TOV: 'Turnovers', FPTS: 'Fantasy pts (ESPN)' };
+    const label = (s) => (data && data.labels && data.labels[s]) || FALLBACK_LABELS[s] || s;
+    const COUNTS = new Set(['PTS', 'REB', 'AST', 'FG3M', 'STL', 'BLK', 'TOV', 'PRA']);
+
+    // ---------- distributions (same as game_projections.py)
+    function nbPmf(mean, v, kmax) {
+      const p = [];
+      if (mean <= 0) { p.push(1); for (let k = 0; k < kmax; k++) p.push(0); return p; }
+      if (v <= mean * 1.0001) { p.push(Math.exp(-mean)); for (let k = 0; k < kmax; k++) p.push(p[k] * mean / (k + 1)); return p; }
+      const r = mean * mean / (v - mean), q = mean / (r + mean);
+      p.push(Math.exp(r * Math.log(1 - q)));
+      for (let k = 0; k < kmax; k++) p.push(p[k] * (k + r) / (k + 1) * q);
+      return p;
+    }
+    function erf(x) {                                    // Abramowitz-Stegun 7.1.26
+      const t = 1 / (1 + 0.3275911 * Math.abs(x));
+      const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return x >= 0 ? y : -y;
+    }
+    function cdf(s, mean, v, x) {
+      if (!COUNTS.has(s)) return 0.5 * (1 + erf((x - mean) / Math.sqrt(2 * Math.max(v, 1e-9))));
+      const k = Math.floor(x);
+      if (k < 0) return 0;
+      return Math.min(1, nbPmf(mean, v, k).reduce((a, b) => a + b, 0));
+    }
+
+    // ---------- odds
+    const toDecimal = (am) => am > 0 ? 1 + am / 100 : 1 + 100 / Math.abs(am);
+    const fairAmerican = (p) => p <= 0 || p >= 1 ? '—' : p >= 0.5 ? `${Math.round(-100 * p / (1 - p))}` : `+${Math.round(100 * (1 - p) / p)}`;
+
+    function playersShown() {
+      if (!data) return [];
+      return data.players.filter(p => (game === 'all' || p.team === game || p.opp === game)
+        && (!query || normalizeString(p.name).includes(query)));
+    }
+
+    function renderTable() {
+      const rows = playersShown().slice().sort((a, b) => b.stats[stat].mean - a.stats[stat].mean);
+      const tbody = document.querySelector('#table tbody');
+      if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6" class="empty">${data && data.players.length ? 'No players match.' : 'No games scheduled.'}</td></tr>`; return; }
+      const top = Math.max(...rows.map(p => p.stats[stat].q90), 1);
+      tbody.innerHTML = rows.map(p => {
+        const s = p.stats[stat], avg = p.bench ? p.bench[stat] : null, diff = avg == null ? null : s.mean - avg;
+        const pct = (x) => Math.max(0, Math.min(100, 100 * x / top));
+        return `<tr class="pickable${selected === p.id ? ' sel' : ''}" data-id="${p.id}">
+          <td><span class="who">${escapeHtml(p.name)}</span>${p.status ? `<span class="status ${escapeHtml(p.status)}">${escapeHtml(p.status)}</span>` : ''}
+            <span class="sub">${escapeHtml(p.team)} ${p.home ? 'vs' : '@'} ${escapeHtml(p.opp)}${p.b2b ? ' · back-to-back' : ''}</span></td>
+          <td class="r">${p.play_probability == null ? '—' : Math.round(100 * p.play_probability) + '%'}</td>
+          <td class="r"><b>${fmt(s.mean, 1)}</b></td>
+          <td><div class="range" title="${fmt(s.q10, 0)} to ${fmt(s.q90, 0)}"><i style="left:${pct(s.q10)}%;right:${100 - pct(s.q90)}%"></i><b style="left:calc(${pct(s.mean)}% - 1px)"></b></div>
+            <span class="sub">${fmt(s.q10, 0)} – ${fmt(s.q90, 0)}</span></td>
+          <td class="r">${avg == null ? '—' : fmt(avg, 1)}</td>
+          <td class="r"><span class="diff ${diff > 0.05 ? 'up' : diff < -0.05 ? 'down' : ''}">${diff == null ? '' : (diff > 0 ? '+' : '') + fmt(diff, 1)}</span></td></tr>`;
+      }).join('');
+    }
+
+    function renderChecker() {
+      const out = document.getElementById('ck-out');
+      const p = data && data.players.find(x => x.id === selected);
+      if (!p) { out.innerHTML = '<p class="help" style="margin:0">Pick a player (or tap one in the table).</p>'; return; }
+      const s = document.getElementById('ck-stat').value, d = p.stats[s];
+      const line = parseFloat(document.getElementById('ck-line').value);
+      if (!isFinite(line)) { out.innerHTML = '<p class="help" style="margin:0">Enter the line.</p>'; return; }
+      const atOrBelow = cdf(s, d.mean, d.var, line);
+      const push = Number.isInteger(line) && COUNTS.has(s) ? atOrBelow - cdf(s, d.mean, d.var, line - 1) : 0;
+      const pOver = 1 - atOrBelow, pUnder = atOrBelow - push;
+      const oddsTxt = document.getElementById('ck-odds').value.trim();
+      const am = oddsTxt === '' ? null : parseFloat(oddsTxt);
+      const valid = am != null && isFinite(am) && Math.abs(am) >= 100;
+      const ev = (p) => { if (!valid) return null; const dec = toDecimal(am); return p * (dec - 1) - (1 - p - push); };
+      const sideHtml = (name, prob) => {
+        const e = ev(prob);
+        return `<div class="side"><div><small>${name}</small><span class="num">${Math.round(prob * 100)}%</span></div>
+          <div><small>Fair odds</small>${fairAmerican(prob)}</div>
+          <div>${e == null ? '' : `<small>Expected profit per $1 at ${am > 0 ? '+' : ''}${am}</small><b class="ev ${e > 0 ? 'good' : 'bad'}">${e >= 0 ? '+' : '−'}$${Math.abs(e).toFixed(2)}</b>`}</div></div>`;
+      };
+      const breakEven = valid ? 1 / toDecimal(am) : null;
+      out.innerHTML = sideHtml(`Over ${line}`, pOver) + sideHtml(`Under ${line}`, pUnder)
+        + (push > 0.001 ? `<p class="help" style="margin:0">Push (exactly ${line}): ${Math.round(push * 100)}%.</p>` : '')
+        + (breakEven ? `<p class="help" style="margin:0">At ${am > 0 ? '+' : ''}${am} a bet needs to win ${(breakEven * 100).toFixed(1)}% to break even.</p>` : '')
+        + `<p class="help" style="margin:0">${escapeHtml(p.name)}: ${fmt(d.mean, 1)} ${label(s).toLowerCase()} projected, ${fmt(d.q10, 0)}–${fmt(d.q90, 0)} in 80% of games${p.play_probability < 0.95 ? `; ${Math.round(100 * p.play_probability)}% to play` : ''}.</p>`;
+    }
+
+    function fillChecker() {
+      const sel = document.getElementById('ck-player');
+      const list = data.players.slice().sort((a, b) => a.name.localeCompare(b.name));
+      sel.innerHTML = '<option value="">Choose a player</option>' + list.map(p => `<option value="${p.id}"${p.id === selected ? ' selected' : ''}>${escapeHtml(p.name)} (${escapeHtml(p.team)})</option>`).join('');
+      document.getElementById('ck-stat').innerHTML = data.stats.map(s => `<option value="${s}"${s === stat ? ' selected' : ''}>${label(s)}</option>`).join('');
+    }
+
+    function choosePlayer(id) {
+      selected = id;
+      const p = data.players.find(x => x.id === id);
+      document.getElementById('ck-player').value = String(id);
+      document.getElementById('ck-stat').value = stat;
+      if (p) document.getElementById('ck-line').value = (Math.floor(p.stats[stat].mean) + 0.5).toFixed(1);
+      renderTable(); renderChecker();
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/games');
+        data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const day = data.day ? new Date(data.day + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : null;
+        document.getElementById('season-notice').textContent = day
+          ? `${day} · ${data.games.length} game${data.games.length === 1 ? '' : 's'} · ${data.players.length} players`
+          : 'No games scheduled.';
+        document.getElementById('games').innerHTML = `<button class="chip on" data-g="all">All games</button>` + data.games.map(g =>
+          `<button class="chip" data-g="${escapeHtml(g.home)}">${escapeHtml(g.away)} @ ${escapeHtml(g.home)}</button>`).join('');
+        document.getElementById('stat-seg').innerHTML = data.stats.map(s => `<button data-s="${s}"${s === stat ? ' class="on"' : ''}>${label(s)}</button>`).join('');
+        fillChecker(); renderTable(); renderChecker();
+      } catch (e) {
+        document.getElementById('season-notice').textContent = 'Could not load the projections.';
+      }
+    }
+
+    document.getElementById('games').addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      game = b.dataset.g; document.querySelectorAll('#games .chip').forEach(x => x.classList.toggle('on', x === b)); renderTable();
+    });
+    document.getElementById('stat-seg').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      stat = b.dataset.s; document.querySelectorAll('#stat-seg button').forEach(x => x.classList.toggle('on', x === b));
+      renderTable(); if (selected) choosePlayer(selected);
+    });
+    document.getElementById('search').addEventListener('input', e => { query = normalizeString(e.target.value.trim()); renderTable(); });
+    document.querySelector('#table tbody').addEventListener('click', e => { const r = e.target.closest('tr[data-id]'); if (r) choosePlayer(+r.dataset.id); });
+    document.getElementById('ck-player').addEventListener('change', e => { if (e.target.value) choosePlayer(+e.target.value); else { selected = null; renderTable(); renderChecker(); } });
+    document.getElementById('ck-stat').addEventListener('change', e => {
+      const p = data.players.find(x => x.id === selected);
+      if (p) document.getElementById('ck-line').value = (Math.floor(p.stats[e.target.value].mean) + 0.5).toFixed(1);
+      renderChecker();
+    });
+    ['ck-line', 'ck-odds'].forEach(id => document.getElementById(id).addEventListener('input', renderChecker));
+    load();
+  </script>
+</body>
+</html>

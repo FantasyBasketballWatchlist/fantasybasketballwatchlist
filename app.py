@@ -148,9 +148,14 @@ def injuries():
     return render_template("injuries.html")
 
 
+@app.route("/games")
+def games():
+    return render_template("games.html")
+
+
 # ---------- search engines and icons ----------
 SITE_URL = "https://hoopothesis.cc"
-PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/trade-analyzer", "/waiver-wires"]
+PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/games", "/trade-analyzer", "/waiver-wires"]
 
 
 @app.route("/hoopothesis-espn.user.js")
@@ -268,6 +273,23 @@ def get_injuries():
     """The latest official injury report, joined to BPV (see ratings.injury_list)."""
     players, meta = ratings.get()
     return jsonify(_clean({**ratings.injury_list(players, meta), "meta": _meta(meta)}))
+
+
+@app.route("/api/games")
+@cached_json
+def get_games():
+    """Single-game projections for the next game day (game_projections.today): per player, the mean and spread of each
+    stat if he plays, his chance of playing, and his season average."""
+    import game_projections
+    players, meta = ratings.get()
+    out = game_projections.today(players, meta)
+    keep = [r for r in out["players"] if r["minutes"] >= 8]
+    for r in keep:
+        for st in r["stats"].values():
+            for k in ("mean", "var", "q10", "q50", "q90"):
+                st[k] = round(float(st[k]), 3)
+    return jsonify(_clean({"day": out["day"], "games": out["games"], "players": keep, "labels": out.get("labels"),
+                           "stats": out.get("stats"), "meta": _meta(meta)}))
 
 
 @app.route("/api/positions")

@@ -217,6 +217,36 @@
       return out;
     }
 
+    // Single-game projections (Games page; rules: docs/prereg-game-projections.md and -fix.md), from live_checks.
+    function gameChecks(g) {
+      const PRED_ACC = 'Our single-game projections miss by less than each player’s season average (fantasy points, points, rebounds, assists).';
+      const PRED_RNG = '80% of results land inside the likely range shown on the Games page.';
+      const PRED_LINE = 'When we give one side of a line X%, it wins about X% of the time (lines set at his average).';
+      if (!g || g.status !== 'scored') {
+        const when = 'after the first morning’s projections are followed by games';
+        return [waiting('Single-game accuracy', PRED_ACC, when), waiting('Single-game ranges', PRED_RNG, when), waiting('Over/under chances', PRED_LINE, when)];
+      }
+      const st = g.stats, ok = g.passes || {}, judged = ok.judged;
+      const v = (pass) => !judged ? 'soon' : pass ? 'pass' : 'fail';
+      const sample = `${g.player_games} player-games over ${g.game_days} game day${g.game_days === 1 ? '' : 's'}${judged ? '' : ' (judged at 14 days and 1,000)'}.`;
+      const out = [];
+      out.push(check('Single-game accuracy', PRED_ACC,
+        ['PTS', 'REB', 'AST'].map(s => `${label(s)} ${fmt(st[s].mae, 2)} vs ${fmt(st[s].mae_bench, 2)}`).join(' · ') + '. ' + sample,
+        v(ok.accuracy), { stat: [fmt(st.FPTS.mae, 1), fmt(st.FPTS.mae_bench, 1), 'fantasy pts miss: ours vs his average'] }));
+      const pits = Object.values(st).map(x => x.pit_80).filter(x => x != null);
+      out.push(check('Single-game ranges', PRED_RNG,
+        Object.entries(st).map(([s, x]) => `${label(s)} ${pct(x.pit_80)}`).join(' · ') + '.',
+        v(ok.ranges), { stat: ['80%', pct(pits.reduce((a, b) => a + b, 0) / Math.max(pits.length, 1)), 'inside, all stats'] }));
+      const strong = (st.PTS.lines?.buckets || []).filter(b => b.from >= 0.6);
+      const n = strong.reduce((a, b) => a + b.n, 0);
+      const avg = (k) => n ? strong.reduce((a, b) => a + b[k] * b.n, 0) / n : null;
+      out.push(check('Over/under chances', PRED_LINE,
+        `Points picks we gave 60%+: ${n} so far. Brier (lower is better): ours ${fmt(st.PTS.lines?.brier, 3)} vs always-50% ${fmt(st.PTS.lines?.brier_50, 3)}.`,
+        v(ok.lines), { stat: [n ? pct(avg('predicted')) : '—', n ? pct(avg('actual')) : '—', 'points picks at 60%+'] }));
+      return out;
+    }
+    const label = (s) => ({ PTS: 'Points', REB: 'Rebounds', AST: 'Assists', FG3M: 'Threes', PRA: 'PRA', STL: 'Steals', BLK: 'Blocks', TOV: 'Turnovers', FPTS: 'Fantasy pts' })[s] || s;
+
     function cardHtml(c) {
       const stat = c.stat ? `<div class="check-stat"><div><small>Predicted</small><span class="num">${c.stat[0]}</span></div>
           <div class="check-arrow">→</div><div><small>Actual</small><span class="num">${c.stat[1]}</span></div>
@@ -262,6 +292,7 @@
           checks: pre ? rankingChecks(pre, h2hFor(pre.snapshot), summary, 'preseason') : [],
           note: pre && pre.snapshot === 'bpv_2026-10-20_pre_2026-27.csv' ? 'Graded on the opening-day version, after a fix for players returning from short seasons (the 8 AM version is archived).' : '' },
         { key: 'night', title: 'Nightly & weekly', sub: 'Single inputs to the model, not the rankings', checks: nightlyChecks(data.live_checks) },
+        { key: 'games', title: 'Single games', sub: 'The Games page: each player’s next-game projection, logged every morning before tip-off', checks: gameChecks(data.live_checks && data.live_checks.games) },
       ].filter(g => g.checks.length);
 
       const all = groups.flatMap(g => g.checks);

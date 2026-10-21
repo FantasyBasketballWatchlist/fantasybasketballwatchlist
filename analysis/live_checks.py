@@ -12,6 +12,8 @@ played, so the record builds itself during the season:
   play probability for his team's next game; scored as played / didn't play.
 - Preseason groups: the last preseason snapshot scored per game against ESPN's projection, for rookies,
   players returning from a missed season, and everyone else.
+- game_predictions.csv: the single-game projections (game_projections.py) for that day's games, logged at the first
+  morning refresh, scored against the box scores (rules: docs/prereg-game-projections.md).
 
 summary.json collects the results and any flags (a part doing worse than its benchmark on a fair sample).
 Flags are for a person to look at: nothing here changes the model by itself.
@@ -31,6 +33,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRACK_DIR = os.path.join(ROOT, "data", "tracking")
 WEEK_FILE = os.path.join(TRACK_DIR, "week_predictions.csv")
 INJURY_FILE = os.path.join(TRACK_DIR, "injury_predictions.csv")
+GAMES_FILE = os.path.join(TRACK_DIR, "game_predictions.csv")
+LOG_MIN_MINUTES = 10           # single-game projections are logged for players projected for 10+ minutes
 SUMMARY_FILE = os.path.join(TRACK_DIR, "summary.json")
 SNAPSHOT_DIR = os.path.join(ROOT, "data", "snapshots")
 
@@ -75,6 +79,11 @@ def record(players, meta, now=None):
                 "name": w["name"], "team": w["team"], "rank": w["rank"], "games_left": w["week_games"],
                 "predicted": w["week_fpts"].round(2), "benchmark": (w["season_fpts"] * w["week_games"]).round(2),
             }), ["week_end", "id"])
+    if now.hour < MORNING_BEFORE_HOUR:
+        try:
+            _log_game_projections(players, meta, today)
+        except Exception as e:                       # a new, untested part: never let it stop the refresh
+            print(f"single-game projections not logged: {type(e).__name__}: {e}")
     if now.hour >= EVENING_FROM_HOUR and "report_status" in players:
         r = players[players["report_status"].notna() & players["play_probability"].notna()]
         if len(r):
@@ -87,6 +96,17 @@ def record(players, meta, now=None):
                 "name": r["name"], "team": r["team"], "status": r["report_status"],
                 "play_probability": r["play_probability"].round(3),
             }), ["game_date", "id"])
+
+
+def _log_game_projections(players, meta, today):
+    import game_projections as gp
+    proj = gp.today(players, meta, day=today.isoformat())
+    if proj["players"]:
+        this_g = nba_data.player_game_logs(meta["season"])
+        bench = gp.benchmark(this_g[this_g["GAME_DATE"] < today.isoformat()],
+                             nba_data.player_game_logs(nba_data.previous_season(meta["season"])))
+        rotation = [r for r in proj["players"] if r["minutes"] >= LOG_MIN_MINUTES]     # keeps the file small
+        _append(GAMES_FILE, pd.DataFrame([gp.flatten(proj["day"], r, bench.get(r["id"])) for r in rotation]), ["date", "id"])
 
 
 def _weekly(games, today):
@@ -152,6 +172,15 @@ def _preseason_groups(games, season):
     return out
 
 
+def _games(games):
+    try:
+        import game_projections as gp
+        log = _read(GAMES_FILE)
+        return gp.score(log, games) if log is not None else {"status": "nothing logged yet"}
+    except Exception as e:
+        return {"status": f"error: {type(e).__name__}: {e}"}
+
+
 def _flags(summary):
     flags = []
     w = summary["weekly"]
@@ -175,7 +204,7 @@ def score(season, today=None):
     games = nba_data.player_game_logs(season)
     games = bpv.add_fpts(games) if len(games) and "FPTS" not in games else games
     summary = {"season": season, "weekly": _weekly(games, today), "injury": _injury(games, today),
-               "preseason": _preseason_groups(games, season)}
+               "preseason": _preseason_groups(games, season), "games": _games(games)}
     summary["flags"] = _flags(summary)
     old = None
     if os.path.exists(SUMMARY_FILE):
