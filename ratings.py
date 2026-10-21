@@ -1124,7 +1124,7 @@ def injury_list(df, meta):
 # Curry mode (2026-10-20, a joke, "just for right now"). Display only: applied to what the site serves through get(),
 # never to snapshots, accuracy scoring, the preseason prior or refresh.py's in-season checks (they use get_real()).
 # Set to False to turn it off.
-CURRY_MODE = True
+CURRY_MODE = False
 CURRY_BPV = 203.0           # comfortably ahead of everyone (Jokic is ~53)
 
 
