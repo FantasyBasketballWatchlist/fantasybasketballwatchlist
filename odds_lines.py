@@ -50,17 +50,22 @@ class Quota:
 
 
 def get(path, **params):
-    r = requests.get(f"{API}{path}", params={"apiKey": api_key(), **params}, timeout=30)
+    try:
+        r = requests.get(f"{API}{path}", params={"apiKey": api_key(), **params}, timeout=30)
+    except requests.RequestException as e:          # its message can include the URL, and so the key
+        raise RuntimeError(f"Couldn't reach The Odds API for {path}: {type(e).__name__}") from None
     Quota.remaining = r.headers.get("x-requests-remaining", Quota.remaining)
     Quota.used = r.headers.get("x-requests-used", Quota.used)
     if r.status_code == 401:
         sys.exit("The API key was refused (401). Check it was copied in full.")
-    if r.status_code == 422:
-        return None                                    # e.g. no data for that market/time
+    if r.status_code in (404, 422):
+        return None                                    # no such event / no data for that market or time: skip it
     if r.status_code == 429:
         time.sleep(2)
         return get(path, **params)
-    r.raise_for_status()
+    if not r.ok:
+        # Never let the URL (it carries the key) reach an error message or a log.
+        raise RuntimeError(f"The Odds API answered {r.status_code} for {path}")
     return r.json()
 
 
