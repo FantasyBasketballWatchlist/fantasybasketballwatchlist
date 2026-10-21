@@ -190,8 +190,9 @@ def disagreements(bpv_path, espn_path, date, pre):
     db, de = (br[top] - actual[top]).abs(), (er[top] - actual[top]).abs()
     wins = float((db < de).sum() + 0.5 * (db == de).sum())
     names = b.loc[top, "name"]
-    examples = [{"name": names[i], "bpv_rank": int(br[i]), "espn_rank": int(er[i]), "actual_rank": int(actual[i]), "games": int(played[i])}
-                for i in top[:5]]
+    closer = lambda i: "BPV" if db[i] < de[i] else "ESPN" if de[i] < db[i] else "tie"
+    examples = [{"name": names[i], "bpv_rank": int(br[i]), "espn_rank": int(er[i]), "actual_rank": int(actual[i]),
+                 "games": int(played[i]), "fpts": float(totals[i]), "closer": closer(i)} for i in top]   # biggest gap first
     return {"players": len(top), "bpv_closer": wins, "pool": len(pool), "examples": examples}
 
 

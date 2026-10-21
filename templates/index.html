@@ -161,10 +161,31 @@
       const d = h && h.disagreements;
       if (d && d.players) out.push(check('Where we disagree with ESPN most',
         `On the ${d.players} players BPV and ESPN rank most differently, BPV's rank ends up closer.`,
-        'For example: ' + d.examples.slice(0, 3).map(x =>
-          `${escapeHtml(x.name)} (BPV #${x.bpv_rank}, ESPN #${x.espn_rank}, ${x.games ? `so far #${x.actual_rank}` : "hasn't played yet"})`).join(', ') + '.',
-        judge(d.bpv_closer > d.players / 2), { stat: [`${Math.floor(d.players / 2) + 1}+`, `${d.bpv_closer}`, `of ${d.players} closer`] }));
+        disagreeSummary(d), judge(d.bpv_closer > d.players / 2),
+        { stat: [`${Math.floor(d.players / 2) + 1}+`, `${d.bpv_closer}`, `of ${d.players} closer`], table: disagreeTable(d, s.date), wide: true }));
       return out;
+    }
+
+    function disagreeSummary(d) {
+      const n = who => d.examples.filter(x => x.closer === who).length;
+      const ties = n('tie');
+      return `BPV closer on ${n('BPV')}, ESPN on ${n('ESPN')}${ties ? `, ${ties} tied (a tie counts half)` : ''}. ` +
+        'Ranks are within the players either list had in its top 150; players who haven\'t played share the bottom rank.';
+    }
+
+    function disagreeTable(d, date) {
+      if (!d.examples || !d.examples[0] || !d.examples[0].closer) return '';
+      const cls = (x, who) => x.closer === who ? ' class="won"' : '';
+      return `<p class="dis-caption">BPV and ESPN ranks as of ${escapeHtml(date)}, not today's, counted among the ${d.pool} players either list had in its top 150.</p>
+        <div class="dis-table"><table>
+          <thead><tr><th>Player</th><th class="r">BPV then</th><th class="r">ESPN then</th><th class="r">Actual</th><th>Closer</th></tr></thead>
+          <tbody>${d.examples.map(x => `<tr>
+            <td>${escapeHtml(x.name)}</td>
+            <td class="r"><span${cls(x, 'BPV')}>#${x.bpv_rank}</span></td>
+            <td class="r"><span${cls(x, 'ESPN')}>#${x.espn_rank}</span></td>
+            <td class="r">${x.games ? `#${x.actual_rank}` : '<small>no games</small>'}</td>
+            <td><span class="dis-who dis-${x.closer.toLowerCase()}">${x.closer === 'tie' ? 'Tie' : x.closer}</span></td></tr>`).join('')}</tbody>
+        </table></div>`;
     }
 
     function nightlyChecks(lc) {
@@ -205,11 +226,11 @@
           <div class="bar-row${bpvBar ? ' is-bpv' : ''}"><span class="bar-label">${escapeHtml(label)}</span>
             <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, 100 * Math.max(0, v) / top)}%"></span></span>
             <span class="bar-val">${fmt(v, 3)}</span></div>`).join('')}</div>` : '';
-      return `<article class="check v-${c.verdict}">
+      return `<article class="check v-${c.verdict}${c.wide ? ' wide' : ''}">
           <header class="check-head"><h4>${c.name}</h4>
             <span class="check-pill">${VERDICT_ICON[c.verdict]} ${VERDICT[c.verdict]}</span></header>
           <p class="check-pred"><span class="check-lbl">Our prediction</span>${c.prediction}</p>
-          ${stat}${bars}
+          ${stat}${bars}${c.table || ''}
           <p class="check-res"><span class="check-lbl">Result</span>${c.result}</p>
         </article>`;
     }
