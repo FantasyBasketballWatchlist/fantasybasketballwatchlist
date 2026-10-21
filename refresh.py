@@ -315,6 +315,15 @@ def main():
         from analysis import live_checks
         live_checks.record(players, meta)
         summary, old_flags = live_checks.score(meta.get("target_season") or meta["season"])
+        try:                                         # the betting corner search on the forward odds (docs/prereg-corners.md)
+            import contextlib, io
+            from analysis import corners
+            with contextlib.redirect_stdout(io.StringIO()):
+                res = corners.live()
+            if res:
+                log(f"corner search: {res.get('game_days', 0)} game days, {len(res.get('confirmed', []))} confirmed corners")
+        except Exception as e:
+            log(f"corner search skipped: {type(e).__name__}: {e}")
         for flag in summary.get("flags", []):
             log(f"in-season check: {flag}")
             if flag not in old_flags:

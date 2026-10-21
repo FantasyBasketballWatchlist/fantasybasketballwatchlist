@@ -6,8 +6,10 @@ the API's terms forbid passing its raw data on as downloadable files, and the re
 
     python -m odds_lines check                       is the key working, how many credits are left (free)
     python -m odds_lines today [--markets ...]        today's lines (1 credit per market per game)
-    python -m odds_lines history 2024-11-01 2025-02-28 [--markets ...] [--budget 18000]
-                                                      past lines, one snapshot an hour before each tip-off
+    python -m odds_lines history 2024-11-01 2025-02-28 [--markets ...] [--budget 18000] [--at-et 11:00] [--out FILE]
+                                                      past lines, one snapshot an hour before each tip-off, or at a
+                                                      fixed US Eastern time on game day with --at-et (e.g. 11:00 for
+                                                      morning prices, into data/lines/history_morning.csv)
                                                       (paid plans only; 10 credits per market per game)
     python -m odds_lines spreads 2024-11-06 2025-01-29  past point spreads for every game, one snapshot per day at
                                                       6 PM ET (paid plans only; 10 credits per day)
@@ -125,10 +127,10 @@ def today(markets, regions="us"):
     print(f"{len(events)} games, {len(rows)} prices saved. Credits remaining {Quota.remaining}.")
 
 
-def history(start, end, markets, budget, regions="us"):
-    """One snapshot per game, an hour before tip-off. Resumable: games already saved are skipped. Stops before going
-    over `budget` credits in this run."""
-    path = os.path.join(LINES_DIR, "history.csv")
+def history(start, end, markets, budget, regions="us", at_et=None, out=None):
+    """One snapshot per game, an hour before tip-off (or at `at_et`, "HH:MM" US Eastern on game day, if earlier than
+    tip-off). Resumable: games already saved are skipped. Stops before going over `budget` credits in this run."""
+    path = os.path.join(LINES_DIR, out or ("history_morning.csv" if at_et else "history.csv"))
     done = set()
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -151,7 +153,14 @@ def history(start, end, markets, budget, regions="us"):
                 print(f"Stopping: the next game would go over the budget ({budget}). Saved {saved_games} games this run.")
                 return
             tip = datetime.datetime.fromisoformat(ev["commence_time"].replace("Z", "+00:00"))
-            snap = (tip - SNAPSHOT_BEFORE_TIP).strftime("%Y-%m-%dT%H:%M:%SZ")
+            snap_t = tip - SNAPSHOT_BEFORE_TIP
+            if at_et:
+                hh, mm = map(int, at_et.split(":"))
+                gd = datetime.date.fromisoformat(et_date(ev["commence_time"]))
+                offset = 4 if 3 <= gd.month <= 11 else 5
+                local = datetime.datetime(gd.year, gd.month, gd.day, hh, mm, tzinfo=datetime.timezone.utc) + datetime.timedelta(hours=offset)
+                snap_t = min(local, tip - datetime.timedelta(minutes=30))
+            snap = snap_t.strftime("%Y-%m-%dT%H:%M:%SZ")
             data = get(f"/historical/sports/{SPORT}/events/{ev['id']}/odds", date=snap, regions=regions,
                        markets=",".join(markets), oddsFormat="american")
             spent += per_game
@@ -269,6 +278,8 @@ def main():
     h.add_argument("end")
     h.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
     h.add_argument("--budget", type=int, default=18000)
+    h.add_argument("--at-et", dest="at_et", help="snapshot time on game day, US Eastern HH:MM (e.g. 11:00)")
+    h.add_argument("--out", help="file name in data/lines/")
     sub.add_parser("auto")
     sp = sub.add_parser("spreads")
     sp.add_argument("start")
@@ -284,7 +295,7 @@ def main():
     elif a.cmd == "spreads":
         spreads(a.start, a.end, a.budget)
     else:
-        history(a.start, a.end, a.markets, a.budget)
+        history(a.start, a.end, a.markets, a.budget, at_et=a.at_et, out=a.out)
 
 
 if __name__ == "__main__":

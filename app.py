@@ -297,6 +297,21 @@ def get_games():
                            "stats": out.get("stats"), "meta": _meta(meta)}))
 
 
+@app.route("/api/betting-status")
+def get_betting_status():
+    """The corner search's latest results (data/tracking/corners_*.json, written by refresh.py on the PC)."""
+    out = {}
+    for src in ("history", "live", "morning"):
+        path = os.path.join(ROOT, "data", "tracking", f"corners_{src}.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            out[src] = {k: d.get(k) for k in ("updated", "status", "game_days", "bets", "mean_clv", "discover_bets", "confirm_bets",
+                                              "corners_tested", "discovered", "metric", "baseline")}
+            out[src]["confirmed"] = [{k: c.get(k) for k in ("corner", "bets", "mean", "p", "confirm")} for c in d.get("confirmed", [])]
+    return jsonify(out)
+
+
 @app.route("/api/positions")
 @cached_json
 def get_positions():

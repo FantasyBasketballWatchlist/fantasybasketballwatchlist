@@ -185,9 +185,12 @@
         <div class="rec"><h4>Model fixes (two rounds)</h4><div class="num meh">closer, still behind</div>
           <p>Better than each player's season average, but still less accurate than the books (Brier 0.2547 vs 0.2470;
             lower is better).</p></div>
-        <div class="rec"><h4>Morning prices vs the closing line</h4><div class="num wait">collecting</div>
-          <p>Since Oct 21, 2026: every game's lines in the morning and right before tip-off. Beating the closing line is
-            the standard sign of a real edge; first results in about 2-4 weeks.</p></div>
+        <div class="rec"><h4>Corner search, 2024-25</h4><div class="num meh" id="rec-hist">0 of 201</div>
+          <p id="rec-hist-p">Every book / stat / side / price / value / model combination and pair: none survived the
+            correction for testing so many at once.</p></div>
+        <div class="rec"><h4>Morning prices vs the closing line</h4><div class="num wait" id="rec-live">collecting</div>
+          <p id="rec-live-p">Since Oct 21, 2026: every game's lines in the morning and right before tip-off, searched for
+            corners that beat the closing line (found on earlier days, confirmed on later ones).</p></div>
       </div>
       <p class="footer-note">Details: the docs/prereg-real-lines*.md and docs/prereg-game-projections*.md files in the
         <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/tree/main/docs" target="_blank" rel="noopener">repository</a>.</p>
@@ -386,6 +389,26 @@
         <div class="hstat"><small>If the offer's side wins / if the other side wins</small>${money(winA)} / ${money(winB)}${type === 'nosweat' ? ' (incl. the refund at its cash value)' : ''}</div>
         ${marketMargin > 0.08 ? `<p class="help" style="margin:0;color:var(--bad)">These two prices have a big margin (${(marketMargin * 100).toFixed(1)}%): look for closer odds on the other side.</p>` : ''}`;
     }
+    // ---------- track record: the corner search's latest status
+    fetch('/api/betting-status').then(r => r.json()).then(st => {
+      const h = st.history, l = st.live;
+      if (h && h.corners_tested) {
+        document.getElementById('rec-hist').textContent = `${(h.confirmed || []).length} of ${h.corners_tested}`;
+      }
+      if (l) {
+        const conf = l.confirmed || [];
+        const el = document.getElementById('rec-live'), p = document.getElementById('rec-live-p');
+        if (conf.length) {
+          el.textContent = `${conf.length} confirmed`; el.className = 'num';
+          p.innerHTML = conf.map(c => `<b>${escapeHtml(c.corner)}</b>: ${(100 * c.confirm.mean).toFixed(1)}% closing-line value on ${c.confirm.bets} later bets`).join('<br>');
+        } else if (l.status === 'collecting') {
+          p.textContent = `${l.game_days || 0} game day(s) collected so far (${l.bets || 0} morning bets). The search starts at 4 days; corners need confirming on later days.`;
+        } else {
+          el.textContent = `0 confirmed`;
+          p.textContent = `${l.game_days} game days: ${l.corners_tested} corners tested, ${l.discovered} found on the earlier days, none confirmed on the later ones yet.`;
+        }
+      }
+    }).catch(() => {});
     ['h-type', 'h-amt', 'h-extra', 'h-a', 'h-b'].forEach(id => document.getElementById(id).addEventListener('input', hedgeCalc));
     document.getElementById('h-extra').addEventListener('input', e => { e.target.dataset.touched = '1'; });
     document.getElementById('h-type').addEventListener('change', () => { document.getElementById('h-extra').dataset.touched = ''; hedgeCalc(); });
