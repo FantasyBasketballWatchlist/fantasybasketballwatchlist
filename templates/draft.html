@@ -843,7 +843,10 @@
         if (nTeams < MIN_TEAMS || nTeams > MAX_TEAMS) throw new Error(`ESPN lists ${nTeams} teams; the tracker handles ${MIN_TEAMS}-${MAX_TEAMS}`);
 
         // League shape: teams, rounds (roster size), your slot from ESPN's draft order.
-        const rosterSize = Object.values(d.settings?.rosterSettings?.lineupSlotCounts || {}).reduce((a, b) => a + b, 0);
+        // Every roster slot is a round except IR (ESPN slot 13): ESPN's default 13 players + 1 IR is 13 rounds, not 14.
+        const ESPN_IR_SLOT = '13';
+        const rosterSize = Object.entries(d.settings?.rosterSettings?.lineupSlotCounts || {})
+          .filter(([slot]) => slot !== ESPN_IR_SLOT).reduce((a, [, n]) => a + n, 0);
         const maxRound = Math.max(0, ...made.map(p => p.roundId || 0));
         const before = JSON.stringify([state.picks, state.teams, state.slot, state.rounds]);
         state.teams = nTeams;

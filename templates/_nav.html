@@ -10,7 +10,8 @@
       </svg>
       <span>Hoop<em>othesis</em></span>
     </a>
-    <nav class="nav">
+    <button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="true">✕ Hide</button>
+    <nav class="nav" id="site-nav">
       <a href="/" class="{{ 'active' if active == 'home' }}">Rankings</a>
       <a href="/draft" class="{{ 'active' if active == 'draft' }}">Draft</a>
       <a href="/league" class="{{ 'active' if active == 'league' }}">Teams</a>
@@ -20,4 +21,23 @@
       <a href="/injuries" class="{{ 'active' if active == 'injuries' }}">Injuries</a>
     </nav>
   </div>
+  <script>
+    // Phones: the menu can be hidden; the choice is remembered in this browser.
+    (function () {
+      const bar = document.currentScript.closest('.topbar'), btn = bar.querySelector('.nav-toggle');
+      let hidden = false;
+      try { hidden = localStorage.getItem('hoop-nav-hidden') === '1'; } catch (e) {}
+      const apply = () => {
+        bar.classList.toggle('nav-hidden', hidden);
+        btn.setAttribute('aria-expanded', String(!hidden));
+        btn.textContent = hidden ? '☰ Menu' : '✕ Hide';
+      };
+      btn.addEventListener('click', () => {
+        hidden = !hidden;
+        try { localStorage.setItem('hoop-nav-hidden', hidden ? '1' : '0'); } catch (e) {}
+        apply();
+      });
+      apply();
+    })();
+  </script>
 </header>

@@ -62,6 +62,7 @@ a { color: inherit; }
 .brand svg { flex: none; filter: drop-shadow(0 0 10px rgba(255, 122, 26, .45)); }
 .brand span { font-family: 'Barlow Condensed', sans-serif; font-size: 1.45rem; }
 .brand em { font-style: normal; color: var(--orange); }
+.nav-toggle { display: none; }                          /* phones only (below) */
 
 .nav { display: flex; gap: 4px; background: var(--bg-2); padding: 4px; border-radius: 12px; border: 1px solid var(--border); }
 .nav a {
@@ -277,7 +278,12 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 @media (max-width: 760px) {
   .grid-2 { grid-template-columns: 1fr; }
   /* Compact header: logo over a menu of equal tabs (two rows of four) that always fits the screen. */
-  .topbar-inner { flex-direction: column; gap: 6px; padding: 8px 10px; }
+  .topbar-inner { flex-direction: column; gap: 6px; padding: 8px 10px; position: relative; }
+  .nav-toggle { display: inline-flex; align-items: center; position: absolute; top: 8px; right: 10px; padding: 4px 10px;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; color: var(--muted);
+    font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; }
+  .nav-toggle:hover, .nav-toggle:focus-visible { color: var(--text); border-color: var(--orange); outline: none; }
+  .topbar.nav-hidden .nav { display: none; }
   .brand svg { width: 22px; height: 22px; }
   .brand span { font-size: 1.25rem; }
   .nav { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; }
