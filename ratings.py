@@ -134,10 +134,10 @@ ESPN_GAMES_SCALE = 0.86
 EARLY_ESPN_K = 41
 
 # Before a season, when ESPN expects a player to miss (most of) the season (0 projected games, or no projection while
-# listed OUT), he is expected to play this many games. The 15 regulars ESPN flagged this way in 2021-22 and 2023-24..
-# 2025-26 played 14 games on average (Tatum 2025-26: 16; Lillard: 0); BPV used to ignore the flag and project ~55-60.
-# Small sample; found by the expert-gap decomposition (docs/prereg-ecr-gap.md), where Tatum alone was 11% of the gap.
-ESPN_OUT_GAMES = 14
+# listed OUT), he is expected to play this many games. The 40 veterans (20+ games, 15+ mpg) ESPN flagged this way in
+# 2021-22 and 2023-24..2025-26 played 23 on average (docs/prereg-espn-games-curve.md; Tatum 2025-26: 16, Lillard: 0);
+# BPV used to ignore the flag and project ~55-60. Found by the expert-gap decomposition (docs/prereg-ecr-gap.md).
+ESPN_OUT_GAMES = 23
 
 # Between seasons, last season's FPTS/game is replaced by per-minute rates x last season's minutes. Each
 # scoring stat's rate uses the last 3 seasons, each game weighted 0.5 ** (days before the new season /
