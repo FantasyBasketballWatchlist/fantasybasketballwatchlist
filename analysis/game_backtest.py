@@ -33,6 +33,8 @@ def main():
     curves = gp.variance_curves(last)
     last_avg = last.groupby("PLAYER_ID")["FPTS"].mean()
     days = sorted(this_all["GAME_DATE"].unique())
+    from analysis.game_fix2 import teammate_news
+    news = teammate_news(SEASON)
     records = []
     for day in days[FIRST_DAY_INDEX:]:
         before = this_all[this_all["GAME_DATE"] < day]
@@ -56,7 +58,9 @@ def main():
         opp = gp.opponent_relative(before, tb)
         yday = (pd.Timestamp(day) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
         bench = gp.benchmark(before, last)
-        rows = gp.project_day(players, hist, curves, sched, day, opp, {}, {}, set(tb[tb["GAME_DATE"] == yday]["TEAM_ABBREVIATION"]), bench)
+        nd = news[news["date"] == day]
+        rows = gp.project_day(players, hist, curves, sched, day, opp, {}, {}, set(tb[tb["GAME_DATE"] == yday]["TEAM_ABBREVIATION"]), bench,
+                              dict(zip(nd["id"], zip(nd["V"], nd["share"]))))
         records += [gp.flatten(day, r, bench.get(r["id"])) for r in rows]
     log = pd.DataFrame(records)
     res = gp.score(log, this_all)

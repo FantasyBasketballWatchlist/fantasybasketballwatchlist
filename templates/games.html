@@ -66,7 +66,7 @@
       <div class="card table-wrap">
         <table class="data" id="table">
           <thead><tr><th>Player</th><th class="r" title="Chance he plays">Plays</th><th class="r">Projection</th>
-            <th>Likely range <small style="color:var(--dim);font-weight:400">(80% of games)</small></th>
+            <th>Likely range <small style="color:var(--dim);font-weight:400" title="Points ranges run a little wide: about 87% of games in testing">(~80% of games)</small></th>
             <th class="r" title="His average this season (last season's early on)">Season avg</th><th class="r">vs avg</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -82,10 +82,11 @@
         <label>Odds (American, optional) <input id="ck-odds" placeholder="-110" inputmode="numeric"></label>
         <div class="odds-out" id="ck-out"></div>
         <p class="caveat"><b>Read this first.</b> Chances assume he plays (a bet on a player who sits is void). These
-          projections beat each player's season average, and their ranges are honest, but against <b>real sportsbook
-          lines</b> (592 games of 2024-25) betting the model's favourite side <b>would have lost about 2%</b>: the books'
-          lines were more accurate than the model. Use this as information, not as a betting edge.
-          <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-real-lines.md" target="_blank" rel="noopener">The test</a>.
+          projections beat each player's season average, but against <b>real sportsbook lines</b> (592 games of 2024-25)
+          betting the model's side <b>lost about 2%</b>, and after two rounds of fixes the books' own odds are still more
+          accurate than the model's. Line shopping (the best price across books) roughly halves the books' margin; whether
+          any of this beats the closing line is being measured now. Information, not a betting edge.
+          <a href="https://github.com/FantasyBasketballWatchlist/fantasybasketballwatchlist/blob/main/docs/prereg-game-projections-fix2.md" target="_blank" rel="noopener">How it was tested</a>.
           Sports betting is 21+ and legal only in some states.</p>
       </aside>
     </div>
@@ -100,7 +101,6 @@
     let data = null, stat = 'PTS', game = 'all', query = '', selected = null;
     const FALLBACK_LABELS = { PTS: 'Points', REB: 'Rebounds', AST: 'Assists', FG3M: 'Threes', PRA: 'Pts+Reb+Ast', STL: 'Steals', BLK: 'Blocks', TOV: 'Turnovers', FPTS: 'Fantasy pts (ESPN)' };
     const label = (s) => (data && data.labels && data.labels[s]) || FALLBACK_LABELS[s] || s;
-    const COUNTS = new Set(['PTS', 'REB', 'AST', 'FG3M', 'STL', 'BLK', 'TOV', 'PRA']);
 
     // ---------- distributions (same as game_projections.py)
     function nbPmf(mean, v, kmax) {
@@ -117,8 +117,9 @@
       const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
       return x >= 0 ? y : -y;
     }
-    function cdf(s, mean, v, x) {
-      if (!COUNTS.has(s)) return 0.5 * (1 + erf((x - mean) / Math.sqrt(2 * Math.max(v, 1e-9))));
+    // dist: 'nb' (negative binomial) or 'normal', as the API says for each stat (game_projections.dist_of).
+    function cdf(dist, mean, v, x) {
+      if (dist !== 'nb') return 0.5 * (1 + erf((x - mean) / Math.sqrt(2 * Math.max(v, 1e-9))));
       const k = Math.floor(x);
       if (k < 0) return 0;
       return Math.min(1, nbPmf(mean, v, k).reduce((a, b) => a + b, 0));
@@ -144,7 +145,7 @@
         const pct = (x) => Math.max(0, Math.min(100, 100 * x / top));
         return `<tr class="pickable${selected === p.id ? ' sel' : ''}" data-id="${p.id}">
           <td><span class="who">${escapeHtml(p.name)}</span>${p.status ? `<span class="status ${escapeHtml(p.status)}">${escapeHtml(p.status)}</span>` : ''}
-            <span class="sub">${escapeHtml(p.team)} ${p.home ? 'vs' : '@'} ${escapeHtml(p.opp)}${p.b2b ? ' · back-to-back' : ''}</span></td>
+            <span class="sub">${escapeHtml(p.team)} ${p.home ? 'vs' : '@'} ${escapeHtml(p.opp)}${p.b2b ? ' · back-to-back' : ''}${Math.abs(p.teammate_minutes || 0) >= 10 ? ` · teammates ${p.teammate_minutes > 0 ? 'out' : 'back'}: ${p.teammate_minutes > 0 ? '+' : ''}${fmt(p.teammate_minutes, 0)} min to share` : ''}</span></td>
           <td class="r">${p.play_probability == null ? '—' : Math.round(100 * p.play_probability) + '%'}</td>
           <td class="r"><b>${fmt(s.mean, 1)}</b></td>
           <td><div class="range" title="${fmt(s.q10, 0)} to ${fmt(s.q90, 0)}"><i style="left:${pct(s.q10)}%;right:${100 - pct(s.q90)}%"></i><b style="left:calc(${pct(s.mean)}% - 1px)"></b></div>
@@ -161,8 +162,8 @@
       const s = document.getElementById('ck-stat').value, d = p.stats[s];
       const line = parseFloat(document.getElementById('ck-line').value);
       if (!isFinite(line)) { out.innerHTML = '<p class="help" style="margin:0">Enter the line.</p>'; return; }
-      const atOrBelow = cdf(s, d.mean, d.var, line);
-      const push = Number.isInteger(line) && COUNTS.has(s) ? atOrBelow - cdf(s, d.mean, d.var, line - 1) : 0;
+      const atOrBelow = cdf(d.dist, d.mean, d.var, line);
+      const push = Number.isInteger(line) && d.dist === 'nb' ? atOrBelow - cdf(d.dist, d.mean, d.var, line - 1) : 0;
       const pOver = 1 - atOrBelow, pUnder = atOrBelow - push;
       const oddsTxt = document.getElementById('ck-odds').value.trim();
       const am = oddsTxt === '' ? null : parseFloat(oddsTxt);

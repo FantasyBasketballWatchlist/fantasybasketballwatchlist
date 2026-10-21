@@ -1,0 +1,222 @@
+{
+ "rules": "docs/prereg-game-projections-fix2.md",
+ "chosen": {
+  "PTS": {
+   "H": 3,
+   "w": 0.75,
+   "opp": "stat",
+   "c": 1.25,
+   "b2b": 1.0,
+   "home": 0.01,
+   "s": 1.0,
+   "k": 1.2,
+   "shape": "normal",
+   "kshape": 1.1,
+   "alpha": 0.5,
+   "gamma": 0
+  },
+  "REB": {
+   "H": 3,
+   "w": 0.5,
+   "opp": "stat",
+   "c": 0.75,
+   "b2b": 1.0,
+   "home": 0.0,
+   "s": 1.0,
+   "k": 1.0,
+   "shape": "nb",
+   "kshape": 1.0,
+   "alpha": 0.25,
+   "gamma": 0
+  },
+  "AST": {
+   "H": 3,
+   "w": 0.75,
+   "opp": "stat",
+   "c": 1.0,
+   "b2b": 1.0,
+   "home": 0.01,
+   "s": 0.9,
+   "k": 1.0,
+   "shape": "nb",
+   "kshape": 1.0,
+   "alpha": 0.25,
+   "gamma": 0
+  },
+  "PRA": {
+   "H": 3,
+   "w": 0.75,
+   "opp": "stat",
+   "c": 1.0,
+   "b2b": 1.0,
+   "home": 0.0,
+   "s": 1.0,
+   "k": 1.1,
+   "shape": "normal",
+   "kshape": 1.0,
+   "alpha": 0.25,
+   "gamma": 0
+  }
+ },
+ "trails": {
+  "PTS": [
+   [
+    "current",
+    0.248
+   ],
+   [
+    "F1 shape",
+    0.24471,
+    {
+     "shape": "normal",
+     "kshape": 1.1
+    }
+   ],
+   [
+    "F2 recent minutes",
+    0.24394,
+    {
+     "H": 3,
+     "w": 0.75
+    }
+   ],
+   [
+    "F3 teammate news",
+    0.24272,
+    {
+     "alpha": 0.5,
+     "gamma": 0
+    }
+   ]
+  ],
+  "REB": [
+   [
+    "current",
+    0.24065
+   ],
+   [
+    "F1 shape",
+    0.24065,
+    null
+   ],
+   [
+    "F2 recent minutes",
+    0.24065,
+    null
+   ],
+   [
+    "F3 teammate news",
+    0.23989,
+    {
+     "alpha": 0.25,
+     "gamma": 0
+    }
+   ]
+  ],
+  "AST": [
+   [
+    "current",
+    0.23896
+   ],
+   [
+    "F1 shape",
+    0.23896,
+    null
+   ],
+   [
+    "F2 recent minutes",
+    0.23839,
+    {
+     "H": 3,
+     "w": 0.75
+    }
+   ],
+   [
+    "F3 teammate news",
+    0.23778,
+    {
+     "alpha": 0.25,
+     "gamma": 0
+    }
+   ]
+  ],
+  "PRA": [
+   [
+    "current",
+    0.24514
+   ],
+   [
+    "F1 shape",
+    0.24232,
+    {
+     "shape": "normal",
+     "kshape": 1.0
+    }
+   ],
+   [
+    "F2 recent minutes",
+    0.2416,
+    {
+     "H": 3,
+     "w": 0.75
+    }
+   ],
+   [
+    "F3 teammate news",
+    0.24044,
+    {
+     "alpha": 0.25,
+     "gamma": 0
+    }
+   ]
+  ]
+ },
+ "real_lines_2024_25": {
+  "PTS": {
+   "offers": 7826,
+   "brier_current": 0.25956070386157293,
+   "brier_fixed": 0.2578833721387213,
+   "brier_market": 0.24946308147176385,
+   "teammate_news_offers": 5150,
+   "news_brier_current": 0.2596149412932611,
+   "news_brier_fixed": 0.25800966668587855,
+   "news_brier_market": 0.24970250812151648,
+   "over_rate": 0.4902887809864554,
+   "current_says": 0.4448682002030907,
+   "fixed_says": 0.4969981060854027
+  },
+  "REB": {
+   "offers": 7616,
+   "brier_current": 0.25471461723092087,
+   "brier_fixed": 0.2547745202638568,
+   "brier_market": 0.24659466891620485,
+   "teammate_news_offers": 5025,
+   "news_brier_current": 0.2555773981992378,
+   "news_brier_fixed": 0.2556681885472656,
+   "news_brier_market": 0.2463638328882674,
+   "over_rate": 0.4839810924369748,
+   "current_says": 0.4584431220336765,
+   "fixed_says": 0.4518192950003097
+  },
+  "AST": {
+   "offers": 7335,
+   "brier_current": 0.25112599031241983,
+   "brier_fixed": 0.2513115333660518,
+   "brier_market": 0.24465496220547694,
+   "teammate_news_offers": 4809,
+   "news_brier_current": 0.25173819011810333,
+   "news_brier_fixed": 0.2522995429983446,
+   "news_brier_market": 0.24431457266641324,
+   "over_rate": 0.5044308111792775,
+   "current_says": 0.47298747896397125,
+   "fixed_says": 0.4707615903990383
+  }
+ },
+ "total": {
+  "brier_current": 0.25522403003876554,
+  "brier_fixed": 0.25472749325754734,
+  "brier_market": 0.24695557895425266
+ },
+ "passes": true,
+ "seconds": 125
+}

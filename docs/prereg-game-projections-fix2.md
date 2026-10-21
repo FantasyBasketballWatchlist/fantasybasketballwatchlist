@@ -42,3 +42,16 @@ value on the forward snapshots (`analysis/clv.py`).
 
 The 2024-25 lines were used to see the problems (and November-December to fit the blend weights): the test season
 isn't untouched. The injury report's Out/Doubtful players are assumed not to play and unlisted ones to play.
+
+## Result (2026-10-21)
+
+`analysis/game_fix2.json`. Chosen on 2025-26: points normal (variance x 1.1), recent-minutes weight 0.75, teammate
+news alpha 0.5; rebounds alpha 0.25; assists weight 0.75, alpha 0.25; points+rebounds+assists normal, weight 0.75,
+alpha 0.25 (gamma, the per-minute boost, was never kept).
+
+Test on 2024-25 real lines (Brier, lower is better): **passes, narrowly.** All three stats 0.2552 -> 0.2547; points
+0.2596 -> 0.2579 (the lean is gone: over chance 44.5% -> 49.7%, actual 49.0%); rebounds 0.2547 -> 0.2548; assists
+0.2511 -> 0.2513. The books' no-vig consensus is 0.2470: the gap barely moved, and the teammate-news games show no
+gain against real lines. Adopted in `game_projections.FIX`; the live code reproduces the design numbers (points 0.2427,
+rebounds 0.2401, assists 0.2381, points+rebounds+assists 0.2404 on 2025-26). Side effect: points ranges are now wide
+(87% of 2025-26 games inside the 10th-90th range, check 2b would fail for points); the Games page says so.

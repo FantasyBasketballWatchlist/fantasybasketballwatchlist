@@ -39,12 +39,15 @@ MIN_HALF_LIFE = 3           # recent minutes: averaged with a half-life of 3 gam
 # Per stat, chosen on 2025-26 (analysis/game_fix.json "chosen"): w = weight of recent minutes, c = opponent coefficient,
 # b2b = minutes factor on the second night of a back-to-back, home = +/- share at home / away, s = how much of the
 # difference from his average is kept, k = variance multiplier.
+# Second round (analysis/game_fix2.json, docs/prereg-game-projections-fix2.md): shape = "normal" with the variance x
+# kshape for some counting stats (the negative binomial's long tail made it lean under against real lines), and
+# alpha = share of a teammate's vacated minutes he picks up (teammate news from the day's injury report).
 FIX = {
-    "PTS":  {"w": 0.5, "c": 1.25, "b2b": 1.0,  "home": 0.01,  "s": 1.0, "k": 1.2},
-    "REB":  {"w": 0.5, "c": 0.75, "b2b": 1.0,  "home": 0.0,   "s": 1.0, "k": 1.0},
-    "AST":  {"w": 0.5, "c": 1.0,  "b2b": 1.0,  "home": 0.01,  "s": 0.9, "k": 1.0},
+    "PTS":  {"w": 0.75, "c": 1.25, "b2b": 1.0, "home": 0.01, "s": 1.0, "k": 1.2, "alpha": 0.5, "shape": "normal", "kshape": 1.1},
+    "REB":  {"w": 0.5, "c": 0.75, "b2b": 1.0,  "home": 0.0,   "s": 1.0, "k": 1.0, "alpha": 0.25},
+    "AST":  {"w": 0.75, "c": 1.0, "b2b": 1.0,  "home": 0.01,  "s": 0.9, "k": 1.0, "alpha": 0.25},
     "FG3M": {"w": 0.5, "c": 0.75, "b2b": 1.0,  "home": 0.02,  "s": 0.8, "k": 1.1},
-    "PRA":  {"w": 0.5, "c": 1.0,  "b2b": 1.0,  "home": 0.0,   "s": 1.0, "k": 1.1},
+    "PRA":  {"w": 0.75, "c": 1.0, "b2b": 1.0,  "home": 0.0,   "s": 1.0, "k": 1.1, "alpha": 0.25, "shape": "normal", "kshape": 1.0},
     "STL":  {"w": 0.5, "c": 0.75, "b2b": 1.0,  "home": 0.0,   "s": 0.9, "k": 1.0},
     "BLK":  {"w": 0.5, "c": 0.5,  "b2b": 0.93, "home": 0.03,  "s": 0.8, "k": 1.0},
     "TOV":  {"w": 0.5, "c": 0.75, "b2b": 1.0,  "home": -0.01, "s": 0.9, "k": 0.9},
@@ -151,9 +154,15 @@ def pit(dist, mean, var, y):
 
 # ---------- the model
 
-def project_player(hist, anchor_fpts, curves, opp_rel=None, b2b=False, home=False, bench=None):
+def dist_of(s):
+    """'nb' or 'normal' for a stat (FPTS is always normal; some counting stats are normal since the second fix round)."""
+    return "normal" if s not in COUNTS or FIX[s].get("shape") == "normal" else "nb"
+
+
+def project_player(hist, anchor_fpts, curves, opp_rel=None, b2b=False, home=False, bench=None, vacated=0.0, share=0.0):
     """One player's projection. hist: his last games (BASE_STATS + FPTS + PRA, oldest first); opp_rel: the opponent's
-    allowed-per-stat (None before it has played OPP_MIN_GAMES); bench: his average per stat (for the shrink).
+    allowed-per-stat (None before it has played OPP_MIN_GAMES); bench: his average per stat (for the shrink);
+    vacated / share: net minutes per game vacated by teammates' news today, and his share of the active teammates' minutes.
     Returns ({stat: {mean, var, dist}}, scale), or None if there's too little history."""
     n = len(hist)
     if n < MIN_HISTORY:
@@ -183,7 +192,14 @@ def project_player(hist, anchor_fpts, curves, opp_rel=None, b2b=False, home=Fals
         a, bb = curves.get(s, (0.0, 1.0))
         v_league = math.exp(a + bb * math.log(max(mean, 0.05)))
         var = (n * v_emp + VAR_K * v_league) / (n + VAR_K) * fx["k"]
-        out[s] = {"mean": mean, "var": max(var, 1e-6), "dist": "nb" if s in COUNTS else "normal"}
+        if fx.get("alpha") and vacated:
+            mh = fx["w"] * min_recent + (1 - fx["w"]) * min_mean
+            if mh > 1:
+                mean = max(0.0, mean * (mh + fx["alpha"] * vacated * share) / mh)
+        dist = dist_of(s)
+        if dist == "normal" and s in COUNTS:
+            var *= fx.get("kshape", 1.0)
+        out[s] = {"mean": mean, "var": max(var, 1e-6), "dist": dist}
     return out, scale
 
 
@@ -209,13 +225,47 @@ def last_games(this_season, last_season):
     return {pid: grp.tail(HISTORY_GAMES) for pid, grp in g.groupby("PLAYER_ID")}
 
 
+NEWS_STATUSES = {"Out", "Doubtful"}
+RETURN_MPG = 15
+
+
+def teammate_news(games, listed_by_team, day, teams):
+    """Player id -> (net vacated minutes, his share of the active teammates' minutes) for `teams` playing on `day`,
+    as in analysis/game_fix2.py: new absences = teammates listed Out/Doubtful today who played the team's previous game;
+    returns = teammates with 15+ minutes a game who missed it, are still with the team (latest game for it within 15
+    days) and aren't listed. Minutes per game over each player's last 10 of the team's last 10 games."""
+    g = games[(games["MIN"] > 0) & (games["GAME_DATE"] < day)]
+    out = {}
+    cutoff = (datetime.date.fromisoformat(day) - datetime.timedelta(days=15)).isoformat()
+    latest = g.sort_values("GAME_DATE").groupby("PLAYER_ID").tail(1).set_index("PLAYER_ID")
+    for team in teams:
+        dates = sorted(set(g[g["TEAM_ABBREVIATION"] == team]["GAME_DATE"]))[-10:]
+        if not dates:
+            continue
+        hist = g[(g["TEAM_ABBREVIATION"] == team) & g["GAME_DATE"].isin(dates)]
+        mpg = hist.groupby("PLAYER_ID")["MIN"].apply(lambda m: m.tail(10).mean())
+        played_prev = set(hist[hist["GAME_DATE"] == dates[-1]]["PLAYER_ID"])
+        recent3 = set(hist[hist["GAME_DATE"].isin(dates[-3:])]["PLAYER_ID"])
+        listed = listed_by_team.get(team, set())
+        on_team = {pid for pid in mpg.index if pid in latest.index and latest.at[pid, "TEAM_ABBREVIATION"] == team
+                   and latest.at[pid, "GAME_DATE"] >= cutoff}
+        new_abs = [pid for pid in mpg.index if pid in played_prev and pid in listed]
+        returns = [pid for pid in mpg.index if pid not in played_prev and pid in on_team and mpg[pid] >= RETURN_MPG and pid not in listed]
+        v = float(mpg[new_abs].sum() - mpg[returns].sum())
+        active = [pid for pid in mpg.index if (pid in recent3 or pid in returns) and pid in (on_team | played_prev) and pid not in listed]
+        act = float(mpg[active].sum()) if active else 0.0
+        for pid in mpg.index:
+            out[int(pid)] = (v, float(mpg[pid]) / act if act > 0 else 0.0)
+    return out
+
+
 def next_game_day(schedule, today):
     upcoming = schedule[schedule["GAME_DATE"] >= today.isoformat()]
     return upcoming["GAME_DATE"].min() if len(upcoming) else None
 
 
 def project_day(players, hist_by_pid, curves, schedule, day, opp_rel, last_team_game, last_player_game,
-                played_yesterday=(), bench=None):
+                played_yesterday=(), bench=None, news=None):
     """Projections for everyone in `players` (id, name, team, production, report_status) whose team plays on `day`."""
     games = schedule[schedule["GAME_DATE"] == day]
     opp_of = {r.TEAM_ABBREVIATION: (r.OPPONENT, bool(r.HOME)) for r in games.itertuples()}
@@ -228,8 +278,9 @@ def project_day(players, hist_by_pid, curves, schedule, day, opp_rel, last_team_
         if hist is None:
             continue
         opp, home = opp_of[p.team]
+        v, sh = (news or {}).get(p.id, (0.0, 0.0))
         res = project_player(hist, getattr(p, "production", None), curves, opp_rel.get(opp), p.team in played_yesterday,
-                             home, bench.get(p.id))
+                             home, bench.get(p.id), v, sh)
         if res is None:
             continue
         stats, scale = res
@@ -239,7 +290,7 @@ def project_day(players, hist_by_pid, curves, schedule, day, opp_rel, last_team_
         rows.append({"id": int(p.id), "name": p.name, "team": p.team, "opp": opp, "home": home, "status": status,
                      "play_probability": play_chance(status, sat), "sat_last": bool(sat), "scale": round(scale, 3),
                      "b2b": p.team in played_yesterday, "minutes": round(float(hist["MIN"].mean()) * scale, 1),
-                     "history_games": len(hist), "stats": summarize(stats)})
+                     "history_games": len(hist), "teammate_minutes": round(v, 1), "stats": summarize(stats)})
     return rows
 
 
@@ -270,7 +321,13 @@ def today(players=None, meta=None, day=None):
     yday = (datetime.date.fromisoformat(day) - datetime.timedelta(days=1)).isoformat()
     played_yday = set(tg[tg["GAME_DATE"] == yday]["TEAM_ABBREVIATION"]) if len(tg) else set()
     bench = benchmark(this_g[this_g["GAME_DATE"] < day] if len(this_g) else this_g, last_g)
-    rows = project_day(players, hist, curves, sched, day, opp, last_team, last_player, played_yday, bench)
+    listed = {}
+    if "report_status" in players:
+        for r in players[players["report_status"].isin(NEWS_STATUSES)].itertuples():
+            listed.setdefault(r.team, set()).add(int(r.id))
+    playing = set(sched[sched["GAME_DATE"] == day]["TEAM_ABBREVIATION"])
+    news = teammate_news(this_g, listed, day, playing) if len(this_g) else {}
+    rows = project_day(players, hist, curves, sched, day, opp, last_team, last_player, played_yday, bench, news)
     for r in rows:
         r["bench"] = {st: round(v, 2) for st, v in bench.get(r["id"], {}).items()}
     games = sched[(sched["GAME_DATE"] == day) & (sched["HOME"].astype(bool))]
@@ -347,7 +404,7 @@ def score(log, games):
         y = act[s].astype(float)
         mean, bench = done[f"{s}_mean"].astype(float), done[f"{s}_bench"].astype(float)
         ok = bench.notna()
-        dist = "nb" if s in COUNTS else "normal"
+        dist = dist_of(s)
         q10 = [quantile(dist, m_, v_, 0.1) for m_, v_ in zip(mean, done[f"{s}_var"].astype(float))]
         q90 = [quantile(dist, m_, v_, 0.9) for m_, v_ in zip(mean, done[f"{s}_var"].astype(float))]
         inside = ((y >= q10) & (y <= q90)).mean()
