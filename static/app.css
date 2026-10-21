@@ -344,3 +344,5 @@ table.data .num { font-size: 1.15rem; font-weight: 600; }
 .alert-item.urgent { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); color: #fecaca; }
 .alert-item.warn { border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.07); color: #fde7b0; }
 .alert-item.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.06); color: #c9f5e3; }
+
+.acc-explain { margin: 4px 4px 10px; font-size: 13px; color: var(--dim); }

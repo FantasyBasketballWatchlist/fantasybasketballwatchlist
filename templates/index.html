@@ -56,6 +56,8 @@
       <small id="accuracy-note">Loading...</small>
     </div>
     <div class="card table-wrap" id="accuracy-container" hidden>
+      <p class="acc-explain">The rankings test: BPV's saved rankings against what players actually scored afterwards.
+        A player counts once he has 10+ games since the snapshot.</p>
       <table class="data" id="accuracyTable">
         <thead>
           <tr><th>Snapshot</th><th>Source</th><th class="r" title="Players with 10+ games since the snapshot">Players</th>
@@ -68,6 +70,8 @@
       </table>
     </div>
     <div class="card table-wrap" id="live-checks" style="margin-top:14px" hidden>
+      <p class="acc-explain">Smaller checks on single inputs (not the rankings), scored after every night of games.
+        Checks with fewer than 20 players are greyed out: too few to judge yet.</p>
       <table class="data">
         <thead><tr><th>In-season check</th><th class="r">Sample</th><th>Result</th></tr></thead>
         <tbody></tbody>
@@ -112,7 +116,9 @@
     // Parts of BPV that could only be tested once the season started, scored by refresh.py as games finish.
     function renderLiveChecks(lc) {
       if (!lc) return;
-      const good = (a, b) => `style="color:${a <= b ? 'var(--good)' : 'var(--bad)'}"`;
+      const MIN_SAMPLE = 20;   // below this, a hit or miss is mostly luck
+      const good = (a, b, n) => `style="color:${n != null && n < MIN_SAMPLE ? 'var(--dim)' : a <= b ? 'var(--good)' : 'var(--bad)'}"`;
+      const few = n => n < MIN_SAMPLE ? ' <small style="color:var(--dim)">(too few to judge yet)</small>' : '';
       const rows = [];
       (lc.flags || []).forEach(f => rows.push(`<tr><td colspan="3" style="color:var(--bad);white-space:normal">⚠ ${escapeHtml(f)}</td></tr>`));
       const w = lc.weekly;
@@ -121,11 +127,11 @@
         <small style="color:var(--dim)">(better in ${w.weeks_model_better} of ${w.weeks_scored})</small></td></tr>`);
       const inj = lc.injury;
       if (inj && inj.status === 'scored') Object.entries(inj.by_status).forEach(([st, v]) => rows.push(`<tr><td>Injury report: ${escapeHtml(st)}</td>
-        <td class="r">${v.n}</td><td><span ${good(Math.abs(v.predicted - v.actual), 0.1)}>predicted ${pct(v.predicted)} to play</span>, ${pct(v.actual)} did</td></tr>`));
+        <td class="r">${v.n}</td><td><span ${good(Math.abs(v.predicted - v.actual), 0.1, v.n)}>predicted ${pct(v.predicted)} to play</span>, ${pct(v.actual)} did${few(v.n)}</td></tr>`));
       const pre = lc.preseason;
       if (pre && pre.status === 'scored') Object.entries(pre.groups).filter(([, g]) => g.players).forEach(([name, g]) => rows.push(`<tr>
         <td>Preseason: ${escapeHtml(name)}</td><td class="r">${g.players}</td>
-        <td><span ${good(g.bpv_error, g.espn_error)}>${fmt(g.bpv_error)} FPTS/game error</span> vs ESPN ${fmt(g.espn_error)}</td></tr>`));
+        <td><span ${good(g.bpv_error, g.espn_error, g.players)}>${fmt(g.bpv_error)} FPTS/game error</span> vs ESPN ${fmt(g.espn_error)}${few(g.players)}</td></tr>`));
       if (!rows.length) return;
       document.querySelector('#live-checks tbody').innerHTML = rows.join('');
       document.getElementById('live-checks').hidden = false;
@@ -141,7 +147,7 @@
         const scored = data.snapshots.filter(s => s.status === 'scored' && s.per_game);
         if (!scored.length) {
           note.textContent = data.snapshots.length
-            ? `${data.snapshots.length} saved snapshot(s), nothing to score until games are played.`
+            ? `${data.snapshots.length} saved rankings snapshot(s). First rankings results once players have 10+ games (about 3 weeks into the season).`
             : 'No snapshots saved yet (python -m analysis.snapshot).';
           return;
         }
