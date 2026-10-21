@@ -3,3 +3,4 @@ data/cache
 **/__pycache__
 .render_deploy_hook
 .last_verified_code
+data/accuracy.json

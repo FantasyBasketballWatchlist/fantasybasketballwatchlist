@@ -99,7 +99,8 @@ def score(path, only_ids=None):
             result["range_coverage"] = {"players": int(valid.sum()), "inside": float(inside[valid].mean()) if valid.any() else None,
                                         "target": TARGET_COVERAGE}
     totals = actual["sum"].reindex(snap.index).fillna(0)
-    result["ranking"] = {"players": len(snap), "spearman_bpv_vs_actual_total": float(snap["bpv"].corr(totals, method="spearman"))}
+    # Spearman = Pearson on ranks (pandas' method="spearman" needs scipy, which the live server doesn't install).
+    result["ranking"] = {"players": len(snap), "spearman_bpv_vs_actual_total": float(snap["bpv"].rank().corr(totals.rank()))}
     top = snap.nsmallest(50, "rank") if "rank" in snap else snap.nlargest(50, "bpv")
     result["top50"] = {"projected_fpg": float(top["production"].mean()),
                        "actual_fpg": float(actual["mean"].reindex(top.index).mean()),
