@@ -956,6 +956,7 @@
     const BRIDGE_STALE_MS = 6 * 3600 * 1000;        // ignore picks from a draft room left open hours ago
     const bridge = {
       installed: null, last: null, applied: 0, unconfirmed: 0, warn: '',
+      seenAt: new Map(), lags: [],                  // when each pick first reached this page; seconds behind the draft room
       live() { return !!this.last && Date.now() - Date.parse(this.last.at) < 10 * 60 * 1000; },
     };
     function bridgeStatus() {
@@ -967,6 +968,7 @@
       el.textContent = bridge.warn || (b
         ? `ESPN draft room script v${b.version}: ${bridge.applied} pick${bridge.applied === 1 ? '' : 's'} placed · last ${new Date(b.at).toLocaleTimeString()}` +
           (b.picks.length ? '' : ` · ${b.summary.sockets} live feed(s), ${b.summary.wsMessages} messages so far`) +
+          (bridge.lags.length ? ` · last pick ${fmt(bridge.lags[bridge.lags.length - 1].lag, 1)} s behind ESPN` : '') +
           (bridge.unconfirmed ? ` · ${bridge.unconfirmed} pick number${bridge.unconfirmed === 1 ? '' : 's'} not yet confirmed by ESPN's board` : '')
         : `ESPN draft room script v${bridge.installed} installed: open your draft on ESPN's website in another tab.`);
     }
@@ -977,9 +979,7 @@
         ? `The ESPN draft room open in the other tab is league ${b.league}, but this page is connected to league ${state.espn.league}: its picks aren't used.` : '';
       espnNote('bridge', { league: b.league, started: b.started, picks: b.picks.length, summary: b.summary });
       if (bridge.warn) { bridgeStatus(); return; }
-      if (b.picks.some(p => p.playerId && !espn.names.has(p.playerId) && !p.name) && espnYear()) {
-        try { await espnPlayerNames(espnYear()); } catch (e) { espnNote('error', { error: `bridge names: ${e.message}` }); }
-      }
+      if (b.picks.some(p => p.playerId && !espn.names.has(p.playerId) && !p.name)) await bridgeNames();
       const byKey = new Map(players.map(p => [espnKey(p.name), p.id]));
       const synced = new Set(state.espn?.synced || []);       // pick numbers ESPN's own list filled: those stay
       const exact = new Set(), guessed = new Set();
@@ -997,11 +997,40 @@
       }
       bridge.applied = new Set([...exact, ...guessed]).size;     // the live feed and the board can both report a pick
       bridge.unconfirmed = [...guessed].filter(id => !exact.has(id)).length;   // live picks the board hasn't shown yet
+      // Speed: for each pick the first time it's placed here, seconds since the draft room saw it.
+      const now = Date.now();
+      for (const p of b.picks) {
+        const k = p.playerId ? `id:${p.playerId}` : `name:${p.name}`;
+        if (!p.at || bridge.seenAt.has(k)) continue;
+        bridge.seenAt.set(k, now);
+        const lag = (now - Date.parse(p.at)) / 1000;
+        if (lag >= 0 && lag < 3600) {
+          bridge.lags.push({ lag: +lag.toFixed(2), how: b.forwarded?.how || '?', source: p.source });
+          if (bridge.lags.length > 200) bridge.lags.shift();
+        }
+      }
       lookCache = { key: null, value: null }; save(); render(); bridgeStatus();
     }
+    // ESPN player id -> name, needed for live-feed picks (they carry only ESPN's id). Loaded once, as soon as the script
+    // says hello (long before the first pick), and shared by concurrent callers.
+    let bridgeNamesLoad = null;
+    function bridgeNames() {
+      if (espn.names.size > 500 || !espnYear()) return Promise.resolve();
+      if (!bridgeNamesLoad) {
+        const t0 = Date.now();
+        bridgeNamesLoad = espnPlayerNames(espnYear())
+          .then(() => espnNote('bridge names', { players: espn.names.size, seconds: (Date.now() - t0) / 1000 }))
+          .catch(e => { espnNote('error', { error: `bridge names: ${e.message}` }); bridgeNamesLoad = null; });
+      }
+      return bridgeNamesLoad;
+    }
+
     window.addEventListener('message', (ev) => {
       if (ev.source !== window || ev.origin !== location.origin || !ev.data) return;
-      if (ev.data.type === 'hoop-espn-bridge-hello') { if (!bridge.installed) { bridge.installed = ev.data.version; espnNote('bridge installed', { version: ev.data.version }); } bridgeStatus(); }
+      if (ev.data.type === 'hoop-espn-bridge-hello') {
+        if (!bridge.installed) { bridge.installed = ev.data.version; espnNote('bridge installed', { version: ev.data.version }); bridgeNames(); }
+        bridgeStatus();
+      }
       if (ev.data.type === 'hoop-espn-bridge') applyBridge(ev.data.payload);
     });
 
@@ -1045,7 +1074,8 @@
         `connected: ${state.espn ? `league ${state.espn.league}, team ${state.espn.team}` : 'no'}`,
         `board: ${Object.keys(state.picks).length} picks, ${state.teams} teams x ${state.rounds} rounds, your slot ${state.slot}`,
         `status: ${document.getElementById('espn-status').textContent}`,
-        `draft room script: ${bridge.installed ? `v${bridge.installed}` : 'not detected'}; last: ${bridge.last ? JSON.stringify({ at: bridge.last.at, league: bridge.last.league, picks: bridge.last.picks.length, summary: bridge.last.summary }) : 'none'}`,
+        `draft room script: ${bridge.installed ? `v${bridge.installed}` : 'not detected'}; last: ${bridge.last ? JSON.stringify({ at: bridge.last.at, league: bridge.last.league, picks: bridge.last.picks.length, summary: bridge.last.summary, forwarded: bridge.last.forwarded }) : 'none'}`,
+        `draft room script speed (seconds from ESPN to this page, per pick): ${JSON.stringify(bridge.lags)}`,
         `log (${espnLog.length} lines, oldest first):`];
       const text = head.concat(espnLog.map(l => JSON.stringify(l))).join('\n');
       const box = document.getElementById('espn-debug-text'), note = document.getElementById('espn-debug-note');

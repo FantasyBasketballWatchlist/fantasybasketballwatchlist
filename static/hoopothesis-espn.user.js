@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hoopothesis: live ESPN draft picks
 // @namespace    https://hoopothesis.cc/
-// @version      0.2.0
+// @version      0.2.1
 // @description  Reads picks from ESPN's fantasy basketball draft room as they happen and sends them to the Hoopothesis draft tracker (open in another tab). Beta: shows a debug panel you can copy if it misses picks.
 // @match        https://fantasy.espn.com/*
 // @match        https://hoopothesis.cc/*
@@ -13,6 +13,7 @@
 // @grant        GM_getValue
 // @grant        GM.setValue
 // @grant        GM.getValue
+// @grant        GM_addValueChangeListener
 // @updateURL    https://hoopothesis.cc/hoopothesis-espn.user.js
 // @downloadURL  https://hoopothesis.cc/hoopothesis-espn.user.js
 // ==/UserScript==
@@ -34,11 +35,13 @@
  * clipboard (long tokens and query strings removed) to send over.
  *
  * Hand-off: picks are written to the userscript manager's storage (GM_setValue); the copy of this script running on the
- * Hoopothesis draft page reads them every 1.5 s and hands them to the page with window.postMessage.
+ * Hoopothesis draft page is told the moment they change (GM_addValueChangeListener, which isn't slowed down in a
+ * background tab), with a 1 s check as a fallback, and hands them to the page with window.postMessage. Each pick carries
+ * the time the draft room saw it, so the page can show how far behind it is.
  */
 (function () {
   'use strict';
-  const VERSION = '0.2.0';
+  const VERSION = '0.2.1';
   const KEY = 'hoop-espn-bridge-v1';
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   const host = location.hostname;
@@ -248,7 +251,7 @@
       const list = [...picks.values()].sort((a, b) => (a.guessed === b.guessed ? 0 : a.guessed ? -1 : 1) ||
         (a.overall ?? 1e9) - (b.overall ?? 1e9) || a.seq - b.seq);
       const payload = { v: 1, version: VERSION, at: new Date().toISOString(), started: dbg.started, league: dbg.league, page: dbg.page,
-        picks: list.map(({ overall, guessed, seq, teamId, playerId, name, source }) => ({ overall, guessed, seq, teamId, playerId, name, source })),
+        picks: list.map(({ overall, guessed, seq, teamId, playerId, name, source, at }) => ({ overall, guessed, seq, teamId, playerId, name, source, at })),
         summary: { sockets: dbg.sockets.length, wsMessages: dbg.wsMessages, http: dbg.http.length, hooks: dbg.hooks,
           errors: dbg.errors.length, board: dbg.board ? { completed: dbg.board.completed, parsed: dbg.board.parsed, teams: dbg.board.teams } : null } };
       gmSet(KEY, JSON.stringify(payload)).catch((e) => note('storage', e));
@@ -304,19 +307,22 @@
   function hoopSide() {
     if (!/\/draft/.test(location.pathname)) return;
     let last = null;
-    const tick = async () => {
-      try {
-        const raw = await gmGet(KEY);
-        if (raw && raw !== last) {
-          last = raw;
-          window.postMessage({ type: 'hoop-espn-bridge', payload: JSON.parse(raw) }, location.origin);
-        }
-      } catch (e) { /* storage unavailable: nothing to forward */ }
+    const forward = (raw, how) => {
+      if (!raw || raw === last) return;
+      last = raw;
+      const payload = JSON.parse(raw);
+      payload.forwarded = { at: new Date().toISOString(), how };
+      window.postMessage({ type: 'hoop-espn-bridge', payload }, location.origin);
     };
+    const tick = async () => { try { forward(await gmGet(KEY), 'check'); } catch (e) { /* storage unavailable */ } };
+    // Instant: Tampermonkey calls this when the draft room tab saves new picks (also in a background tab).
+    if (typeof GM_addValueChangeListener === 'function') {
+      try { GM_addValueChangeListener(KEY, (k, oldV, newV) => { try { forward(newV, 'instant'); } catch (e) { /* bad data */ } }); } catch (e) { /* not supported */ }
+    }
     // Tell the page the script is installed even before any pick arrives.
     const hello = () => window.postMessage({ type: 'hoop-espn-bridge-hello', version: VERSION }, location.origin);
     document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', hello) : hello();
-    setInterval(tick, 1500);
+    setInterval(tick, 1000);
     setInterval(hello, 10000);
     tick();
   }
