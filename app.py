@@ -153,6 +153,15 @@ SITE_URL = "https://hoopothesis.cc"
 PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/trade-analyzer", "/waiver-wires"]
 
 
+@app.route("/hoopothesis-espn.user.js")
+def espn_userscript():
+    """The Tampermonkey script for live ESPN draft picks. Served from the root with no caching, so Tampermonkey installs
+    it (the .user.js ending) and its update checks always see the newest version."""
+    res = send_from_directory(app.static_folder, "hoopothesis-espn.user.js", max_age=0)
+    res.headers["Content-Type"] = "text/javascript; charset=utf-8"
+    return res
+
+
 @app.route("/robots.txt")
 def robots():
     # /api/ stays crawlable: search engines need it to render the pages. API responses are noindex instead.

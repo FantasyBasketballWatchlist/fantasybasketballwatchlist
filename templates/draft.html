@@ -200,14 +200,17 @@
 
         <div class="card panel espn" style="--c: var(--blue)">
           <h3><span class="dot"></span>Sync with ESPN <span class="beta">BETA</span></h3>
-          <p class="help" style="margin:4px 0 0">Draft in the ESPN app or website as usual; picks fill in here by themselves.
-            You can still enter picks by hand: ESPN's pick replaces yours once ESPN has that pick.
+          <p class="help" style="margin:4px 0 0">ESPN only shares a draft's picks once it's over; they fill in here within
+            seconds and correct anything entered by hand. During the draft, enter picks here, or on a computer install the
+            <a href="/hoopothesis-espn.user.js" target="_blank" rel="noopener">Tampermonkey script</a> (beta) and draft on
+            ESPN's website with this page open in another tab: picks then appear here live.
             Paste your ESPN league ID (or the league's URL). Public leagues work anywhere; private ones only if you're logged
             into ESPN's website in this same browser.</p>
           <div class="row"><input id="espn-league" placeholder="League ID or URL" autocomplete="off" spellcheck="false">
             <button class="btn small" id="espn-go">Connect</button></div>
           <div class="row" id="espn-team-row" hidden><select id="espn-team" aria-label="Your ESPN team"></select></div>
           <div class="status" id="espn-status"></div>
+          <div class="status" id="bridge-status" hidden></div>
           <div class="espn-debug" id="espn-debug-row" hidden>
             <button class="btn small ghost" id="espn-debug">Copy debug info</button>
             <span id="espn-debug-note">If the sync misbehaves, copy this and send it over.</span>
@@ -806,9 +809,10 @@
     // are kept for the pick numbers ESPN hasn't filled (state.espn.synced = the pick numbers the last sync filled).
     const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/fba/seasons';
     const ESPN_POLL_MS = 8000;
-    // Whether ESPN's API shows picks during a live draft (or only once it's over) hasn't been confirmed: if the draft is
-    // live and ESPN still lists no picks after this long, say so and point to entering picks by hand.
-    const ESPN_SILENT_MS = 2 * 60 * 1000;
+    // ESPN's API lists no picks during a live draft, then all of them when it ends (recorded 2026-10-21 with
+    // analysis/espn_draft_recorder.py: 0 picks for the whole draft, 130 at once at the end). So a live draft with no picks
+    // is flagged right away (0 ms), pointing to hand entry or the Tampermonkey script.
+    const ESPN_SILENT_MS = 0;
     const ESPN_RETRY_MS = 2000;           // while the rankings or season info are still loading
     const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false, silentSince: null };
 
@@ -923,8 +927,10 @@
         const started = live || (draftAt != null && Date.now() > draftAt);
         espn.silentSince = started && !done && !made.length ? (espn.silentSince ?? (live ? Date.now() : Math.max(draftAt, Date.now() - ESPN_SILENT_MS))) : null;
         const silent = espn.silentSince != null && Date.now() - espn.silentSince >= ESPN_SILENT_MS;
-        espnStatus((silent ? `${live ? 'ESPN says the draft is live' : 'The draft was scheduled to start'} but ESPN isn't sharing picks yet. ` +
-          "Enter them here by hand; they'll be checked against ESPN when it catches up. " : '') + notes.join(' · '), silent ? 'bad' : done ? '' : 'live');
+        const bridged = bridge.live();
+        espnStatus((silent && !bridged ? "The draft is on, but ESPN doesn't share picks until it's over. Enter them here by hand " +
+          "(or use the Tampermonkey script); this fills in and corrects the board when the draft ends. " : '') + notes.join(' · '),
+          silent && !bridged ? 'bad' : done ? '' : 'live');
         espnNote('ok', { http: espn.lastHttp, year, league: cfg.league, live, done, espnPicks: made.length, manual: manual.length,
           board: Object.keys(state.picks).length, draftAt: draftAt ? new Date(draftAt).toISOString() : null, silent,
           teams: nTeams, rounds: state.rounds, unmatched, offSnake });
@@ -943,6 +949,60 @@
       if (state.espn && !espn.done) espn.timer = setTimeout(() => { if (!document.hidden) espnSync(); else espn.timer = null; }, ESPN_POLL_MS);
     }
 
+    // ---------- Live picks from the Tampermonkey script (static/hoopothesis-espn.user.js) running in ESPN's draft room.
+    // It posts {picks: [{overall, seq, teamId, playerId, name, source}], league, started, at}. Each pick goes on the board
+    // at its pick number (or its order of arrival if ESPN's message had no number), replacing a hand pick there; ESPN's
+    // own list still wins once the draft is over (espnSync).
+    const BRIDGE_STALE_MS = 6 * 3600 * 1000;        // ignore picks from a draft room left open hours ago
+    const bridge = {
+      installed: null, last: null, applied: 0, warn: '',
+      live() { return !!this.last && Date.now() - Date.parse(this.last.at) < 10 * 60 * 1000; },
+    };
+    function bridgeStatus() {
+      const el = document.getElementById('bridge-status');
+      const b = bridge.last;
+      el.hidden = !bridge.installed && !b;
+      if (el.hidden) return;
+      el.className = `status ${bridge.warn ? 'bad' : b && bridge.live() ? 'live' : ''}`;
+      el.textContent = bridge.warn || (b
+        ? `ESPN draft room script v${b.version}: ${b.picks.length} pick${b.picks.length === 1 ? '' : 's'} seen, ${bridge.applied} placed · last ${new Date(b.at).toLocaleTimeString()}` +
+          (b.picks.length ? '' : ` · ${b.summary.sockets} live feed(s), ${b.summary.wsMessages} messages so far`)
+        : `ESPN draft room script v${bridge.installed} installed: open your draft on ESPN's website in another tab.`);
+    }
+    async function applyBridge(b) {
+      if (!b || !Array.isArray(b.picks) || Date.now() - Date.parse(b.at) > BRIDGE_STALE_MS) return;
+      bridge.last = b;
+      bridge.warn = state.espn?.league && b.league && String(b.league) !== String(state.espn.league)
+        ? `The ESPN draft room open in the other tab is league ${b.league}, but this page is connected to league ${state.espn.league}: its picks aren't used.` : '';
+      espnNote('bridge', { league: b.league, started: b.started, picks: b.picks.length, summary: b.summary });
+      if (bridge.warn) { bridgeStatus(); return; }
+      if (b.picks.some(p => p.playerId && !espn.names.has(p.playerId) && !p.name) && espnYear()) {
+        try { await espnPlayerNames(espnYear()); } catch (e) { espnNote('error', { error: `bridge names: ${e.message}` }); }
+      }
+      const byKey = new Map(players.map(p => [espnKey(p.name), p.id]));
+      const synced = new Set(state.espn?.synced || []);       // pick numbers ESPN's own list filled: those stay
+      let placed = 0;
+      for (const p of b.picks) {
+        const n = p.overall || p.seq;
+        if (!n || n > totalPicks() || synced.has(n)) continue;
+        const name = p.name || espn.names.get(p.playerId) || `ESPN player ${p.playerId}`;
+        const id = byKey.get(espnKey(name)) ?? -(p.playerId || 0);
+        if (!id) continue;
+        for (const [k, v] of Object.entries(state.picks)) if (v === id && +k !== n) { delete state.picks[k]; state.history = state.history.filter(x => x !== +k); }
+        state.picks[n] = id;
+        state.names[id] = name;
+        if (!state.history.includes(n)) state.history.push(n);
+        placed++;
+      }
+      bridge.applied = placed;
+      lookCache = { key: null, value: null }; save(); render(); bridgeStatus();
+    }
+    window.addEventListener('message', (ev) => {
+      if (ev.source !== window || ev.origin !== location.origin || !ev.data) return;
+      if (ev.data.type === 'hoop-espn-bridge-hello') { if (!bridge.installed) { bridge.installed = ev.data.version; espnNote('bridge installed', { version: ev.data.version }); } bridgeStatus(); }
+      if (ev.data.type === 'hoop-espn-bridge') applyBridge(ev.data.payload);
+    });
+
     function renderEspnTeams() {
       const row = document.getElementById('espn-team-row'), sel = document.getElementById('espn-team');
       row.hidden = !espn.teams.length;
@@ -956,7 +1016,7 @@
       document.getElementById('espn-go').textContent = state.espn ? 'Disconnect' : 'Connect';
       renderEspnTeams();
       espnStatus(state.espn ? 'Connecting...' : '');
-      document.getElementById('espn-debug-row').hidden = !state.espn && !espnLog.length;
+      document.getElementById('espn-debug-row').hidden = !state.espn && !espnLog.length && !bridge.installed;
       if (state.espn) { espnNote('connect', { league: state.espn.league, team: state.espn.team }); espnSync(); }
     }
 
@@ -982,7 +1042,9 @@
         `browser: ${navigator.userAgent}`, `season data: ${loadedMeta ? `${loadedMeta.season} ${loadedMeta.mode}` : 'not loaded'}`,
         `connected: ${state.espn ? `league ${state.espn.league}, team ${state.espn.team}` : 'no'}`,
         `board: ${Object.keys(state.picks).length} picks, ${state.teams} teams x ${state.rounds} rounds, your slot ${state.slot}`,
-        `status: ${document.getElementById('espn-status').textContent}`, `log (${espnLog.length} lines, oldest first):`];
+        `status: ${document.getElementById('espn-status').textContent}`,
+        `draft room script: ${bridge.installed ? `v${bridge.installed}` : 'not detected'}; last: ${bridge.last ? JSON.stringify({ at: bridge.last.at, league: bridge.last.league, picks: bridge.last.picks.length, summary: bridge.last.summary }) : 'none'}`,
+        `log (${espnLog.length} lines, oldest first):`];
       const text = head.concat(espnLog.map(l => JSON.stringify(l))).join('\n');
       const box = document.getElementById('espn-debug-text'), note = document.getElementById('espn-debug-note');
       try { await navigator.clipboard.writeText(text); note.textContent = `Copied (${espnLog.length} lines). Paste it into a message.`; }
