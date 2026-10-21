@@ -797,7 +797,10 @@
     // are kept for the pick numbers ESPN hasn't filled (state.espn.synced = the pick numbers the last sync filled).
     const ESPN_API = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/fba/seasons';
     const ESPN_POLL_MS = 8000;
-    const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false };
+    // Whether ESPN's API shows picks during a live draft (or only once it's over) hasn't been confirmed: if the draft is
+    // live and ESPN still lists no picks after this long, say so and point to entering picks by hand.
+    const ESPN_SILENT_MS = 2 * 60 * 1000;
+    const espn = { timer: null, names: new Map(), teams: [], leagueName: '', busy: false, silentSince: null };
     const espnKey = (n) => normalizeString(String(n)).replace(/\./g, '').replace(/-/g, ' ').replace(/'/g, '')
       .replace(/\s+(jr|sr|ii|iii|iv)$/, '').replace(/\s+/g, ' ').trim();          // same as ratings._espn_key
     const espnYear = () => {
@@ -886,7 +889,10 @@
         if (cfg.team == null) notes.push('pick your team above');
         if (unmatched) notes.push(`${unmatched} player${unmatched === 1 ? '' : 's'} not in the rankings`);
         if (offSnake) notes.push(`${offSnake} pick${offSnake === 1 ? " doesn't" : "s don't"} follow a plain snake (traded picks?): placed by pick number`);
-        espnStatus(notes.join(' · '), done ? '' : 'live');
+        espn.silentSince = live && !made.length ? (espn.silentSince ?? Date.now()) : null;
+        const silent = espn.silentSince != null && Date.now() - espn.silentSince >= ESPN_SILENT_MS;
+        espnStatus((silent ? "ESPN says the draft is live but isn't sharing picks yet. Enter them here by hand; " +
+          "they'll be checked against ESPN when it catches up. " : '') + notes.join(' · '), silent ? 'bad' : done ? '' : 'live');
         espn.done = done;
       } catch (e) {
         const msg = e.message === 'private' ? "This league is private. Make it viewable to the public in ESPN's league settings, or log into ESPN's website in this browser."
@@ -909,7 +915,7 @@
     }
 
     function espnResume() {
-      clearTimeout(espn.timer); espn.timer = null; espn.done = false; espn.teams = [];
+      clearTimeout(espn.timer); espn.timer = null; espn.done = false; espn.teams = []; espn.silentSince = null;
       document.getElementById('espn-league').value = state.espn?.league || '';
       document.getElementById('espn-go').textContent = state.espn ? 'Disconnect' : 'Connect';
       renderEspnTeams();
