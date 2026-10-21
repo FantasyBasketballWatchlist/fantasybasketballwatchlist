@@ -1,0 +1,722 @@
+{
+ "rules": "docs/prereg-win-totals.md",
+ "coef": {
+  "a": 0.50057301922483,
+  "b_S": 0.03338595707362367,
+  "c_prev": 0.3385024961660911
+ },
+ "design_fit": {
+  "mae_proj": 7.1594948522113855,
+  "mae_line": 6.222222222222222,
+  "bets": {
+   "bets": 67,
+   "hit": 0.5074626865671642,
+   "roi": -0.031207598371777435,
+   "overs": 31,
+   "unders": 36
+  }
+ },
+ "test": {
+  "2023-24": {
+   "mae_proj": 8.300143858274161,
+   "mae_line": 6.566666666666666,
+   "mae_blend": 6.8069595138507655,
+   "bets": {
+    "bets": 23,
+    "hit": 0.391304347826087,
+    "roi": -0.25296442687747034,
+    "overs": 8,
+    "unders": 15
+   },
+   "bets_edge3": {
+    "bets": 14,
+    "hit": 0.42857142857142855,
+    "roi": -0.1818181818181818,
+    "overs": 6,
+    "unders": 8
+   }
+  },
+  "2024-25": {
+   "mae_proj": 8.81508424905095,
+   "mae_line": 8.333333333333334,
+   "mae_blend": 8.056604829039891,
+   "bets": {
+    "bets": 22,
+    "hit": 0.6363636363636364,
+    "roi": 0.2148760330578513,
+    "overs": 10,
+    "unders": 12
+   },
+   "bets_edge3": {
+    "bets": 19,
+    "hit": 0.631578947368421,
+    "roi": 0.20574162679425842,
+    "overs": 9,
+    "unders": 10
+   }
+  },
+  "2025-26": {
+   "mae_proj": 9.191855719284035,
+   "mae_line": 7.966666666666667,
+   "mae_blend": 7.858576426478665,
+   "bets": {
+    "bets": 24,
+    "hit": 0.5416666666666666,
+    "roi": 0.03409090909090914,
+    "overs": 12,
+    "unders": 12
+   },
+   "bets_edge3": {
+    "bets": 18,
+    "hit": 0.5,
+    "roi": -0.045454545454545414,
+    "overs": 8,
+    "unders": 10
+   }
+  }
+ },
+ "blend_w_design": 0.2810405196857856,
+ "test_all": {
+  "bets": {
+   "bets": 69,
+   "hit": 0.5217391304347826,
+   "roi": -0.003952569169960432,
+   "overs": 30,
+   "unders": 39
+  },
+  "bets_edge3": {
+   "bets": 51,
+   "hit": 0.5294117647058824,
+   "roi": 0.010695187165775444,
+   "overs": 23,
+   "unders": 28
+  },
+  "mae_proj": 8.769027942203047,
+  "mae_line": 7.622222222222222,
+  "mae_blend": 7.574046923123107
+ },
+ "passes": false,
+ "test_bets": [
+  {
+   "season": "2023-24",
+   "team": "Boston Celtics",
+   "line": 55.5,
+   "proj": 52.5,
+   "actual": 64,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Cleveland Cavaliers",
+   "line": 50.5,
+   "proj": 48.1,
+   "actual": 48,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "New Orleans Pelicans",
+   "line": 44.5,
+   "proj": 41.2,
+   "actual": 49,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Chicago Bulls",
+   "line": 37.5,
+   "proj": 40.2,
+   "actual": 39,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Dallas Mavericks",
+   "line": 44.5,
+   "proj": 42.4,
+   "actual": 50,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Denver Nuggets",
+   "line": 53.5,
+   "proj": 47.8,
+   "actual": 57,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Golden State Warriors",
+   "line": 48.5,
+   "proj": 42.2,
+   "actual": 46,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Houston Rockets",
+   "line": 31.5,
+   "proj": 35.3,
+   "actual": 41,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "LA Clippers",
+   "line": 46.5,
+   "proj": 43.8,
+   "actual": 51,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Los Angeles Lakers",
+   "line": 47.5,
+   "proj": 44.3,
+   "actual": 47,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Miami Heat",
+   "line": 46.5,
+   "proj": 41.8,
+   "actual": 46,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Milwaukee Bucks",
+   "line": 54.5,
+   "proj": 49.3,
+   "actual": 49,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Minnesota Timberwolves",
+   "line": 44.5,
+   "proj": 41.1,
+   "actual": 56,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Brooklyn Nets",
+   "line": 37.5,
+   "proj": 41.1,
+   "actual": 32,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "New York Knicks",
+   "line": 45.5,
+   "proj": 42.8,
+   "actual": 50,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Philadelphia 76ers",
+   "line": 48.5,
+   "proj": 46.1,
+   "actual": 47,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Phoenix Suns",
+   "line": 52.5,
+   "proj": 44.3,
+   "actual": 49,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2023-24",
+   "team": "Portland Trail Blazers",
+   "line": 28.5,
+   "proj": 34.8,
+   "actual": 21,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "San Antonio Spurs",
+   "line": 28.5,
+   "proj": 30.7,
+   "actual": 22,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Oklahoma City Thunder",
+   "line": 44.5,
+   "proj": 41.6,
+   "actual": 57,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Toronto Raptors",
+   "line": 36.5,
+   "proj": 41.8,
+   "actual": 25,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Washington Wizards",
+   "line": 24.5,
+   "proj": 33.1,
+   "actual": 15,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2023-24",
+   "team": "Charlotte Hornets",
+   "line": 31.5,
+   "proj": 34.7,
+   "actual": 21,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Atlanta Hawks",
+   "line": 36.5,
+   "proj": 38.6,
+   "actual": 40,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Boston Celtics",
+   "line": 58.5,
+   "proj": 51.4,
+   "actual": 61,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Cleveland Cavaliers",
+   "line": 48.5,
+   "proj": 45.7,
+   "actual": 64,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Chicago Bulls",
+   "line": 28.5,
+   "proj": 38.0,
+   "actual": 39,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Denver Nuggets",
+   "line": 51.5,
+   "proj": 49.3,
+   "actual": 50,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Golden State Warriors",
+   "line": 45.5,
+   "proj": 38.6,
+   "actual": 48,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "LA Clippers",
+   "line": 35.5,
+   "proj": 42.1,
+   "actual": 50,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Los Angeles Lakers",
+   "line": 43.5,
+   "proj": 47.0,
+   "actual": 50,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Milwaukee Bucks",
+   "line": 50.5,
+   "proj": 45.0,
+   "actual": 48,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Minnesota Timberwolves",
+   "line": 52.5,
+   "proj": 46.5,
+   "actual": 49,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Brooklyn Nets",
+   "line": 19.5,
+   "proj": 33.6,
+   "actual": 26,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "New York Knicks",
+   "line": 53.5,
+   "proj": 43.7,
+   "actual": 51,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Orlando Magic",
+   "line": 47.5,
+   "proj": 40.5,
+   "actual": 41,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Indiana Pacers",
+   "line": 47.5,
+   "proj": 43.4,
+   "actual": 50,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Philadelphia 76ers",
+   "line": 51.5,
+   "proj": 46.4,
+   "actual": 24,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Portland Trail Blazers",
+   "line": 22.5,
+   "proj": 32.2,
+   "actual": 36,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Oklahoma City Thunder",
+   "line": 56.5,
+   "proj": 49.9,
+   "actual": 68,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Toronto Raptors",
+   "line": 29.5,
+   "proj": 34.6,
+   "actual": 30,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2024-25",
+   "team": "Utah Jazz",
+   "line": 27.5,
+   "proj": 34.7,
+   "actual": 17,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Memphis Grizzlies",
+   "line": 47.5,
+   "proj": 34.0,
+   "actual": 48,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Washington Wizards",
+   "line": 20.5,
+   "proj": 27.4,
+   "actual": 18,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2024-25",
+   "team": "Detroit Pistons",
+   "line": 25.5,
+   "proj": 29.5,
+   "actual": 44,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Boston Celtics",
+   "line": 43.5,
+   "proj": 49.3,
+   "actual": 56,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Cleveland Cavaliers",
+   "line": 55.5,
+   "proj": 50.5,
+   "actual": 52,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "New Orleans Pelicans",
+   "line": 32.5,
+   "proj": 35.2,
+   "actual": 26,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Chicago Bulls",
+   "line": 32.5,
+   "proj": 40.0,
+   "actual": 31,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Denver Nuggets",
+   "line": 53.5,
+   "proj": 49.1,
+   "actual": 54,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Golden State Warriors",
+   "line": 47.5,
+   "proj": 41.0,
+   "actual": 37,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Houston Rockets",
+   "line": 54.5,
+   "proj": 46.0,
+   "actual": 52,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Miami Heat",
+   "line": 36.5,
+   "proj": 39.2,
+   "actual": 43,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Milwaukee Bucks",
+   "line": 45.5,
+   "proj": 43.1,
+   "actual": 32,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Minnesota Timberwolves",
+   "line": 51.5,
+   "proj": 43.6,
+   "actual": 49,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Brooklyn Nets",
+   "line": 21.5,
+   "proj": 32.0,
+   "actual": 20,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "New York Knicks",
+   "line": 52.5,
+   "proj": 47.8,
+   "actual": 53,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Orlando Magic",
+   "line": 51.5,
+   "proj": 42.0,
+   "actual": 45,
+   "side": "under",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Philadelphia 76ers",
+   "line": 43.5,
+   "proj": 33.1,
+   "actual": 45,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Phoenix Suns",
+   "line": 31.5,
+   "proj": 38.1,
+   "actual": 45,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Portland Trail Blazers",
+   "line": 32.5,
+   "proj": 35.1,
+   "actual": 42,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Sacramento Kings",
+   "line": 37.5,
+   "proj": 41.5,
+   "actual": 22,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "San Antonio Spurs",
+   "line": 43.5,
+   "proj": 40.7,
+   "actual": 62,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Oklahoma City Thunder",
+   "line": 62.5,
+   "proj": 54.9,
+   "actual": 64,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Toronto Raptors",
+   "line": 34.5,
+   "proj": 37.3,
+   "actual": 46,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Utah Jazz",
+   "line": 18.5,
+   "proj": 29.4,
+   "actual": 22,
+   "side": "over",
+   "won": true
+  },
+  {
+   "season": "2025-26",
+   "team": "Washington Wizards",
+   "line": 20.5,
+   "proj": 28.6,
+   "actual": 17,
+   "side": "over",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Detroit Pistons",
+   "line": 45.5,
+   "proj": 41.8,
+   "actual": 60,
+   "side": "under",
+   "won": false
+  },
+  {
+   "season": "2025-26",
+   "team": "Charlotte Hornets",
+   "line": 24.5,
+   "proj": 32.4,
+   "actual": 44,
+   "side": "over",
+   "won": true
+  }
+ ]
+}

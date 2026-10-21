@@ -46,3 +46,13 @@ the line (none here: all lines are .5) would push.
 - At most ~90 test lines, and probably 40-60 bets: only a large edge can pass; a real small edge may not.
 - Lines for 2020-21 to 2022-23 aren't strictly openers (dated tables), and 2023-24's come from a different site.
 - Fantasy points aren't wins (defense, efficiency, coaching aren't in BPV); last season's record partly covers them.
+
+## Result (2026-10-21)
+
+`analysis/win_totals.json`. **Fails.** Test seasons: 69 bets won 52.2% (break-even 52.4%; ROI -0.4%); by season 39% /
+64% / 54% (2 of 3 above break-even, but the overall rule needs 55%). With a 3-win threshold: 51 bets, 52.9%, +1.1%.
+The lines forecast wins better than the projection (mean absolute error 7.6 vs 8.8); a blend (w = 0.28 from the
+design seasons) is 7.57, a negligible gain. Fitted model: one SD of team BPV = 2.7 wins, last season's record carries
+most of the weight. BPV measures fantasy production; wins also depend on defense, efficiency, coaching and depth,
+which it doesn't see, and the market already prices what it does. 2020-21 used BPV without the age adjustment (no
+earlier seasons to fit the age curve on).
