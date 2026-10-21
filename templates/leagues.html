@@ -114,14 +114,7 @@
     }
 
     // The drafted rosters become the league's teams (you are "Your team"); the Teams page then ranks them.
-    function copyDraft(l) {
-      const f = draftFacts(l.draft), d = l.draft, teams = [];
-      for (let t = 1; t <= d.teams; t++) {
-        const ids = Object.entries(d.picks).filter(([n]) => f.teamOf(+n) === t).sort((a, b) => a[0] - b[0]).map(([, id]) => id);
-        teams.push({ name: t === d.slot ? 'Your team' : `Team ${t}`, ids });
-      }
-      return { teams, lineup: d.lineup || l.teams?.lineup || 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL', mine: d.slot - 1, trades: [] };
-    }
+    function copyDraft(l) { return Leagues.teamsFromDraft(l.draft, l.teams?.lineup); }
 
     const box = document.getElementById('leagues');
     box.addEventListener('click', e => {

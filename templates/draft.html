@@ -885,7 +885,11 @@
         const rosterSize = Object.entries(d.settings?.rosterSettings?.lineupSlotCounts || {})
           .filter(([slot]) => slot !== ESPN_IR_SLOT).reduce((a, [, n]) => a + n, 0);
         const maxRound = Math.max(0, ...made.map(p => p.roundId || 0));
-        const before = JSON.stringify([state.picks, state.teams, state.slot, state.rounds]);
+        const before = JSON.stringify([state.picks, state.teams, state.slot, state.rounds, state.teamNames, state.owners]);
+        // ESPN's team names by draft slot, and which slot made each pick (handles traded picks): the Teams page uses both.
+        state.teamNames = order.map(id => espn.teams.find(t => t.id === id)?.name || null);
+        state.owners = {};
+        made.forEach(p => { const slot = order.indexOf(p.teamId) + 1; if (slot > 0) state.owners[p.overall] = slot; });
         state.teams = nTeams;
         state.rounds = Math.min(30, Math.max(rosterSize || state.rounds, maxRound, 1));
         if (cfg.team != null && order.includes(cfg.team)) state.slot = order.indexOf(cfg.team) + 1;
@@ -910,7 +914,7 @@
         cfg.synced = espnNumbers;
         state.picks = picks;
         state.history = [...espnNumbers, ...manual];
-        if (JSON.stringify([state.picks, state.teams, state.slot, state.rounds]) !== before) {
+        if (JSON.stringify([state.picks, state.teams, state.slot, state.rounds, state.teamNames, state.owners]) !== before) {
           lookCache = { key: null, value: null }; save(); writeSettings(); render();
         }
         const done = !!d.draftDetail?.drafted, live = !!d.draftDetail?.inProgress;

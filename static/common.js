@@ -142,6 +142,49 @@ const Leagues = {
     const d = Leagues.read(), l = d.leagues.find(x => x.id === id);
     if (l && name.trim()) { l.name = name.trim().slice(0, 40); Leagues.write(d); }
   },
+  // Write one kind (draft / teams) of any league, active or not.
+  setFor(id, kind, value) {
+    const d = Leagues.read(), l = d.leagues.find(x => x.id === id);
+    if (!l) return false;
+    l[kind] = value; l.updated = new Date().toISOString();
+    return Leagues.write(d);
+  },
+  // The drafted rosters as teams: pick n belongs to the team in draft slot owners[n] (ESPN's record, which handles traded
+  // picks) or else to the snake order. Team names are ESPN's when the draft was synced with ESPN.
+  teamsFromDraft(d, lineup) {
+    const n = d.teams;
+    const snake = (k) => { const r = Math.floor((k - 1) / n), i = (k - 1) % n; return r % 2 === 0 ? i + 1 : n - i; };
+    const slotOf = (k) => (d.owners && d.owners[k]) || snake(k);
+    const teams = [];
+    for (let t = 1; t <= n; t++) {
+      const ids = Object.entries(d.picks || {}).filter(([k, id]) => slotOf(+k) === t && id > 0)
+        .sort((a, b) => a[0] - b[0]).map(([, id]) => id);
+      teams.push({ name: (d.teamNames && d.teamNames[t - 1]) || (t === d.slot ? 'Your team' : `Team ${t}`), ids });
+    }
+    return { teams, lineup: lineup || d.lineup || 'PG,SG,SF,PF,C,G,F,UTIL,UTIL,UTIL', mine: Math.max(0, (d.slot || 1) - 1),
+      trades: [], draftIds: teams.map(t => t.ids), draftNames: teams.map(t => t.name) };
+  },
+  // A league's teams, filled from its draft automatically: when there are none yet, or when they still are exactly what
+  // an earlier version of the draft produced (no trades or roster edits since) and the draft has moved on. Teams someone
+  // edited are left alone (the Your leagues page can still replace them).
+  teamsFor(l) {
+    if (!l) return null;
+    const t = l.teams, d = l.draft;
+    if (!d || !d.picks || !Object.keys(d.picks).length || (t && t.manual)) return t;
+    const has = t && Array.isArray(t.teams) && t.teams.some(x => x.ids && x.ids.length);
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const untouched = has && t.draftIds && !(t.trades || []).length && same(t.teams.map(x => x.ids), t.draftIds);
+    if (has && !untouched) return t;
+    const built = Leagues.teamsFromDraft(d, t && t.lineup);
+    if (untouched) {
+      if (same(built.draftIds, t.draftIds) && same(built.draftNames, t.draftNames)) return t;
+      built.mine = t.mine ?? built.mine;
+      // Keep names someone typed; take the draft's new names (e.g. ESPN's) for the rest.
+      built.teams.forEach((x, i) => { if (t.teams[i] && t.draftNames && t.teams[i].name !== t.draftNames[i]) x.name = t.teams[i].name; });
+    }
+    Leagues.setFor(l.id, 'teams', built);
+    return built;
+  },
   remove(id) {
     const d = Leagues.read();
     d.leagues = d.leagues.filter(l => l.id !== id);

@@ -152,7 +152,7 @@
     function save() { Leagues.set('teams', state); }
     function restore() {
       state = { teams: newTeams(DEFAULT_TEAMS), lineup: DEFAULT_LINEUP, mine: 0, trades: [] };
-      const s = Leagues.get('teams');
+      const s = Leagues.teamsFor(Leagues.active());     // filled from this league's draft when it has no teams yet
       if (s && Array.isArray(s.teams) && s.teams.length) state = { ...state, ...s };
       if (state.teams.length < MIN_TEAMS) state.teams.push(...newTeams(MIN_TEAMS - state.teams.length, state.teams.length));
       if (!Array.isArray(state.trades)) state.trades = [];
@@ -449,7 +449,8 @@
       save(); render();
     });
     document.getElementById('reset').addEventListener('click', e => armed(e.currentTarget, 'Sure?', () => {
-      state = { teams: newTeams(state.teams.length), lineup: state.lineup, mine: state.mine, trades: [] };
+      // manual: don't refill these from the draft (Leagues.teamsFor) after someone cleared them on purpose.
+      state = { teams: newTeams(state.teams.length), lineup: state.lineup, mine: state.mine, trades: [], manual: true };
       notes = {}; save(); render();
     }));
     document.getElementById('set-lineup').addEventListener('change', e => {

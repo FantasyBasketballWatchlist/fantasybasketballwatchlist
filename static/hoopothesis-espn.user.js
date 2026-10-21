@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hoopothesis: live ESPN draft picks
 // @namespace    https://hoopothesis.cc/
-// @version      0.2.1
+// @version      0.2.2
 // @description  Reads picks from ESPN's fantasy basketball draft room as they happen and sends them to the Hoopothesis draft tracker (open in another tab). Beta: shows a debug panel you can copy if it misses picks.
 // @match        https://fantasy.espn.com/*
 // @match        https://hoopothesis.cc/*
@@ -41,7 +41,7 @@
  */
 (function () {
   'use strict';
-  const VERSION = '0.2.1';
+  const VERSION = '0.2.2';
   const KEY = 'hoop-espn-bridge-v1';
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   const host = location.hostname;
@@ -273,7 +273,16 @@
           '<textarea id="hoop-t" readonly style="display:none;width:100%;height:90px;margin-top:6px;font:10px monospace"></textarea>';
         document.body.appendChild(panel);
         panel.querySelector('#hoop-v').textContent = `v${VERSION}`;
-        panel.querySelector('#hoop-hide').onclick = () => { panel.style.display = 'none'; };
+        // "hide" folds the box into a small tab in the same corner; clicking the tab opens it again. Picks keep being
+        // read and sent either way.
+        const tab = document.createElement('button');
+        tab.textContent = 'Hoop ▴';
+        tab.title = 'Show the Hoopothesis bridge';
+        tab.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;display:none;background:#ff7a1a;color:#1a0d00;' +
+          'border:0;border-radius:8px;padding:4px 9px;font:600 12px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35)';
+        document.body.appendChild(tab);
+        panel.querySelector('#hoop-hide').onclick = () => { panel.style.display = 'none'; tab.style.display = 'block'; };
+        tab.onclick = () => { panel.style.display = 'block'; tab.style.display = 'none'; };
         panel.querySelector('#hoop-copy').onclick = copyDebug;
       }
       const ids = [...picks.values()];

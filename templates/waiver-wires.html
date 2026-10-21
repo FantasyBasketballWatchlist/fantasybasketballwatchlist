@@ -89,14 +89,19 @@
     let threshold = 4;
     // League view: "all" = every player; otherwise a league from Your leagues and one of its teams.
     const NO_LEAGUE = 'all';
-    let scope = { league: NO_LEAGUE, team: 0 };
-    try { const v = JSON.parse(localStorage.getItem('hoop-waiver-scope')); if (v && v.league) scope = v; } catch (e) {}
-    const saveScope = () => { try { localStorage.setItem('hoop-waiver-scope', JSON.stringify(scope)); } catch (e) {} };
+    // Follows the league you're working on (the one picked on the Draft, Teams or Your leagues page); "All players"
+    // stays chosen only for the league it was chosen in.
+    let scope = { league: Leagues.read().active, team: -1 };
+    try {
+      const v = JSON.parse(localStorage.getItem('hoop-waiver-scope-v2'));
+      if (v && v.active === Leagues.read().active) scope = { league: v.league, team: v.team };
+    } catch (e) {}
+    const saveScope = () => { try { localStorage.setItem('hoop-waiver-scope-v2', JSON.stringify({ ...scope, active: Leagues.read().active })); } catch (e) {} };
 
     function leagueTeams() {
       if (scope.league === NO_LEAGUE) return null;
-      const l = Leagues.read().leagues.find(x => x.id === scope.league);
-      return l && l.teams && Array.isArray(l.teams.teams) ? l.teams : null;
+      const t = Leagues.teamsFor(Leagues.read().leagues.find(x => x.id === scope.league));   // from its draft if needed
+      return t && Array.isArray(t.teams) ? t : null;
     }
 
     function renderScope() {
@@ -175,7 +180,12 @@
       renderScope(); saveScope(); load();
     });
     document.getElementById('team').addEventListener('change', e => { scope.team = +e.target.value; saveScope(); load(); });
-    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY) { renderScope(); load(); } });
+    window.addEventListener('storage', e => {
+      if (e.key !== LEAGUES_KEY) return;
+      const active = Leagues.read().active;
+      if (scope.league !== NO_LEAGUE && scope.league !== active) scope = { league: active, team: -1 };   // switched elsewhere
+      renderScope(); load();
+    });
     renderScope();
     load();
   </script>
