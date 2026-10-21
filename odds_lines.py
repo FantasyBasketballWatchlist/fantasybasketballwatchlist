@@ -11,6 +11,10 @@ the API's terms forbid passing its raw data on as downloadable files, and the re
                                                       (paid plans only; 10 credits per market per game)
     python -m odds_lines spreads 2024-11-06 2025-01-29  past point spreads for every game, one snapshot per day at
                                                       6 PM ET (paid plans only; 10 credits per day)
+    python -m odds_lines auto                         forward collection, run every 15 minutes by a scheduled task:
+                                                      a morning snapshot of each of today's games (10 AM-1 PM ET) and
+                                                      a closing one 0-20 minutes before its tip-off, 3 credits a game
+                                                      each, into data/lines/live/<date>.csv (for closing-line value)
 """
 import argparse
 import csv
@@ -203,6 +207,57 @@ def spreads(start, end, budget):
         day += datetime.timedelta(days=1)
 
 
+LIVE_DIR = os.path.join(LINES_DIR, "live")
+MORNING_HOURS_ET = (10, 13)          # the morning snapshot is taken in this window (lines are softest early)
+CLOSE_WINDOW = datetime.timedelta(minutes=20)
+
+
+def now_et():
+    utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    return utc - datetime.timedelta(hours=4 if 3 <= utc.month <= 11 else 5)
+
+
+def auto(markets=DEFAULT_MARKETS):
+    """One pass of forward collection. Each game gets one 'morning' and one 'close' snapshot at most."""
+    et = now_et()
+    day = et.date().isoformat()
+    path = os.path.join(LIVE_DIR, f"{day}.csv")
+    have = set()
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            have = {(r["event_id"], r["kind"]) for r in csv.DictReader(f)}
+    events = get(f"/sports/{SPORT}/events") or []                      # free
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    todo = []
+    for ev in events:
+        if et_date(ev["commence_time"]) != day:
+            continue
+        tip = datetime.datetime.fromisoformat(ev["commence_time"].replace("Z", "+00:00"))
+        if tip <= utc_now:
+            continue
+        if MORNING_HOURS_ET[0] <= et.hour < MORNING_HOURS_ET[1] and (ev["id"], "morning") not in have:
+            todo.append((ev, "morning"))
+        if tip - utc_now <= CLOSE_WINDOW and (ev["id"], "close") not in have:
+            todo.append((ev, "close"))
+    saved = 0
+    for ev, kind in todo:
+        data = get(f"/sports/{SPORT}/events/{ev['id']}/odds", regions="us", markets=",".join(markets), oddsFormat="american")
+        rows = rows_from_event(data, datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")) if data else []
+        if not rows:
+            continue                                   # props not posted yet: try again next pass
+        for r in rows:
+            r["kind"] = kind
+        os.makedirs(LIVE_DIR, exist_ok=True)
+        new = not os.path.exists(path)
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=FIELDS + ["kind"])
+            if new:
+                w.writeheader()
+            w.writerows(rows)
+        saved += 1
+    print(f"{datetime.datetime.now():%Y-%m-%d %H:%M} auto: {len(todo)} due, {saved} saved, credits remaining {Quota.remaining}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -214,6 +269,7 @@ def main():
     h.add_argument("end")
     h.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
     h.add_argument("--budget", type=int, default=18000)
+    sub.add_parser("auto")
     sp = sub.add_parser("spreads")
     sp.add_argument("start")
     sp.add_argument("end")
@@ -223,6 +279,8 @@ def main():
         check()
     elif a.cmd == "today":
         today(a.markets)
+    elif a.cmd == "auto":
+        auto()
     elif a.cmd == "spreads":
         spreads(a.start, a.end, a.budget)
     else:
