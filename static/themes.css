@@ -203,10 +203,10 @@ html[data-theme="royal"] .row-in, html[data-theme="royal"] .fade-up,
 html[data-theme="royal"] .list-row, html[data-theme="royal"] .plan li { animation-name: procession; animation-duration: .6s; }
 @keyframes procession { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
 
-/* Sunset: the sky glow breathes; rows drift in from the right */
+/* Sunset: the sky glow breathes; rows rise slowly (vertical only, so nothing pokes out sideways past a table) */
 html[data-theme="sunset"] { --sweep: #ffd6a5; }
 html[data-theme="sunset"] body::before { animation: dusk 9s ease-in-out infinite alternate; }
 @keyframes dusk { from { opacity: .55; } to { opacity: 1; } }
 html[data-theme="sunset"] .row-in, html[data-theme="sunset"] .fade-up,
 html[data-theme="sunset"] .list-row, html[data-theme="sunset"] .plan li { animation-name: duskIn; animation-duration: .6s; }
-@keyframes duskIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes duskIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }

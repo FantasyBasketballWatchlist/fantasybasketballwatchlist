@@ -44,9 +44,10 @@
               <th class="r">BPV</th><th class="hide-xs">HCI</th><th class="r hide-sm" title="Games in the fantasy playoffs (last 4 weeks)">Playoff G</th></tr>
         </thead>
         <tbody>
-          <tr><td colspan="8"><div class="skeleton"></div></td></tr>
-          <tr><td colspan="8"><div class="skeleton"></div></td></tr>
-          <tr><td colspan="8"><div class="skeleton"></div></td></tr>
+          {#- As many placeholder rows as the default Top 25, at a real row's height, so nothing below jumps when it loads. #}
+          {%- for i in range(25) %}
+          <tr class="sk"><td colspan="8"><div class="skeleton"></div></td></tr>
+          {%- endfor %}
         </tbody>
       </table>
     </div>

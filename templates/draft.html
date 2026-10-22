@@ -44,7 +44,7 @@
     .toolbar .search .icon { left: 15px; }
     .toolbar label.toggle { color: var(--muted); font-size: .88rem; display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
 
-    .list-box { max-height: 62vh; overflow: auto; }
+    .list-box { height: 62vh; overflow: auto; }      /* fixed, not max: the page below doesn't jump when players load or a filter narrows the list */
     .list-box table.data thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); }
     .jump { color: var(--orange); font-size: .85rem; text-decoration: none; white-space: nowrap; }
     .jump:hover { text-decoration: underline; }
@@ -379,8 +379,12 @@
       const levelOf = Object.fromEntries(look.map(o => [o.p, o]));
       const needPositions = POSITIONS.filter(p => fill.openSpecific.some(s => fits(s, [p])));
       const alerts = [];
-      let pick = available[0] || null, why = 'Best BPV left.';
-      if (hasPos && now != null && myLeft > 0 && pick) ({ pick, why } = lookAhead(available, mineIds, now));
+      let pick = available[0] || null, why = 'Best BPV left.', pending = false;
+      if (hasPos && now != null && myLeft > 0 && pick) {
+        // The look-ahead takes ~100 ms: when it isn't cached, draw everything else first and work it out right after.
+        if (allowLook || lookCache.key === lookKey()) ({ pick, why } = lookAhead(available, mineIds, now));
+        else { pending = true; pick = null; scheduleLook(); }
+      }
 
       if (hasPos && now != null && myLeft > 0) {
         const urgent = fill.openSpecific.length > 0 && fill.openSpecific.length >= myLeft;
@@ -405,7 +409,7 @@
 
       }
       if (!hasPos) alerts.push({ cls: '', text: 'Position data unavailable right now, so these tips use BPV only.' });
-      return { pick, why, alerts, look, fill, needPositions };
+      return { pick, why, pending, alerts, look, fill, needPositions };
     }
 
     // Suggested pick: for each candidate, play out the rest of the draft (other teams take the best BPV left, or a
@@ -415,6 +419,16 @@
     // your picks across positions. Multi-position players can move between slots.
     const LOOKAHEAD_CANDIDATES = 10, LOOKAHEAD_OPTIONS = 8;
     let lookCache = { key: null, value: null };
+    const lookKey = () => JSON.stringify([state.picks, state.slot, state.teams, state.rounds, state.lineup, players.length]);
+    let lookTimer = null, allowLook = false;
+    function scheduleLook() {
+      if (lookTimer) return;
+      // After the next paint (rAF, then a task), so the click's result shows first.
+      lookTimer = requestAnimationFrame(() => setTimeout(() => {
+        lookTimer = null; allowLook = true;
+        try { render(); } finally { allowLook = false; }
+      }, 0));
+    }
 
     function replacementBpv() {
       const idx = Math.min(players.length, state.teams * state.rounds) - 1;
@@ -520,7 +534,7 @@
     }
 
     function lookAhead(available, mineIds, now) {
-      const key = JSON.stringify([state.picks, state.slot, state.teams, state.rounds, state.lineup, players.length]);
+      const key = lookKey();
       if (lookCache.key === key) return lookCache.value;
       const pool = available.slice().sort((a, b) => b.bpv - a.bpv);
       const results = shortlist(pool, LOOKAHEAD_CANDIDATES).map(c => {
@@ -651,8 +665,12 @@
       const mineIds = Object.entries(state.picks).filter(([n]) => teamOf(+n) === state.slot).map(([, id]) => id);
       const adv = advise(available, mineIds, now, until);
       const sg = document.getElementById('suggest');
-      sg.hidden = !(players.length && adv.pick && now != null);
-      if (!sg.hidden) {
+      sg.hidden = !(players.length && (adv.pick || adv.pending) && now != null);
+      if (!sg.hidden && adv.pending) {
+        delete sg.dataset.id;
+        sg.innerHTML = `<small>${teamOf(now) === state.slot ? 'Suggested pick' : 'Best for you right now'}</small>
+          <b>Working it out…</b><span class="why">Playing out the rest of the draft.</span>`;
+      } else if (!sg.hidden) {
         sg.dataset.id = adv.pick.id;
         sg.innerHTML = `<small>${teamOf(now) === state.slot ? 'Suggested pick' : 'Best for you right now'}</small>
           <b>${escapeHtml(adv.pick.name)}</b>${positions[adv.pick.id] ? `<span class="pos">${positions[adv.pick.id]}</span>` : ''}
@@ -809,7 +827,7 @@
       state.posFilter = b.dataset.p;
       writeSettings(); save(); render();
     });
-    document.getElementById('suggest').addEventListener('click', e => draft(+e.currentTarget.dataset.id));
+    document.getElementById('suggest').addEventListener('click', e => { const id = +e.currentTarget.dataset.id; if (id) draft(id); });
     ['set-teams', 'set-slot', 'set-rounds', 'set-lineup'].forEach(id => document.getElementById(id).addEventListener('change', readSettings));
 
     // ---------- ESPN sync (beta)

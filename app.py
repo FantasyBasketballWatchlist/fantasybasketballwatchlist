@@ -1,5 +1,6 @@
 import datetime
 import functools
+import gzip
 import hashlib
 import json
 import math
@@ -216,6 +217,38 @@ def root_icons():
 def api_noindex(response):
     if request.path.startswith("/api/"):
         response.headers["X-Robots-Tag"] = "noindex"
+    return response
+
+
+_COMPRESSIBLE = ("application/json", "text/html", "text/css", "application/javascript", "text/javascript", "image/svg+xml",
+                 "text/plain", "application/xml")
+_gzipped, _gzip_lock = {}, threading.Lock()
+
+
+@app.after_request
+def compress(response):
+    """gzip text responses (Render doesn't): the draft page's player list is ~260 KB of JSON, ~45 KB compressed.
+    Compressed bodies are remembered by content hash, so a cached API answer is only compressed once."""
+    if (response.status_code != 200 or "Content-Encoding" in response.headers
+            or "gzip" not in request.headers.get("Accept-Encoding", "")
+            or response.mimetype not in _COMPRESSIBLE):
+        return response
+    response.direct_passthrough = False          # static files stream by default; read them so they can be compressed
+    body = response.get_data()
+    if len(body) < 1024:
+        return response
+    key = hashlib.md5(body).digest()
+    with _gzip_lock:
+        packed = _gzipped.get(key)
+    if packed is None:
+        packed = gzip.compress(body, compresslevel=6)
+        with _gzip_lock:
+            if len(_gzipped) > 200:
+                _gzipped.clear()
+            _gzipped[key] = packed
+    response.set_data(packed)
+    response.headers["Content-Encoding"] = "gzip"
+    response.headers["Vary"] = "Accept-Encoding"
     return response
 
 
