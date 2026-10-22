@@ -56,6 +56,8 @@
     .hedge select, .hedge input { width: 100%; margin-top: 4px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 8px 10px; }
     .hedge select:focus, .hedge input:focus { outline: none; border-color: var(--orange); }
     .hedge .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hedge label.check-line { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: .86rem; }
+    .hedge label.check-line input { width: auto; margin: 0; accent-color: var(--orange); }
     .hedge [hidden] { display: none; }
     .hout { display: grid; gap: 10px; }
     .hstat { padding: 12px 14px; border-radius: 12px; background: var(--well); border: 1px solid var(--border); }
@@ -144,6 +146,13 @@
           <div class="row2">
             <label><span id="h-amt-label">Bonus bet amount ($)</span><input id="h-amt" type="number" min="0" step="1" value="100" inputmode="decimal"></label>
             <label id="h-extra-wrap" hidden><span id="h-extra-label">Boost (%)</span><input id="h-extra" type="number" min="0" step="1" value="50" inputmode="decimal"></label>
+          </div>
+          <div id="h-qual" hidden>
+            <div class="row2">
+              <label>Bonus you'll get ($)<input id="h-bonus" type="number" min="0" step="1" value="200" inputmode="decimal"></label>
+              <label>Bonus kept as cash (%)<input id="h-keep" type="number" min="0" max="100" step="1" value="70" inputmode="decimal"></label>
+            </div>
+            <label class="check-line"><input id="h-onwin" type="checkbox"> The bonus only comes if this bet <b>wins</b></label>
           </div>
           <div class="row2">
             <label>Odds where you bet the offer<input id="h-a" placeholder="+300" value="+300" inputmode="numeric"></label>
@@ -360,6 +369,9 @@
     //   nosweat: cash S, refund S as a bonus      A wins: S(A-1) - H      B wins: H(B-1) - S + rS   -> H = (S A - r S) / B
     //            worth r of face value if it loses.
     //   boost:   winnings x (1 + b).            A' = 1 + (A-1)(1+b), then as qual.
+    //   qual with a bonus worth V in cash (bonus x share kept): paid either way -> same H, V added to both outcomes;
+    //            paid only if A wins -> A wins: S(A-1) - H + V, B wins: H(B-1) - S -> H = (S A + V) / B.
+    // Odds are the books' real prices, so their cut is already in every number here.
     const dec = (txt) => { const a = parseFloat(String(txt).replace('+', '')); return isFinite(a) && Math.abs(a) >= 100 ? (a > 0 ? 1 + a / 100 : 1 + 100 / Math.abs(a)) : null; };
     const money = (x) => `${x < 0 ? '−' : ''}$${Math.abs(x).toFixed(2)}`;
     function hedgeCalc() {
@@ -369,13 +381,14 @@
       let A = dec(document.getElementById('h-a').value);
       const B = dec(document.getElementById('h-b').value);
       document.getElementById('h-extra-wrap').hidden = !(type === 'boost' || type === 'nosweat');
+      document.getElementById('h-qual').hidden = type !== 'qual';
       document.getElementById('h-extra-label').textContent = type === 'boost' ? 'Boost (%)' : 'Value of the refund (%)';
       if (type === 'nosweat' && !document.getElementById('h-extra').dataset.touched) document.getElementById('h-extra').value = 70;
       if (type === 'boost' && !document.getElementById('h-extra').dataset.touched) document.getElementById('h-extra').value = 50;
       document.getElementById('h-amt-label').textContent = type === 'bonus' ? 'Bonus bet amount ($)' : 'Your stake ($)';
       document.getElementById('h-tip').textContent = {
         bonus: 'Longer odds keep more of a bonus bet: around +250 to +500, with a close price on the other side (the two odds near each other, e.g. +300 / -350).',
-        qual: 'A qualifying bet usually costs a little; pick near-even odds on both sides (e.g. -110 / +100) to keep the cost small.',
+        qual: 'A qualifying bet costs a little on its own (the books’ cut); the bonus it unlocks is the point. Pick near-even odds on both sides (e.g. -110 / +100) to keep the cost small. With your own cash on both sides and no bonus, this is also the arbitrage calculator.',
         nosweat: 'If it loses you get a bonus bet back; "value of the refund" is what that bonus will be worth in cash after you hedge it (usually 65-75%).',
         boost: 'A boost raises your winnings. Hedging locks in part of the boost; not hedging keeps more on average but risks the stake.',
       }[type];
@@ -383,16 +396,22 @@
       if (!S || !A || !B) { out.innerHTML = '<p class="help" style="margin:0">Enter the amount and both odds (American, e.g. +300 and -350).</p>'; return; }
       if (type === 'boost') A = 1 + (A - 1) * (1 + extra / 100);
       const r = extra / 100;
-      const H = type === 'bonus' ? S * (A - 1) / B : type === 'nosweat' ? (S * A - r * S) / B : S * A / B;
-      const winA = type === 'bonus' ? S * (A - 1) - H : S * (A - 1) - H;
-      const winB = type === 'bonus' ? H * (B - 1) : type === 'nosweat' ? H * (B - 1) - S + r * S : H * (B - 1) - S;
+      const isQual = type === 'qual';
+      const V = isQual ? (parseFloat(document.getElementById('h-bonus').value) || 0) * (parseFloat(document.getElementById('h-keep').value) || 0) / 100 : 0;
+      const onWin = isQual && V > 0 && document.getElementById('h-onwin').checked;
+      const H = type === 'bonus' ? S * (A - 1) / B : type === 'nosweat' ? (S * A - r * S) / B : onWin ? (S * A + V) / B : S * A / B;
+      const winA = (type === 'bonus' ? S * (A - 1) - H : S * (A - 1) - H) + V;
+      const winB = type === 'bonus' ? H * (B - 1) : type === 'nosweat' ? H * (B - 1) - S + r * S : H * (B - 1) - S + (onWin ? 0 : V);
       const lock = Math.min(winA, winB);
+      const qualCost = isQual ? Math.min(S * (A - 1) - S * A / B, (S * A / B) * (B - 1) - S) : null;   // the bet alone, hedged
       const marketMargin = 1 / dec(document.getElementById('h-a').value) + 1 / B - 1;
       out.innerHTML = `
         <div class="hstat"><small>Bet at the other book</small><span class="num">${money(H)}</span> on the other side</div>
         <div class="hstat ${lock >= 0 ? 'big' : 'bad'}"><small>${lock >= 0 ? 'Locked-in profit' : 'Cost'} (either way)</small><span class="num">${money(lock)}</span>
-          ${type === 'bonus' ? `<br><small>${Math.round(100 * lock / S)}% of the bonus kept as cash</small>` : ''}</div>
-        <div class="hstat"><small>If the offer's side wins / if the other side wins</small>${money(winA)} / ${money(winB)}${type === 'nosweat' ? ' (incl. the refund at its cash value)' : ''}</div>
+          ${type === 'bonus' ? `<br><small>${Math.round(100 * lock / S)}% of the bonus kept as cash</small>` : ''}
+          ${isQual && V > 0 ? `<br><small>= qualifying bet ${money(qualCost)} + bonus worth ${money(V)} in cash${onWin ? ' (hedge sized to cover the bonus too)' : ''}</small>` : ''}</div>
+        <div class="hstat"><small>If the offer's side wins / if the other side wins</small>${money(winA)} / ${money(winB)}${type === 'nosweat' ? ' (incl. the refund at its cash value)' : isQual && V > 0 ? ' (incl. the bonus at its cash value)' : ''}</div>
+        ${isQual && V > 0 ? `<p class="help" style="margin:0">The bonus becomes cash when you use it: switch to "Bonus bet" above when you get it. "Kept as cash" is a guess until then (65-80% is typical at +250 to +500).</p>` : ''}
         ${marketMargin > 0.08 ? `<p class="help" style="margin:0;color:var(--bad)">These two prices have a big margin (${(marketMargin * 100).toFixed(1)}%): look for closer odds on the other side.</p>` : ''}`;
     }
     // ---------- track record: the corner search's latest status
@@ -419,7 +438,7 @@
         }
       }
     }).catch(() => {});
-    ['h-type', 'h-amt', 'h-extra', 'h-a', 'h-b'].forEach(id => document.getElementById(id).addEventListener('input', hedgeCalc));
+    ['h-type', 'h-amt', 'h-extra', 'h-a', 'h-b', 'h-bonus', 'h-keep', 'h-onwin'].forEach(id => document.getElementById(id).addEventListener('input', hedgeCalc));
     document.getElementById('h-extra').addEventListener('input', e => { e.target.dataset.touched = '1'; });
     document.getElementById('h-type').addEventListener('change', () => { document.getElementById('h-extra').dataset.touched = ''; hedgeCalc(); });
     hedgeCalc();
