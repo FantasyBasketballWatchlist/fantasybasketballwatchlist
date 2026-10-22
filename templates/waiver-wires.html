@@ -80,7 +80,9 @@
     <p class="footer-note">
       Change from minutes = per-minute production &times; change in minutes over the last 5 games; the rest is per-minute
       (shooting and luck). In backtests on four seasons, about 30% of a minutes change carried over to the rest of the
-      season, but only about 10% of a per-minute change did.
+      season, but only about 10% of a per-minute change did. Until a player has 10 games, his games so far are compared
+      with last season (20+ games): in 2023-24 to 2025-26, about 40% of a minutes change after 2 games carried through the
+      rest of the season (big changes kept their direction 3 times in 4), a per-minute change about 10%.
     </p>
   </main>
 
@@ -132,7 +134,9 @@
         const v = p[key];
         return `<div class="list-row" style="animation-delay:${Math.min(i, 12) * 30}ms">
           <span class="who"><span><b>${escapeHtml(p.name)}</b> <small>${escapeHtml(p.team || '')}</small><br>
-            <span class="meta">season ${fmt(p.season_fpts)} · last 5: ${fmt(p.recent_fpts)} in ${fmt(p.recent_minutes)} min</span></span></span>
+            <span class="meta">${p.basis === 'last_season'
+              ? `last season ${fmt(p.last_season_fpts)} in ${fmt(p.last_season_minutes)} min · this season (${p.games} G): ${fmt(p.season_fpts)} in ${fmt(p.recent_minutes)} min`
+              : `season ${fmt(p.season_fpts)} · last 5: ${fmt(p.recent_fpts)} in ${fmt(p.recent_minutes)} min`}</span></span></span>
           <span class="delta ${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '+' : ''}${fmt(v)}</span></div>`;
       }).join('');
     }
@@ -149,7 +153,8 @@
         const response = await fetch(`/api/waiver?${query}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
-        document.getElementById('season-notice').textContent = describeMode(data.meta);
+        document.getElementById('season-notice').textContent = describeMode(data.meta)
+          + (data.early ? '. Early season: players with under 10 games are compared with last season instead of their last 5 games.' : '');
         renderList('rising_minutes', data.rising_minutes, 'minutes_change_fpts');
         renderList('hot_shooting', data.hot_shooting, 'efficiency_change_fpts');
         renderList('cold_shooting', data.cold_shooting, 'efficiency_change_fpts');

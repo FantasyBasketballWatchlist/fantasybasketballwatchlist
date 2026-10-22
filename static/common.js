@@ -234,10 +234,11 @@ function teamUpdates(team, freeAgents, threshold = UPDATE_THRESHOLD) {
   team.forEach(p => {
     const mc = p.minutes_change_fpts, ec = p.efficiency_change_fpts;
     if (mc == null || ec == null) return;
-    if (mc >= threshold) out.push({ cls: 'ok', text: `${p.name}: more minutes lately (+${fmt(mc)} FPTS/G from minutes). These gains tend to last.` });
-    else if (mc <= -threshold) out.push({ cls: 'warn', text: `${p.name}: fewer minutes lately (${fmt(mc)} FPTS/G). Losing minutes usually lasts; check the news.` });
-    else if (ec >= threshold) out.push({ cls: '', text: `${p.name}: hot shooting (+${fmt(ec)} FPTS/G at the same minutes). Usually fades: a sell-high chance.` });
-    else if (ec <= -threshold) out.push({ cls: '', text: `${p.name}: cold shooting (${fmt(ec)} FPTS/G at the same minutes). Usually bounces back: hold.` });
+    const when = p.basis === 'last_season' ? 'than last season' : 'lately';
+    if (mc >= threshold) out.push({ cls: 'ok', text: `${p.name}: more minutes ${when} (+${fmt(mc)} FPTS/G from minutes). These gains tend to last.` });
+    else if (mc <= -threshold) out.push({ cls: 'warn', text: `${p.name}: fewer minutes ${when} (${fmt(mc)} FPTS/G). Losing minutes usually lasts; check the news.` });
+    else if (ec >= threshold) out.push({ cls: '', text: `${p.name}: hot shooting ${when} (+${fmt(ec)} FPTS/G at the same minutes). Usually fades: a sell-high chance.` });
+    else if (ec <= -threshold) out.push({ cls: '', text: `${p.name}: cold shooting ${when} (${fmt(ec)} FPTS/G at the same minutes). Usually bounces back: hold.` });
   });
   const worst = team.filter(p => p.bpv != null).sort((a, b) => a.bpv - b.bpv);
   const best = (freeAgents || []).filter(p => p.bpv != null).sort((a, b) => b.bpv - a.bpv);

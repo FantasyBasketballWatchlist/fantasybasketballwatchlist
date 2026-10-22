@@ -11,15 +11,32 @@
       <span>Hoop<em>othesis</em></span>
     </a>
     <button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="true">✕ Hide</button>
+    {%- set groups = [
+      ('league', 'My League', [
+        ('suggestions', '/suggestions', 'Suggestions', 'What to do next with your team'),
+        ('league', '/league', 'Teams', 'Rosters, trades and lineups'),
+        ('waiver', '/waiver-wires', 'Waiver Wire', 'Who to pick up, sell or drop'),
+        ('trade', '/trade-analyzer', 'Trade Analyzer', 'Compare two sides of a trade'),
+        ('leagues', '/leagues', 'Your Leagues', 'Add, rename or switch leagues')]),
+      ('more', 'More', [
+        ('injuries', '/injuries', 'Injuries', 'Out and questionable players'),
+        ('betting', '/betting', 'Betting', 'Game projections and bet tools')])] %}
     <nav class="nav" id="site-nav">
       <a href="/" class="{{ 'active' if active == 'home' }}">Rankings</a>
       <a href="/draft" class="{{ 'active' if active == 'draft' }}">Draft</a>
-      <a href="/league" class="{{ 'active' if active == 'league' }}">Teams</a>
-      <a href="/leagues" class="{{ 'active' if active == 'leagues' }}"><span class="nav-long">Your </span>Leagues</a>
-      <a href="/trade-analyzer" class="{{ 'active' if active == 'trade' }}">Trade<span class="nav-long"> Analyzer</span></a>
-      <a href="/waiver-wires" class="{{ 'active' if active == 'waiver' }}">Waiver<span class="nav-long"> Wire</span></a>
-      <a href="/injuries" class="{{ 'active' if active == 'injuries' }}">Injuries</a>
-      <a href="/betting" class="{{ 'active' if active == 'betting' }}">Betting</a>
+      {%- for gid, glabel, items in groups %}
+      {%- set current = items | selectattr(0, 'equalto', active) | list %}
+      <div class="nav-group">
+        <button type="button" class="nav-btn{{ ' active' if current }}" aria-expanded="false" aria-haspopup="true">
+          <span>{{ current[0][2] if current else glabel }}</span><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="nav-menu" role="menu">
+          {%- for key, href, label, sub in items %}
+          <a href="{{ href }}" role="menuitem" class="{{ 'active' if active == key }}"><b>{{ label }}</b><small>{{ sub }}</small></a>
+          {%- endfor %}
+        </div>
+      </div>
+      {%- endfor %}
     </nav>
   </div>
   <script>
@@ -39,6 +56,16 @@
         apply();
       });
       apply();
+      // Menus open on click (or tap) and close on a click elsewhere or Escape.
+      const groups = bar.querySelectorAll('.nav-group');
+      const close = (except) => groups.forEach(g => { if (g !== except) { g.classList.remove('open'); g.querySelector('.nav-btn').setAttribute('aria-expanded', 'false'); } });
+      groups.forEach(g => g.querySelector('.nav-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        const open = !g.classList.contains('open');
+        close(g); g.classList.toggle('open', open); e.currentTarget.setAttribute('aria-expanded', String(open));
+      }));
+      document.addEventListener('click', e => { if (!e.target.closest('.nav-group')) close(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     })();
   </script>
 </header>

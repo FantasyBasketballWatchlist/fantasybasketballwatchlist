@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set page_title = 'Fantasy Basketball Team Suggestions | Hoopothesis' %}
+  {% set page_description = 'Pick your league and team: trade targets, free agents to watch, positions to fill and how injury prone your team is.' %}
+  {% set canonical_path = '/suggestions' %}
+  {% include '_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <style>
+    .scope { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 18px; color: var(--muted); font-size: .88rem; }
+    .scope select { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 6px 10px; max-width: 240px; }
+    .scope select:focus { outline: none; border-color: var(--orange); }
+    .scope a { color: var(--orange); text-decoration: none; }
+
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .stat { padding: 16px 18px; }
+    .stat small { display: block; color: var(--muted); font-size: .72rem; letter-spacing: .8px; text-transform: uppercase; }
+    .stat .num { font-family: 'Barlow Condensed', sans-serif; font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
+    .stat .sub { color: var(--dim); font-size: .8rem; }
+    .num.good { color: var(--good); } .num.bad { color: var(--bad); } .num.mid { color: var(--orange-2); }
+
+    .plan { margin-bottom: 18px; }
+    .plan ol { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+    .plan li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--border); animation: fadeUp .35s var(--ease) both; }
+    .plan li::before { content: counter(step); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 700; font-size: .82rem; color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
+    .plan li .kind { display: block; color: var(--dim); font-size: .72rem; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
+    .plan li b { color: var(--text); }
+    .plan li .why { color: var(--muted); font-size: .86rem; }
+
+    .pos-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; margin: 9px 0; font-size: .86rem; }
+    .pos-row .p { font-weight: 700; }
+    .bars { position: relative; height: 22px; background: var(--bg-2); border-radius: 6px; overflow: hidden; }
+    .bars .mine { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--c, var(--blue)); opacity: .85; }
+    .bars .avg { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .7; }
+    .bars span { position: absolute; left: 8px; top: 2px; font-size: .76rem; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+    .pos-row .r { text-align: right; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .legend { color: var(--dim); font-size: .78rem; margin-top: 4px; }
+
+    .item { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+    .item:last-child { border-bottom: 0; }
+    .item .meta { display: block; color: var(--dim); font-size: .78rem; }
+    .item .val { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .trade { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+    .trade:last-child { border-bottom: 0; }
+    .trade .swap { display: grid; grid-template-columns: 1fr 24px 1fr; gap: 8px; align-items: center; }
+    .trade .arrow { text-align: center; color: var(--orange); }
+    .trade .meta { color: var(--dim); font-size: .78rem; margin-top: 4px; }
+    .tag { display: inline-block; font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 5px; margin-left: 4px; vertical-align: 1px; }
+    .tag.fair { color: var(--good); background: rgba(52, 211, 153, .12); }
+    .tag.hard { color: var(--orange-2); background: rgba(255, 176, 32, .12); }
+    .tag.st { color: var(--bad); background: rgba(248, 113, 113, .12); }
+    .sub-h { color: var(--muted); font-size: .76rem; letter-spacing: .6px; text-transform: uppercase; margin: 14px 0 2px; }
+    .empty-state { text-align: center; padding: 36px 20px; color: var(--muted); }
+    .empty-state a { color: var(--orange); }
+    @media (max-width: 760px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stat .num { font-size: 1.7rem; } }
+  </style>
+</head>
+<body>
+  {% set active = 'suggestions' %}{% include '_nav.html' %}
+
+  <main class="page">
+    <section class="hero">
+      <h1>Team <span class="accent">Suggestions</span></h1>
+      <p>Pick your league and team: what to fix, who to target and who to watch</p>
+      <p class="notice" id="season-notice" style="margin-top:6px">Loading...</p>
+    </section>
+
+    <div class="card scope">
+      <label>League <select id="league" aria-label="League"></select></label>
+      <label id="team-wrap" hidden>Your team <select id="team" aria-label="Your team"></select></label>
+      <a href="/leagues">Your leagues →</a>
+    </div>
+
+    <div id="content"></div>
+
+    <p class="footer-note">
+      Team strength = BPV of a team's best starting lineup (ESPN slots; dual-position players move to where they help most).
+      Positions compare your best two players who can play each spot with the league's teams. Trade ideas are one-for-one
+      swaps that raise your lineup; "likely yes" ones also give them a reason to accept: their lineup improves, they get as
+      much BPV back, or ESPN's average draft position (how most owners value players) ranks the player they get higher. Health = your
+      starters' expected share of remaining games (BPV availability), weighted by BPV. Minutes and shooting changes are the
+      same ones as on the Waiver Wire page.
+    </p>
+  </main>
+
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script>
+    let scope = { league: Leagues.read().active, team: -1 };
+    try {
+      const v = JSON.parse(localStorage.getItem('hoop-suggest-scope-v1'));
+      if (v && v.league === scope.league) scope.team = v.team;
+    } catch (e) {}
+    const saveScope = () => { try { localStorage.setItem('hoop-suggest-scope-v1', JSON.stringify(scope)); } catch (e) {} };
+    const leagueTeams = () => {
+      const t = Leagues.teamsFor(Leagues.read().leagues.find(x => x.id === scope.league));
+      return t && Array.isArray(t.teams) && t.teams.some(x => x.ids && x.ids.length) ? t : null;
+    };
+    const esc = escapeHtml;
+    const share = (x) => x == null ? '—' : `${Math.round(x * 100)}%`;
+    const signed = (x) => `${x >= 0 ? '+' : ''}${fmt(x)}`;
+    const ordinal = (n) => n + ((n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
+    let teamNames = [];
+    const tname = (i) => esc(teamNames[i] || `Team ${i + 1}`);
+    const who = (p) => `<b>${esc(p.name)}</b> <small class="meta" style="display:inline">${esc(p.positions || '')}${p.team ? ' · ' + esc(p.team) : ''}</small>`;
+    const since = (p) => p.basis === 'last_season' ? 'vs last season' : 'last 5 games';
+
+    function renderScope() {
+      const d = Leagues.read();
+      if (!d.leagues.some(l => l.id === scope.league)) scope.league = d.active;
+      document.getElementById('league').innerHTML = d.leagues.map(l =>
+        `<option value="${l.id}"${l.id === scope.league ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
+      const lt = leagueTeams();
+      document.getElementById('team-wrap').hidden = !lt;
+      if (lt) {
+        if (!(scope.team >= 0 && scope.team < lt.teams.length)) scope.team = lt.mine || 0;
+        document.getElementById('team').innerHTML = lt.teams.map((t, i) =>
+          `<option value="${i}"${i === scope.team ? ' selected' : ''}>${esc(t.name)}${i === lt.mine ? ' (you)' : ''}</option>`).join('');
+      }
+    }
+
+    const adpText = (p) => p.adp != null ? `#${Math.round(p.adp)}` : 'undrafted';
+    function tradeReason(t) {
+      if (t.reason === 'lineup') return 'Their lineup gets better too.';
+      if (t.reason === 'bpv') return 'They get as much value back (their bench improves).';
+      return `ESPN drafters value ${esc(t.give.name)} more (ADP ${adpText(t.give)} vs ${adpText(t.get)}), so it looks like a win to them.`;
+    }
+
+    function plan(d) {
+      const steps = [];
+      const outStarters = d.injury.out_now.filter(p => p.starter && (p.status === 'Out' || p.status === 'Doubtful'));
+      outStarters.forEach(p => steps.push(['Injury', `Cover for ${who(p)} (${esc(p.status)}${p.reason ? ': ' + esc(p.reason.replace(/^Injury\/Illness - /, '')) : ''}).`,
+        'A starter who is out scores nothing; use a bench player or a free agent at his position until he is back.']));
+      d.pickups.slice(0, 2).forEach(x => steps.push(['Waiver', `Pick up ${who(x.add)} (${fmt(x.add.bpv)} BPV), drop ${who(x.drop)} (${fmt(x.drop.bpv)}).`,
+        x.gain >= 0.5 ? `Your starting lineup gets ${fmt(x.gain)} BPV better.` : 'A better bench player, for when a starter sits.']));
+      const t = d.trades.find(x => x.fair) || d.trades[0];
+      if (t) steps.push(['Trade', `Offer ${tname(t.team)} ${who(t.give)} for ${who(t.get)}.`,
+        `Your lineup ${signed(t.gain)} BPV. ${t.fair ? tradeReason(t) : 'Their lineup gets worse, so expect them to want more.'}`]);
+      if (d.needs.length) steps.push(['Positions', `Look for ${d.needs.map(p => `<b>${p}</b>`).join(' and ')}.`,
+        `Your weakest spots compared with the league${d.surplus.length ? `; you have extra at ${d.surplus.join(' and ')} to trade from` : ''}.`]);
+      d.sell_high.slice(0, 1).forEach(p => steps.push(['Sell high', `Shop ${who(p)}: ${signed(p.change)} FPTS/G from hot shooting (${since(p)}).`,
+        'Per-minute streaks mostly fade, so his trade value is at a high.']));
+      d.buy_low.slice(0, 1).forEach(p => steps.push(['Buy low', `Ask ${tname(p.owner)} about ${who(p)}: ${signed(p.change)} FPTS/G from cold shooting (${since(p)}).`,
+        'Same minutes, a cold stretch: these usually bounce back.']));
+      d.losing_minutes.slice(0, 1).forEach(p => steps.push(['Watch', `${who(p)} is losing minutes (${signed(p.change)} FPTS/G, ${since(p)}).`,
+        'Minutes changes usually last; check the news and have a replacement in mind.']));
+      if (d.injury.availability != null && d.injury.rank > Math.ceil(d.injury.teams * 0.7))
+        steps.push(['Depth', 'Your starters are more injury prone than most teams.',
+          `They're expected to play ${share(d.injury.availability)} of remaining games (league ${share(d.injury.league)}). Keep a solid bench player at their positions.`]);
+      if (!steps.length) steps.push(['Hold', 'Nothing urgent.', 'No injured starters, no clear upgrades on waivers and no lopsided trade spots. Check back after the next update.']);
+      return `<div class="card panel plan" style="--c: var(--orange)"><h3><span class="dot"></span>Your plan</h3>
+        <p class="help">Most urgent first.</p><ol>${steps.map(([k, what, why], i) =>
+          `<li style="animation-delay:${i * 40}ms"><div><span class="kind">${k}</span>${what}<div class="why">${why}</div></div></li>`).join('')}</ol></div>`;
+    }
+
+    function render(d) {
+      const s = d.standing, n = d.teams;
+      const cls = (r) => r <= Math.ceil(n / 3) ? 'good' : r > Math.floor(2 * n / 3) ? 'bad' : 'mid';
+      const healthClass = d.injury.rank == null ? '' : cls(d.injury.rank);
+      const summary = `<div class="summary">
+        <div class="card stat"><small>Lineup strength</small><div class="num ${cls(s.rank)}">${ordinal(s.rank)}</div><div class="sub">of ${n} · ${fmt(s.value)} BPV (avg ${fmt(s.average)})</div></div>
+        <div class="card stat"><small>Health</small><div class="num ${healthClass}">${share(d.injury.availability)}</div><div class="sub">${d.injury.rank ? `${ordinal(d.injury.rank)} of ${n} · league ${share(d.injury.league)}` : 'of remaining games'}</div></div>
+        <div class="card stat"><small>Biggest need</small><div class="num ${d.needs.length ? 'bad' : 'good'}">${d.needs[0] || 'None'}</div><div class="sub">${d.needs.length > 1 ? `then ${d.needs[1]}` : d.needs.length ? '' : 'every spot at or above average'}</div></div>
+        <div class="card stat"><small>Trade from</small><div class="num ${d.surplus.length ? 'good' : ''}">${d.surplus[0] || '—'}</div><div class="sub">${d.surplus.length > 1 ? `and ${d.surplus[1]}` : 'your deepest spot'}</div></div>
+      </div>`;
+
+      const maxPos = Math.max(1, ...d.positions.map(p => Math.max(p.mine, p.league)));
+      const positions = `<div class="card panel" style="--c: var(--blue)"><h3><span class="dot"></span>Positions</h3>
+        <p class="help">Your best two players at each spot (bar) against the league's average team (line).</p>
+        ${d.positions.map(p => `<div class="pos-row"><span class="p">${p.pos}</span>
+          <div class="bars" style="--c:${p.mine >= p.league ? 'var(--good)' : 'var(--bad)'}"><div class="mine" style="width:${p.mine / maxPos * 100}%"></div>
+            <div class="avg" style="left:${p.league / maxPos * 100}%"></div><span>${fmt(p.mine)}</span></div>
+          <span class="r">${ordinal(p.rank)} of ${n}</span></div>`).join('')}
+        <p class="legend">BPV per player. Rank 1 = the league's best at that spot.</p></div>`;
+
+      const trades = `<div class="card panel" style="--c: var(--ice)"><h3><span class="dot"></span>Trade targets</h3>
+        <p class="help">One-for-one swaps that make your starting lineup better.</p>
+        ${d.trades.length ? d.trades.map(t => `<div class="trade"><div class="swap"><div>${who(t.give)}<div class="meta">you give · ${fmt(t.give.bpv)} BPV</div></div>
+            <span class="arrow">⇄</span><div>${who(t.get)}<div class="meta">from ${tname(t.team)} · ${fmt(t.get.bpv)} BPV</div></div></div>
+            <div class="meta">Your lineup ${signed(t.gain)} · theirs ${signed(t.their_gain)} <span class="tag ${t.fair ? 'fair' : 'hard'}">${t.fair ? 'likely yes' : 'tough sell'}</span>
+              ${t.reason ? `<br>${tradeReason(t)}` : ''}</div></div>`).join('')
+          : '<p class="help">No one-for-one swap improves your lineup right now.</p>'}
+        ${d.partners.length ? `<div class="sub-h">Best trade partners</div>${d.partners.map(p => `<div class="item"><span>${tname(p.team)}<span class="meta">${
+          [p.strong.length ? `strong at ${p.strong.join(', ')} (your need)` : '', p.weak.length ? `weak at ${p.weak.join(', ')} (your extra)` : ''].filter(Boolean).join(' · ')}</span></span></div>`).join('')}` : ''}
+        ${d.buy_low.length ? `<div class="sub-h">Buy low (cold shooting, same minutes)</div>${d.buy_low.map(p => `<div class="item"><span>${who(p)}<span class="meta">on ${tname(p.owner)} · ${since(p)}</span></span><span class="val" style="color:var(--bad)">${signed(p.change)}</span></div>`).join('')}` : ''}
+        ${d.sell_high.length ? `<div class="sub-h">Sell high (yours, hot shooting)</div>${d.sell_high.map(p => `<div class="item"><span>${who(p)}<span class="meta">${since(p)}</span></span><span class="val" style="color:var(--good)">${signed(p.change)}</span></div>`).join('')}` : ''}
+      </div>`;
+
+      const fa = Object.entries(d.free_agents_at_needs).filter(([, l]) => l.length);
+      const watch = `<div class="card panel" style="--c: var(--good)"><h3><span class="dot"></span>Players to watch</h3>
+        <p class="help">Free agents in this league (on none of its teams) and your players whose role is changing.</p>
+        ${d.pickups.length ? `<div class="sub-h">Pickups</div>${d.pickups.map(x => `<div class="item"><span>${who(x.add)}<span class="meta">drop ${esc(x.drop.name)} (${fmt(x.drop.bpv)})${x.gain >= 0.5 ? ` · lineup ${signed(x.gain)}` : ''}</span></span><span class="val">${fmt(x.add.bpv)}</span></div>`).join('')}` : ''}
+        ${d.rising_free_agents.length ? `<div class="sub-h">Free agents gaining minutes</div>${d.rising_free_agents.map(p => `<div class="item"><span>${who(p)}<span class="meta">${since(p)} · ${fmt(p.bpv)} BPV</span></span><span class="val" style="color:var(--good)">${signed(p.change)}</span></div>`).join('')}` : ''}
+        ${fa.map(([pos, l]) => `<div class="sub-h">Best free agents at ${pos} (your need)</div>${l.map(p => `<div class="item"><span>${who(p)}</span><span class="val">${fmt(p.bpv)}</span></div>`).join('')}`).join('')}
+        ${d.losing_minutes.length ? `<div class="sub-h">Your players losing minutes</div>${d.losing_minutes.map(p => `<div class="item"><span>${who(p)}<span class="meta">${since(p)}</span></span><span class="val" style="color:var(--bad)">${signed(p.change)}</span></div>`).join('')}` : ''}
+        ${!d.pickups.length && !d.rising_free_agents.length && !fa.length && !d.losing_minutes.length ? '<p class="help">Nothing stands out right now.</p>' : ''}
+      </div>`;
+
+      const inj = d.injury;
+      const injury = `<div class="card panel" style="--c: var(--bad)"><h3><span class="dot"></span>Injuries &amp; durability</h3>
+        <p class="help">Your starters are expected to play <b>${share(inj.availability)}</b> of the remaining games (league average ${share(inj.league)}${inj.rank ? `; ${ordinal(inj.rank)} healthiest of ${n}` : ''}).</p>
+        ${inj.out_now.length ? `<div class="sub-h">On the injury report</div>${inj.out_now.map(p => `<div class="item"><span>${who(p)}<span class="meta">${esc((p.reason || '').replace(/^Injury\/Illness - /, ''))}${p.starter ? ' · starter' : ''}</span></span>${p.status ? `<span class="tag st">${esc(p.status)}</span>` : ''}</div>`).join('')}` : '<p class="help">Nobody on your team is on the injury report.</p>'}
+        ${inj.fragile.length ? `<div class="sub-h">Likely to miss games</div>${inj.fragile.map(p => `<div class="item"><span>${who(p)}<span class="meta">${p.starter ? 'starter' : 'bench'}</span></span><span class="val">${share(p.availability)}</span></div>`).join('')}` : ''}
+      </div>`;
+
+      document.getElementById('content').innerHTML = summary + plan(d) + `<div class="grid-2">${trades}${watch}${positions}${injury}</div>`;
+    }
+
+    async function load() {
+      const el = document.getElementById('content');
+      const lt = leagueTeams();
+      if (!lt) {
+        el.innerHTML = `<div class="card empty-state">This league has no teams yet. Draft on the <a href="/draft">Draft</a> page
+          (or sync it from ESPN there), or add rosters on the <a href="/league">Teams</a> page.</div>`;
+        document.getElementById('season-notice').textContent = '';
+        return;
+      }
+      teamNames = lt.teams.map(t => t.name);
+      if (!(lt.teams[scope.team]?.ids || []).length) {
+        el.innerHTML = '<div class="card empty-state">This team has no players yet.</div>';
+        return;
+      }
+      el.innerHTML = '<div class="card empty-state">Working out suggestions...</div>';
+      try {
+        const q = new URLSearchParams({ teams: lt.teams.map(t => (t.ids || []).join(',')).join(';'), mine: scope.team, lineup: lt.lineup || '' });
+        const response = await fetch(`/api/suggestions?${q}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        document.getElementById('season-notice').textContent = data.meta.mode === 'in-season'
+          ? `${data.meta.season} season in progress` : `Before the ${data.meta.target_season || data.meta.season} season`;
+        render(data);
+      } catch (error) {
+        el.innerHTML = `<div class="card empty-state">Could not load suggestions${error.message ? `: ${esc(error.message)}` : ''}.</div>`;
+      }
+    }
+
+    document.getElementById('league').addEventListener('change', e => {
+      scope = { league: e.target.value, team: -1 };
+      Leagues.switchTo(scope.league);
+      renderScope(); saveScope(); load();
+    });
+    document.getElementById('team').addEventListener('change', e => { scope.team = +e.target.value; saveScope(); load(); });
+    window.addEventListener('storage', e => { if (e.key === LEAGUES_KEY) { renderScope(); load(); } });
+    renderScope();
+    load();
+  </script>
+</body>
+</html>

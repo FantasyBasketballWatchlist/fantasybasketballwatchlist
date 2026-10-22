@@ -446,6 +446,16 @@ def build(today=None):
         per_min = g["FPTS"].mean() / max(mpg, 1)
         minutes_change = per_min * (g["MIN"].tail(RECENT_GAMES).mean() - mpg)
         efficiency_change = g["FPTS"].tail(RECENT_GAMES).mean() - g["FPTS"].mean() - minutes_change
+        # Early in a season (under ROLE_MIN_GAMES), the same split against last season instead of the last 5 games, for
+        # players with 20+ games last season. Checked on 2023-24 to 2025-26: after 2 games, 41% of a minutes change
+        # carried through the rest of the season (76% of big ones kept their direction), a per-minute change only 11%.
+        early = {}
+        if mode == "in-season" and n < ROLE_MIN_GAMES and pid in last_games and len(last_games[pid]) >= AGE_MIN_GAMES:
+            lg = last_games[pid]
+            last_mpg, last_per_min = lg["MIN"].mean(), lg["FPTS"].sum() / max(lg["MIN"].sum(), 1)
+            early = {"last_season_minutes": float(last_mpg), "last_season_fpts": float(lg["FPTS"].mean()),
+                     "early_minutes_change_fpts": float(last_per_min * (mpg - last_mpg)),
+                     "early_efficiency_change_fpts": float(g["FPTS"].mean() - last_per_min * mpg)}
         season_row = this_season.loc[pid] if pid in this_season.index else None
         team = g["TEAM_ABBREVIATION"].iloc[-1]
         if roster_team is not None:
@@ -455,7 +465,7 @@ def build(today=None):
             "games": n, "minutes": float(mpg), "season_fpts": float(g["FPTS"].mean()),
             "recent_fpts": float(g["FPTS"].tail(RECENT_GAMES).mean()),
             "recent_minutes": float(g["MIN"].tail(RECENT_GAMES).mean()),
-            "minutes_change_fpts": float(minutes_change), "efficiency_change_fpts": float(efficiency_change),
+            "minutes_change_fpts": float(minutes_change), "efficiency_change_fpts": float(efficiency_change), **early,
             "production": float(production), "production_note": note,
             "range": _range(n, mode, tested_range),
             "availability": (min(1.0, ESPN_GAMES_SCALE * espn[pid][1] / SEASON_GAMES) if use_espn
@@ -603,6 +613,8 @@ def build(today=None):
     df["report_status"] = [report_rows.get(i, {}).get("status") for i in df.index]
     df["report_reason"] = [report_rows.get(i, {}).get("reason") for i in df.index]
     df["play_probability"] = [bpv.PLAY_PROBABILITY.get(st) if st else None for st in df["report_status"]]
+    # ESPN's average draft position: how most fantasy players value him (the suggestions page's "would they accept").
+    df["adp"] = _espn_adp(df["name"], target_season)
 
     # Known injuries: the injured player's value, and a boost for his teammates' production.
     # Manual entries (data/overrides.json) come first; then injuries on the official report, by type.
@@ -871,6 +883,18 @@ def _espn_out(names, target_season):
     out = proj["ESPN_OUT"].astype(bool) if "ESPN_OUT" in proj else proj["ESPN_GP"].fillna(-1).eq(0)
     keys = {_espn_key(n) for n in proj.loc[out, "PLAYER_NAME"]}
     return {pid for pid, n in names.items() if _espn_key(n) in keys}
+
+
+def _espn_adp(names, target_season):
+    """ESPN average draft position per row of `names` (NaN when unknown or undrafted)."""
+    try:
+        own = nba_data.espn_ownership(target_season)
+    except Exception:
+        return [np.nan] * len(names)
+    if own is None or own.empty:
+        return [np.nan] * len(names)
+    by_key = {_espn_key(n): a for n, a in zip(own["PLAYER_NAME"], own["ADP"])}
+    return [by_key.get(_espn_key(n), np.nan) for n in names]
 
 
 def _espn_by_player(names, target_season):

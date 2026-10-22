@@ -11,6 +11,7 @@ from werkzeug.exceptions import HTTPException
 
 import nba_data
 import ratings
+import suggestions
 from analysis import accuracy_tracker
 
 app = Flask(__name__)
@@ -143,6 +144,11 @@ def your_leagues():
     return render_template("leagues.html")
 
 
+@app.route("/suggestions")
+def suggestions_page():
+    return render_template("suggestions.html")
+
+
 @app.route("/injuries")
 def injuries():
     return render_template("injuries.html")
@@ -160,7 +166,7 @@ def games():
 
 # ---------- search engines and icons ----------
 SITE_URL = "https://hoopothesis.cc"
-PAGES = ["/", "/draft", "/league", "/leagues", "/injuries", "/betting", "/trade-analyzer", "/waiver-wires"]
+PAGES = ["/", "/draft", "/league", "/leagues", "/suggestions", "/injuries", "/betting", "/trade-analyzer", "/waiver-wires"]
 
 
 @app.route("/hoopothesis-espn.user.js")
@@ -316,20 +322,42 @@ def get_betting_status():
     return jsonify(out)
 
 
-@app.route("/api/positions")
-@cached_json
-def get_positions():
-    """player id -> ESPN position eligibility ("PG/SG"), for players ESPN lists."""
-    players, meta = ratings.get()
+def _positions(players, meta):
+    """(player id -> ESPN position eligibility ("PG/SG"), source), or ({}, None) if ESPN's list is unavailable."""
     season = meta.get("target_season") or meta["season"]
     try:
         espn = nba_data.espn_positions(season)
     except Exception:
         app.logger.exception("ESPN positions unavailable")
-        return jsonify({"positions": {}, "source": None})
+        return {}, None
     by_key = dict(zip(espn["PLAYER_NAME"].map(ratings._espn_key), espn["POSITIONS"]))
     positions = {int(pid): by_key[k] for pid, k in zip(players["id"], players["name"].map(ratings._espn_key)) if k in by_key}
-    return jsonify({"positions": positions, "source": f"ESPN, {season}"})
+    return positions, f"ESPN, {season}"
+
+
+@app.route("/api/positions")
+@cached_json
+def get_positions():
+    """player id -> ESPN position eligibility ("PG/SG"), for players ESPN lists."""
+    players, meta = ratings.get()
+    positions, source = _positions(players, meta)
+    return jsonify({"positions": positions, "source": source})
+
+
+@app.route("/api/suggestions")
+@cached_json
+def get_suggestions():
+    """What one team in a league should do next (suggestions.py). ?teams=ids,ids;ids,...  (one group per team, in
+    league order) &mine=index of your team &lineup=PG,SG,... (optional)."""
+    players, meta = ratings.get()
+    groups = request.args.get("teams", "").split(";")
+    teams = [[int(x) for x in g.split(",") if x.strip().isdigit()] for g in groups]
+    mine = request.args.get("mine", default=0, type=int)
+    if len(teams) < 2 or not 0 <= mine < len(teams) or not teams[mine]:
+        return jsonify({"error": "Pick a league with drafted teams and your team."}), 400
+    positions, source = _positions(players, meta)
+    out = suggestions.build(_with_early_changes(players), positions, teams, mine, request.args.get("lineup"))
+    return jsonify(_clean({**out, "positions_source": source, "meta": _meta(meta)}))
 
 
 @app.route("/api/trade")
@@ -359,6 +387,23 @@ def analyze_trade():
     return jsonify({**sides, "difference": difference, "meta": _meta(meta)})
 
 
+def _with_early_changes(players):
+    """Players with under ROLE_MIN_GAMES games this season get their change measured against last season
+    (ratings.py: early_*), since a last-5 vs season split needs more games. basis: "last5", "last_season" or None."""
+    players = players.copy()
+    full = players["games"] >= ratings.ROLE_MIN_GAMES
+    players["basis"] = None
+    players.loc[full, "basis"] = "last5"
+    if "early_minutes_change_fpts" in players:
+        early = ~full & players["early_minutes_change_fpts"].notna()
+        players.loc[early, "basis"] = "last_season"
+        players.loc[early, "minutes_change_fpts"] = players.loc[early, "early_minutes_change_fpts"]
+        players.loc[early, "efficiency_change_fpts"] = players.loc[early, "early_efficiency_change_fpts"]
+    else:
+        players["last_season_fpts"] = players["last_season_minutes"] = float("nan")
+    return players
+
+
 @app.route("/api/waiver")
 @cached_json
 def waiver_signals():
@@ -374,9 +419,10 @@ def waiver_signals():
     ids = lambda key: {int(x) for x in request.args.get(key, "").split(",") if x.strip().isdigit()}
     mine, others = ids("mine"), ids("others")
     league = bool(mine or others)
-    df = players[(players["games"] >= ratings.ROLE_MIN_GAMES)].copy()
+    players = _with_early_changes(players)
+    df = players[(players["games"] >= ratings.ROLE_MIN_GAMES) | (players["basis"] == "last_season")].copy()
     cols = ["id", "name", "team", "games", "season_fpts", "recent_fpts", "recent_minutes",
-            "minutes_change_fpts", "efficiency_change_fpts", "bpv"]
+            "minutes_change_fpts", "efficiency_change_fpts", "bpv", "basis", "last_season_fpts", "last_season_minutes"]
     mc, ec = df["minutes_change_fpts"], df["efficiency_change_fpts"]
     free, own, theirs = ~df["id"].isin(mine | others), df["id"].isin(mine), df["id"].isin(others)
     pick = lambda mask, group: mask & group if league else mask
@@ -387,7 +433,7 @@ def waiver_signals():
         "falling_minutes": df[pick(mc <= -threshold, own)].sort_values("minutes_change_fpts"),
     }
     out = {**{k: _records(v[cols].head(WAIVER_LIST_SIZE)) for k, v in lists.items()},
-           "threshold": threshold, "league": league, "meta": _meta(meta)}
+           "threshold": threshold, "league": league, "early": bool((df["basis"] == "last_season").any()), "meta": _meta(meta)}
     if league:
         team_cols = cols + ["rank", "production", "availability", "injury_note", "report_status", "report_reason",
                             "week_games", "week_fpts"]
