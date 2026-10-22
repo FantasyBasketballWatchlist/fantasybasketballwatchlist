@@ -176,14 +176,17 @@
     function disagreeTable(d, date) {
       if (!d.examples || !d.examples[0] || !d.examples[0].closer) return '';
       const cls = (x, who) => x.closer === who ? ' class="won"' : '';
-      return `<p class="dis-caption">BPV and ESPN ranks as of ${escapeHtml(date)}, not today's, counted among the ${d.pool} players either list had in its top 150.</p>
+      const most = Math.max(...d.examples.map(x => x.games));
+      const early = most < 10 ? ` "So far" ranks total fantasy points after only ${most === 1 ? 'one game' : `${most} games`}, so one big night can put a`
+        + ' player at the top; it settles as the season goes on (this check is judged later).' : '';
+      return `<p class="dis-caption">BPV and ESPN ranks as of ${escapeHtml(date)}, not today's, counted among the ${d.pool} players either list had in its top 150.${early}</p>
         <div class="dis-table"><table>
-          <thead><tr><th>Player</th><th class="r">BPV then</th><th class="r">ESPN then</th><th class="r">Actual</th><th>Closer</th></tr></thead>
+          <thead><tr><th>Player</th><th class="r">BPV then</th><th class="r">ESPN then</th><th class="r">So far</th><th>Closer</th></tr></thead>
           <tbody>${d.examples.map(x => `<tr>
             <td>${escapeHtml(x.name)}</td>
             <td class="r"><span${cls(x, 'BPV')}>#${x.bpv_rank}</span></td>
             <td class="r"><span${cls(x, 'ESPN')}>#${x.espn_rank}</span></td>
-            <td class="r">${x.games ? `#${x.actual_rank}` : '<small>no games</small>'}</td>
+            <td class="r">${x.games ? `#${x.actual_rank} <small>${fmt(x.fpts, 0)} pts, ${x.games} G</small>` : '<small>no games</small>'}</td>
             <td><span class="dis-who dis-${x.closer.toLowerCase()}">${x.closer === 'tie' ? 'Tie' : x.closer}</span></td></tr>`).join('')}</tbody>
         </table></div>`;
     }
