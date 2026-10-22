@@ -1,0 +1,13 @@
+{
+ "rules": "docs/prereg-draft-suggestion-v2.md",
+ "design_leagues": ["538977698", "1854297225", "1503540199"],
+ "slot_drafts": 30,
+ "season_score_mean": {"C0_current": 178.696, "A_injury_nights": 178.131, "B_reach_12": 177.802, "AB": 178.27},
+ "guards_drafted_mean_of_13": {"C0_current": 6.93, "A_injury_nights": 6.2, "B_reach_12": 6.87, "AB": 6.03},
+ "drafts_better_than_C0": {"A": 13, "B": 9, "AB": 12},
+ "mean_diff_vs_C0_by_league": {"A": {"538977698": -1.018, "1503540199": -0.517, "1854297225": -0.159},
+                               "B": {"538977698": 0.103, "1503540199": -1.379, "1854297225": -1.405},
+                               "AB": {"538977698": 0.123, "1503540199": -0.254, "1854297225": -1.147}},
+ "stopped_at_rule1": true, "test_leagues_run": false, "engine_changes_shipped": false,
+ "bug_fix_shipped": "off-the-clock suggestions target the user's next pick"
+}

@@ -379,10 +379,10 @@
       const levelOf = Object.fromEntries(look.map(o => [o.p, o]));
       const needPositions = POSITIONS.filter(p => fill.openSpecific.some(s => fits(s, [p])));
       const alerts = [];
-      let pick = available[0] || null, why = 'Best BPV left.', pending = false;
+      let pick = available[0] || null, why = 'Best BPV left.', pending = false, at = null;
       if (hasPos && now != null && myLeft > 0 && pick) {
         // The look-ahead takes ~100 ms: when it isn't cached, draw everything else first and work it out right after.
-        if (allowLook || lookCache.key === lookKey()) ({ pick, why } = lookAhead(available, mineIds, now));
+        if (allowLook || lookCache.key === lookKey()) ({ pick, why, at } = lookAhead(available, mineIds, now));
         else { pending = true; pick = null; scheduleLook(); }
       }
 
@@ -409,7 +409,7 @@
 
       }
       if (!hasPos) alerts.push({ cls: '', text: 'Position data unavailable right now, so these tips use BPV only.' });
-      return { pick, why, pending, alerts, look, fill, needPositions };
+      return { pick, why, at, pending, alerts, look, fill, needPositions };
     }
 
     // Suggested pick: for each candidate, play out the rest of the draft (other teams take the best BPV left, or a
@@ -501,6 +501,7 @@
 
     // Another team's pick in the play-out: like most drafters, the best BPV left unless one of the next few fills a
     // starting spot it can't fill yet (so centers don't sit there for you just because a guard ranks higher).
+    // Looking further down (12, "positional runs") did worse in replays of real drafts (docs/prereg-draft-suggestion-v2.md).
     const OPPONENT_REACH = 6;
     function opponentPick(pool, roster) {
       const open = fillLineup(roster).openSpecific;
@@ -511,10 +512,16 @@
       return pool[0];
     }
 
-    function playOut(roster, pool, from) {
-      roster = roster.slice(); pool = pool.slice();
+    // Other teams' rosters: the real picks plus, optionally, picks the engine expects before your turn (extra).
+    function otherRosters(extra) {
       const others = {};
       for (const [n, id] of Object.entries(state.picks)) { const t = teamOf(+n); if (t !== state.slot) (others[t] = others[t] || []).push(id); }
+      if (extra) for (const [t, ids] of Object.entries(extra)) (others[t] = others[t] || []).push(...ids);
+      return others;
+    }
+    function playOut(roster, pool, from, extra) {
+      roster = roster.slice(); pool = pool.slice();
+      const others = otherRosters(extra);
       for (let n = from; n <= totalPicks() && pool.length; n++) {
         if (n in state.picks) continue;
         const t = teamOf(n);
@@ -536,9 +543,23 @@
     function lookAhead(available, mineIds, now) {
       const key = lookKey();
       if (lookCache.key === key) return lookCache.value;
-      const pool = available.slice().sort((a, b) => b.bpv - a.bpv);
+      let pool = available.slice().sort((a, b) => b.bpv - a.bpv);
+      // Not your pick: play the other teams forward to your next pick (the same opponent model as the play-out) and
+      // choose from who's likely still there.
+      let at = now, gone = [], extra = null;
+      if (teamOf(now) !== state.slot) {
+        for (let n = now; n <= totalPicks(); n++) if (!(n in state.picks) && teamOf(n) === state.slot) { at = n; break; }
+        const others = otherRosters();
+        extra = {};
+        for (let n = now; n < at && pool.length; n++) {
+          if (n in state.picks) continue;
+          const t = teamOf(n), x = opponentPick(pool, others[t] || []);
+          (others[t] = others[t] || []).push(x.id); (extra[t] = extra[t] || []).push(x.id);
+          pool = pool.filter(p => p !== x); gone.push(x);
+        }
+      }
       const results = shortlist(pool, LOOKAHEAD_CANDIDATES).map(c => {
-        const value = dailyValue(playOut([...mineIds, c.id], pool.filter(x => x !== c), now + 1));
+        const value = dailyValue(playOut([...mineIds, c.id], pool.filter(x => x !== c), at + 1, extra));
         return { c, value, score: value };
       });
       const top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
@@ -553,7 +574,12 @@
         why = `Balances your roster at ${posOf(top.c.id).join('/')}: playing out the rest of the draft, your daily lineups end up ${fmt(gain)} BPV `
           + `better than if you take ${pool[0].name} (${fmt(pool[0].bpv - top.c.bpv)} BPV more on his own) now.`;
       }
-      lookCache = { key, value: { pick: top.c, why } };
+      if (at !== now) {
+        const likelyGone = available.filter(p => gone.includes(p)).slice(0, 3).map(p => p.name);
+        why = `Your next pick is #${at} (${at - now} picks away). ${likelyGone.length ? `${likelyGone.join(', ')} will probably be gone by then. ` : ''}`
+          + (top.c === pool[0] ? `${top.c.name} is the best player likely still there${why.includes('fills') ? ', and fills an open spot' : ''}.` : `From who's likely left: ${why}`);
+      }
+      lookCache = { key, value: { pick: top.c, why, at } };
       return lookCache.value;
     }
 
@@ -672,7 +698,7 @@
           <b>Working it out…</b><span class="why">Playing out the rest of the draft.</span>`;
       } else if (!sg.hidden) {
         sg.dataset.id = adv.pick.id;
-        sg.innerHTML = `<small>${teamOf(now) === state.slot ? 'Suggested pick' : 'Best for you right now'}</small>
+        sg.innerHTML = `<small>${teamOf(now) === state.slot ? 'Suggested pick' : adv.at ? `For your next pick (#${adv.at})` : 'Best for you right now'}</small>
           <b>${escapeHtml(adv.pick.name)}</b>${positions[adv.pick.id] ? `<span class="pos">${positions[adv.pick.id]}</span>` : ''}
           <span class="by"> · ${fmt(adv.pick.bpv)} BPV</span><span class="why">${escapeHtml(adv.why)}</span>`;
       }
