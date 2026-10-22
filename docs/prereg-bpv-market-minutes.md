@@ -39,3 +39,20 @@ lower on at least 3 of the 4 dates. Reported: the same for players with market l
 One season, two months of lines (points, rebounds, assists only; no threes, steals, blocks or turnovers). The lines
 are an hour before tip; in the app they'd come from the forward collection (`data/lines/live/`), so adoption also needs
 that collection kept running (Odds API credits or PropLine).
+
+## Result (2026-10-21)
+
+`analysis/bpv_market.json`. **Neither kept** (both made the design dates worse at every setting): mean absolute error
+of rest-of-season FPTS per game, current 3.824; recent minutes 3.842-4.002; market 3.844-4.077. The test dates are
+unchanged (3.973; rank correlation with rest-of-season totals 0.782). Short-term signals (a few games of minutes, two
+weeks of lines) help a single game but over-react for the rest of a season; BPV's shrunk season-long production is
+already better calibrated for that horizon.
+
+## Addendum: teammate absences (written 2026-10-21, after the result above, before this was computed)
+
+- **T:** each team's rotation players (20+ minutes a game this season before the date) listed Out on that day's
+  injury report vacate minutes for the rest of the season: V = sum of (their minutes per game x (1 - their BPV
+  availability)), i.e. the share of the remaining games they're expected to miss. A teammate's production x
+  (1 + alpha x V x his share of the team's active minutes / his minutes per game); alpha in {0, 0.25, 0.5, 0.75, 1}.
+- Same dates, same error measure, same pass rule (chosen on the design dates, kept only if it lowers the error; test
+  on the four January dates: lower pooled and on 3 of 4).
