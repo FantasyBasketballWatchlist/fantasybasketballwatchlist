@@ -14,14 +14,14 @@
     .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0 0 20px; color: var(--muted); flex-wrap: wrap; font-size: .88rem; }
     .controls label { display: flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
     .status { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
-    .status.Out { color: #fecaca; background: rgba(248,113,113,.16); }
-    .status.Doubtful { color: #fed7aa; background: rgba(251,146,60,.16); }
-    .status.Questionable { color: #fde7b0; background: rgba(255,176,32,.14); }
-    .status.Probable { color: #c9f5e3; background: rgba(52,211,153,.13); }
+    .status.Out { color: var(--bad-text); background: color-mix(in srgb, var(--bad) 16%, transparent); }
+    .status.Doubtful { color: var(--warn-text); background: color-mix(in srgb, var(--orange) 16%, transparent); }
+    .status.Questionable { color: var(--warn-text); background: color-mix(in srgb, var(--orange-2) 14%, transparent); }
+    .status.Probable { color: var(--good-text); background: color-mix(in srgb, var(--good) 13%, transparent); }
     td .reason { display: block; color: var(--dim); font-size: .78rem; font-weight: 400; max-width: 340px; }
     #list td.outlook { color: var(--muted); font-size: .82rem; min-width: 260px; max-width: 360px; white-space: normal; line-height: 1.45; }
     #list td .reason { white-space: normal; }
-    .serious { color: #fecaca; font-weight: 600; }
+    .serious { color: var(--bad-text); font-weight: 600; }
     .counts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
     .empty { color: var(--dim); text-align: center; padding: 24px; }
     table.hist { border-collapse: collapse; font-size: .85rem; margin-top: 8px; }

@@ -1,0 +1,14 @@
+{
+ "rules": "docs/prereg-draft-opponents.md",
+ "rule1_key_choice": {"design_picks": 385, "mean_abs_log_pick_over_key": {"adp": 0.157, "espn_standard_rank": 0.1788}, "chosen": "adp"},
+ "rule2_design_replay": {
+  "slot_drafts": 30,
+  "mean_gain_bpv_per_night": -0.783,
+  "per_league": {"538977698": {"mean": -0.82, "better": 3, "worse": 7},
+                 "1854297225": {"mean": -2.01, "better": 2, "worse": 8},
+                 "1503540199": {"mean": 0.48, "better": 4, "worse": 6}}
+ },
+ "stopped_at_rule2": true,
+ "test_leagues_run": false,
+ "shipped": false
+}

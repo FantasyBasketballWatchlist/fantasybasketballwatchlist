@@ -21,6 +21,7 @@
       ('more', 'More', [
         ('injuries', '/injuries', 'Injuries', 'Out and questionable players'),
         ('betting', '/betting', 'Betting', 'Game projections and bet tools')])] %}
+    <div class="topbar-right">
     <nav class="nav" id="site-nav">
       <a href="/" class="{{ 'active' if active == 'home' }}">Rankings</a>
       <a href="/draft" class="{{ 'active' if active == 'draft' }}">Draft</a>
@@ -38,6 +39,32 @@
       </div>
       {%- endfor %}
     </nav>
+    {%- set themes = [
+      ('arena', 'Arena', 'Dark, basketball orange', ['#0a0f1c', '#19243d', '#ff7a1a']),
+      ('clubhouse', 'Clubhouse', 'Clean white, cream, green', ['#ffffff', '#f5f0e3', '#2f7a4f']),
+      ('hardwood', 'Hardwood', 'Warm maple, brick red', ['#f7efe2', '#f2e5cd', '#c2410c']),
+      ('paper', 'Paper', 'Minimal black on white', ['#ffffff', '#f1f1f1', '#111111']),
+      ('neon', 'Neon', 'Late-night pink and cyan', ['#07050f', '#1c1636', '#ec4899']),
+      ('frost', 'Frost', 'Slate and ice blue', ['#0b1220', '#1a2d47', '#38bdf8']),
+      ('royal', 'Royal', 'Deep purple and gold', ['#0f0a1a', '#271b44', '#eab308']),
+      ('sunset', 'Sunset', 'Dusky red and coral', ['#140a0e', '#321a25', '#f43f5e'])] %}
+    <div class="theme-wrap">
+      <button type="button" class="theme-btn" aria-label="Change theme" aria-expanded="false" title="Theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.2-9-8.2z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/></svg>
+      </button>
+      <div class="theme-menu" role="dialog" aria-label="Themes">
+        <h4>Theme</h4>
+        <div class="theme-grid">
+          {%- for id, name, sub, sw in themes %}
+          <button type="button" class="theme-opt" data-theme-id="{{ id }}">
+            <span class="sw"><i style="background:{{ sw[0] }}"></i><i style="background:{{ sw[1] }}"></i><i style="background:{{ sw[2] }}"></i></span>
+            <b>{{ name }}</b><small>{{ sub }}</small>
+          </button>
+          {%- endfor %}
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
   <script>
     // Phones: the menu can be hidden; the choice is remembered in this browser.
@@ -63,9 +90,26 @@
         e.stopPropagation();
         const open = !g.classList.contains('open');
         close(g); g.classList.toggle('open', open); e.currentTarget.setAttribute('aria-expanded', String(open));
+        bar.querySelector('.theme-wrap').classList.remove('open');
       }));
       document.addEventListener('click', e => { if (!e.target.closest('.nav-group')) close(); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+      // Theme picker: saved in this browser; other open tabs follow.
+      const tw = bar.querySelector('.theme-wrap'), tb = tw.querySelector('.theme-btn');
+      const mark = (t) => tw.querySelectorAll('.theme-opt').forEach(o => o.classList.toggle('on', o.dataset.themeId === t));
+      let current = 'arena';
+      try { current = localStorage.getItem('hoop-theme') || 'arena'; } catch (e) {}
+      mark(window.hoopTheme ? hoopTheme(current) : current);
+      const setOpen = (o) => { tw.classList.toggle('open', o); tb.setAttribute('aria-expanded', String(o)); };
+      tb.addEventListener('click', e => { e.stopPropagation(); close(); setOpen(!tw.classList.contains('open')); });
+      tw.querySelectorAll('.theme-opt').forEach(o => o.addEventListener('click', () => {
+        const t = hoopTheme(o.dataset.themeId);
+        try { localStorage.setItem('hoop-theme', t); } catch (e) {}
+        mark(t);
+      }));
+      document.addEventListener('click', e => { if (!e.target.closest('.theme-wrap')) setOpen(false); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+      window.addEventListener('storage', e => { if (e.key === 'hoop-theme') mark(hoopTheme(e.newValue || 'arena')); });
     })();
   </script>
 </header>

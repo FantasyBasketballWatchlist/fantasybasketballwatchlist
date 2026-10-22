@@ -1,0 +1,128 @@
+/* Site themes. Each one only swaps the tokens app.css is built on (colors, fonts, corner radius, background glow), so
+   switching is instant and costs nothing while scrolling. "Arena" is app.css's own :root. The picker lives in
+   _nav.html; _head.html applies the saved theme before the page draws (no flash). html[data-theme] outranks :root, so
+   this file can load before app.css. */
+
+/* Clubhouse: clean white and cream with forest green */
+html[data-theme="clubhouse"] {
+  color-scheme: light;
+  --bg: #ffffff; --bg-2: #fbf8f0; --surface: #fffdf8; --surface-2: #f5f0e3;
+  --border: rgba(47, 79, 58, .14); --text: #1e2b22; --muted: #56675b; --dim: #87938a;
+  --orange: #2f7a4f; --orange-2: #5d9f72; --on-accent: #ffffff;
+  --blue: #3b6e8f; --good: #2f8a55; --bad: #c2412d; --ice: #2c7a7b;
+  --t-super: #b7791f; --t-chef: #0e7490; --t-allstar: #7c3aed; --t-starter: #2563eb; --t-roster: #2f8a55; --t-waiver: #87938a;
+  --tint: #2f4f3a; --shadow-c: #8a8170; --well: #f6f1e4; --scroll: #d8cfb8; --topbar: rgba(255, 255, 255, .93);
+  --card-bg: var(--surface); --glow-a: #5d9f72; --glow-b: #e7d3a3; --glow: 9%;
+  --bad-text: #9b2c1f; --warn-text: #8a5a00; --good-text: #1f6b40;
+  --font-display: 'Fraunces', Georgia, serif; --display-case: none; --display-spacing: 0; --display-weight: 600;
+  --radius: 14px;
+}
+
+/* Hardwood: warm maple floor, brick-red accent */
+html[data-theme="hardwood"] {
+  color-scheme: light;
+  --bg: #f7efe2; --bg-2: #f1e5d1; --surface: #fcf6ec; --surface-2: #f2e5cd;
+  --border: rgba(92, 58, 30, .16); --text: #2d1d12; --muted: #6c5341; --dim: #9a8270;
+  --orange: #c2410c; --orange-2: #e07a2a; --on-accent: #ffffff;
+  --blue: #1d4e89; --good: #2f7d4a; --bad: #b42318; --ice: #1f6f8b;
+  --t-super: #b45309; --t-chef: #0e7490; --t-allstar: #7e22ce; --t-starter: #1d4ed8; --t-roster: #2f7d4a; --t-waiver: #9a8270;
+  --tint: #5c3a1e; --shadow-c: #7a5a3a; --well: #efe2c9; --scroll: #d9c3a0; --topbar: rgba(247, 239, 226, .93);
+  --card-bg: var(--surface); --glow-a: #e07a2a; --glow-b: #c2410c; --glow: 7%;
+  --bad-text: #8f1d14; --warn-text: #8a4b00; --good-text: #1f5f37;
+  --radius: 12px;
+}
+
+/* Paper: minimal black on white, square corners */
+html[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #ffffff; --bg-2: #f6f6f6; --surface: #ffffff; --surface-2: #f1f1f1;
+  --border: rgba(0, 0, 0, .12); --text: #111111; --muted: #555555; --dim: #8a8a8a;
+  --orange: #111111; --orange-2: #3a3a3a; --on-accent: #ffffff;
+  --blue: #1d4ed8; --good: #15803d; --bad: #b91c1c; --ice: #0369a1;
+  --t-super: #a16207; --t-chef: #0e7490; --t-allstar: #7e22ce; --t-starter: #1d4ed8; --t-roster: #15803d; --t-waiver: #8a8a8a;
+  --tint: #000000; --shadow-c: #777777; --well: #f4f4f4; --scroll: #cccccc; --topbar: rgba(255, 255, 255, .95);
+  --card-bg: var(--surface); --glow: 0%;
+  --bad-text: #991b1b; --warn-text: #854d0e; --good-text: #166534;
+  --font-display: 'Inter', system-ui, sans-serif; --display-case: none; --display-spacing: -.5px; --display-weight: 800;
+  --radius: 6px;
+}
+
+/* Neon: late-night arcade, pink and cyan */
+html[data-theme="neon"] {
+  --bg: #07050f; --bg-2: #0e0a1c; --surface: #141027; --surface-2: #1c1636;
+  --border: rgba(167, 139, 250, .18); --text: #f3f0ff; --muted: #a79fc6; --dim: #6e6890;
+  --orange: #ec4899; --orange-2: #22d3ee; --on-accent: #0b0614;
+  --blue: #818cf8; --good: #34d399; --bad: #fb7185; --ice: #22d3ee;
+  --t-super: #facc15; --t-allstar: #e879f9; --t-starter: #22d3ee; --t-roster: #4ade80;
+  --well: rgba(7, 5, 15, .5); --scroll: #3a2d63; --topbar: rgba(7, 5, 15, .9);
+  --glow-a: #ec4899; --glow-b: #22d3ee; --glow: 15%;
+  --bad-text: #fecdd3;
+}
+
+/* Frost: dark slate with ice blue */
+html[data-theme="frost"] {
+  --bg: #0b1220; --bg-2: #0f1a2b; --surface: #132238; --surface-2: #1a2d47;
+  --border: rgba(148, 197, 255, .16); --text: #eaf4ff; --muted: #9fb6cf; --dim: #64809f;
+  --orange: #38bdf8; --orange-2: #a5f3fc; --on-accent: #03202c;
+  --blue: #60a5fa; --ice: #a5f3fc;
+  --well: rgba(6, 12, 22, .5); --scroll: #2a4466; --topbar: rgba(11, 18, 32, .92);
+  --glow-a: #38bdf8; --glow-b: #a78bfa; --glow: 11%;
+}
+
+/* Royal: deep purple with gold */
+html[data-theme="royal"] {
+  --bg: #0f0a1a; --bg-2: #160f26; --surface: #1d1433; --surface-2: #271b44;
+  --border: rgba(234, 179, 8, .16); --text: #f7f1ff; --muted: #b7a6d6; --dim: #7d6c9e;
+  --orange: #eab308; --orange-2: #fde047; --on-accent: #1f1400;
+  --blue: #a78bfa; --ice: #c4b5fd;
+  --t-starter: #a78bfa;
+  --well: rgba(10, 6, 18, .5); --scroll: #3d2b66; --topbar: rgba(15, 10, 26, .92);
+  --glow-a: #eab308; --glow-b: #7c3aed; --glow: 12%;
+}
+
+/* Sunset: dusky red and coral */
+html[data-theme="sunset"] {
+  --bg: #140a0e; --bg-2: #1c0f15; --surface: #26141c; --surface-2: #321a25;
+  --border: rgba(251, 146, 60, .16); --text: #fff1ec; --muted: #d1a9a3; --dim: #93706b;
+  --orange: #f43f5e; --orange-2: #fb923c; --on-accent: #2a0710;
+  --blue: #f472b6; --ice: #fdba74;
+  --well: rgba(15, 6, 10, .5); --scroll: #5a2a38; --topbar: rgba(20, 10, 14, .92);
+  --glow-a: #f43f5e; --glow-b: #fb923c; --glow: 13%;
+}
+
+/* ---------- theme picker (in the top bar) ---------- */
+.theme-btn {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; color: var(--muted);
+  transition: color .2s, border-color .2s;
+}
+.theme-btn:hover, .theme-wrap.open .theme-btn { color: var(--text); border-color: var(--orange); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.theme-wrap { position: relative; }
+.theme-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 320px; padding: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--shadow-c) 45%, transparent);
+  opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s, transform .15s var(--ease), visibility .15s;
+}
+.theme-wrap.open .theme-menu { opacity: 1; visibility: visible; transform: none; }
+.theme-menu h4 { font-size: .72rem; letter-spacing: .8px; text-transform: uppercase; color: var(--dim); margin: 2px 4px 8px; }
+.theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.theme-opt {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px; cursor: pointer; text-align: left; font: inherit; color: var(--text);
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
+}
+.theme-opt:hover { border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
+.theme-opt.on { border-color: var(--orange); box-shadow: 0 0 0 1px var(--orange); }
+.theme-opt .sw { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(127, 127, 127, .25); }
+.theme-opt .sw i { flex: 1; }
+.theme-opt .sw i:first-child { flex: 2; }
+.theme-opt b { font-size: .84rem; font-weight: 600; }
+.theme-opt small { color: var(--dim); font-size: .72rem; line-height: 1.25; margin-top: -4px; }
+@media (max-width: 760px) {
+  .topbar-right { width: 100%; }
+  .topbar-right .nav { flex: 1; min-width: 0; }
+  .theme-wrap { position: static; }
+  .theme-btn { position: absolute; top: 8px; left: 10px; width: 30px; height: 28px; border-radius: 9px; }
+  .theme-menu { left: 10px; right: 10px; width: auto; top: 44px; }
+}

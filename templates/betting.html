@@ -15,23 +15,23 @@
     .chip { background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: .82rem; font-weight: 600;
       padding: 6px 11px; border-radius: 999px; cursor: pointer; transition: color .15s var(--ease), border-color .15s var(--ease); }
     .chip:hover { color: var(--text); }
-    .chip.on { color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); border-color: transparent; }
+    .chip.on { color: var(--on-accent); background: linear-gradient(135deg, var(--orange-2), var(--orange)); border-color: transparent; }
     .seg { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0 0 12px; }
     .seg button { background: none; border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: .8rem; font-weight: 600; padding: 5px 10px; border-radius: 8px; cursor: pointer; }
-    .seg button.on { color: var(--text); border-color: var(--orange); background: rgba(255,122,26,.1); }
+    .seg button.on { color: var(--text); border-color: var(--orange); background: color-mix(in srgb, var(--orange) 10%, transparent); }
     .tools { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
     .tools input { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 10px; padding: 8px 12px; min-width: 220px; }
     .tools input:focus { outline: none; border-color: var(--orange); }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
     @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .checker { order: -1; } }
-    .range { position: relative; height: 8px; border-radius: 99px; background: rgba(148,163,184,.12); min-width: 80px; }
-    .range i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: linear-gradient(90deg, rgba(255,176,32,.45), rgba(255,122,26,.75)); }
+    .range { position: relative; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--muted) 12%, transparent); min-width: 80px; }
+    .range i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: linear-gradient(90deg, color-mix(in srgb, var(--orange-2) 45%, transparent), color-mix(in srgb, var(--orange) 75%, transparent)); }
     .range b { position: absolute; top: -3px; width: 3px; height: 14px; border-radius: 2px; background: var(--text); }
     td .who { font-weight: 600; } td .sub { display: block; color: var(--dim); font-size: .76rem; font-weight: 400; }
     .status { font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: uppercase; margin-left: 4px; }
-    .status.Out { color: #fecaca; background: rgba(248,113,113,.16); } .status.Doubtful { color: #fed7aa; background: rgba(251,146,60,.16); }
-    .status.Questionable { color: #fde7b0; background: rgba(255,176,32,.14); } .status.Probable, .status.Available { color: #c9f5e3; background: rgba(52,211,153,.13); }
-    tr.pickable { cursor: pointer; } tr.pickable:hover td { background: rgba(255,122,26,.05); } tr.sel td { background: rgba(255,122,26,.09); }
+    .status.Out { color: var(--bad-text); background: color-mix(in srgb, var(--bad) 16%, transparent); } .status.Doubtful { color: var(--warn-text); background: color-mix(in srgb, var(--orange) 16%, transparent); }
+    .status.Questionable { color: var(--warn-text); background: color-mix(in srgb, var(--orange-2) 14%, transparent); } .status.Probable, .status.Available { color: var(--good-text); background: color-mix(in srgb, var(--good) 13%, transparent); }
+    tr.pickable { cursor: pointer; } tr.pickable:hover td { background: color-mix(in srgb, var(--orange) 5%, transparent); } tr.sel td { background: color-mix(in srgb, var(--orange) 9%, transparent); }
     .diff.up { color: var(--good); } .diff.down { color: var(--bad); }
     .checker { position: sticky; top: 84px; }
     .checker h3 { margin-bottom: 8px; }
@@ -39,11 +39,11 @@
     .checker select, .checker input { width: 100%; margin-top: 4px; background: var(--bg-2); border: 1px solid var(--border); color: var(--text); font: inherit; border-radius: 9px; padding: 7px 10px; }
     .checker .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .odds-out { margin-top: 14px; display: grid; gap: 8px; }
-    .side { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 9px 11px; border-radius: 10px; background: rgba(10,15,28,.45); border: 1px solid var(--border); }
+    .side { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 9px 11px; border-radius: 10px; background: var(--well); border: 1px solid var(--border); }
     .side .num { font-size: 1.6rem; font-weight: 700; } .side small { color: var(--dim); display: block; font-size: .72rem; }
     .side .ev.good { color: var(--good); } .side .ev.bad { color: var(--bad); }
     .caveat { font-size: .78rem; color: var(--muted); line-height: 1.5; margin-top: 12px; padding: 9px 11px; border-radius: 10px;
-      background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.25); }
+      background: color-mix(in srgb, var(--blue) 8%, transparent); border: 1px solid color-mix(in srgb, var(--blue) 25%, transparent); }
     .empty { color: var(--dim); text-align: center; padding: 26px; }
     .btabs { display: flex; gap: 6px; justify-content: center; border-bottom: 1px solid var(--border); margin: 0 0 18px; overflow-x: auto; scrollbar-width: none; }
     .btabs::-webkit-scrollbar { display: none; }
@@ -58,7 +58,7 @@
     .hedge .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .hedge [hidden] { display: none; }
     .hout { display: grid; gap: 10px; }
-    .hstat { padding: 12px 14px; border-radius: 12px; background: rgba(10,15,28,.45); border: 1px solid var(--border); }
+    .hstat { padding: 12px 14px; border-radius: 12px; background: var(--well); border: 1px solid var(--border); }
     .hstat small { display: block; color: var(--dim); font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; }
     .hstat .num { font-size: 1.9rem; font-weight: 700; }
     .hstat.big .num { color: var(--good); }

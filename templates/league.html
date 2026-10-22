@@ -28,7 +28,7 @@
     .teams { margin-top: 18px; }
     .team { padding: 18px; border-top: 3px solid var(--c); min-width: 0; }
     .team-head { display: flex; align-items: center; gap: 10px; }
-    .team-name { flex: 1; min-width: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 4px 10px; background: transparent; border-color: transparent; }
+    .team-name { flex: 1; min-width: 0; font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 4px 10px; background: transparent; border-color: transparent; }
     .team-name:hover { border-color: var(--border); }
     .team-score { text-align: right; line-height: 1.05; }
     .team-score .num { font-size: 1.9rem; font-weight: 700; color: var(--c); }
@@ -38,17 +38,17 @@
     .team table.data { font-size: .88rem; }
     .team table.data th, .team table.data td { padding: 8px 8px; }
     .slot { display: inline-block; min-width: 38px; text-align: center; font-size: .7rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;
-      background: rgba(255, 122, 26, .14); color: var(--orange-2); }
-    .slot.bench { background: rgba(148, 163, 184, .1); color: var(--dim); }
+      background: color-mix(in srgb, var(--orange) 14%, transparent); color: var(--orange-2); }
+    .slot.bench { background: color-mix(in srgb, var(--muted) 10%, transparent); color: var(--dim); }
     .pos { color: var(--dim); font-size: .72rem; margin-left: 6px; font-weight: 500; }
     .remove { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px 6px; border-radius: 6px; }
-    .remove:hover { color: var(--bad); background: rgba(248, 113, 113, .12); }
+    .remove:hover { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
     .empty { color: var(--dim); font-size: .9rem; padding: 8px 2px; }
     .note { color: var(--orange-2); font-size: .82rem; min-height: 1em; }
     .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
-    .totals div { background: rgba(255, 255, 255, .03); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; }
+    .totals div { background: color-mix(in srgb, var(--tint) 3%, transparent); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; }
     .totals label { display: block; color: var(--muted); font-size: .7rem; }
-    .totals b { font-family: 'Barlow Condensed', sans-serif; font-size: 1.2rem; }
+    .totals b { font-family: var(--font-display); font-size: 1.2rem; }
     .team-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
     .holes { color: var(--muted); font-size: .8rem; }
     .side-by-side { display: grid; grid-template-columns: 1fr 1.4fr; gap: 18px; margin-top: 18px; align-items: start; }
@@ -57,7 +57,7 @@
     .trade-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
     .trade-side h4 { font-size: .8rem; color: var(--muted); font-weight: 500; margin: 8px 0 6px; }
     .trade-list { max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 4px 8px; }
-    .trade-list label { display: flex; gap: 8px; align-items: center; padding: 5px 0; font-size: .86rem; cursor: pointer; border-bottom: 1px solid rgba(148,163,184,.07); }
+    .trade-list label { display: flex; gap: 8px; align-items: center; padding: 5px 0; font-size: .86rem; cursor: pointer; border-bottom: 1px solid color-mix(in srgb, var(--muted) 7%, transparent); }
     .trade-list label:last-child { border-bottom: 0; }
     .trade-list label span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .trade-list label small { color: var(--dim); }
@@ -65,7 +65,7 @@
     .trade-sum { color: var(--muted); font-size: .85rem; }
     .trade-log { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
     .trade-log .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; font-size: .84rem; color: var(--muted);
-      border-top: 1px solid rgba(148,163,184,.07); padding-top: 6px; }
+      border-top: 1px solid color-mix(in srgb, var(--muted) 7%, transparent); padding-top: 6px; }
     .trade-log .row b { color: var(--text); font-weight: 600; }
     @media (max-width: 960px) { .side-by-side { grid-template-columns: 1fr; } }
     @media (max-width: 760px) { .totals { grid-template-columns: repeat(2, 1fr); } .trade-sides { grid-template-columns: 1fr; } }

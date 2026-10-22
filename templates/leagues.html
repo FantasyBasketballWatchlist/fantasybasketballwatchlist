@@ -23,15 +23,15 @@
     .lg.active { border-top-color: var(--orange); }
     .lg-head { display: flex; align-items: center; gap: 10px; }
     .lg-name { flex: 1; min-width: 0; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 8px; padding: 4px 8px;
-      font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+      font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
     .lg-name:hover { border-color: var(--border); }
     .lg-name:focus { outline: none; border-color: var(--orange); }
     .tag { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .5px;
-      color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
+      color: var(--on-accent); background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
     .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .facts div { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
+    .facts div { background: color-mix(in srgb, var(--tint) 3%, transparent); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
     .facts label { display: block; color: var(--muted); font-size: .7rem; }
-    .facts b { font-family: 'Barlow Condensed', sans-serif; font-size: 1.15rem; }
+    .facts b { font-family: var(--font-display); font-size: 1.15rem; }
     .roster { color: var(--muted); font-size: .84rem; line-height: 1.5; }
     .roster b { color: var(--text); font-weight: 600; }
     .buttons { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -6,7 +6,31 @@
   <meta name="description" content="{{ page_description }}">
   <link rel="canonical" href="{{ canonical }}">
   <meta name="theme-color" content="#0a0f1c">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
+  <script>
+    // Apply the saved theme before anything draws (static/themes.css; picker in _nav.html). Themes with their own
+    // font load it only when chosen.
+    (function () {
+      var bg = { arena: '#0a0f1c', clubhouse: '#ffffff', hardwood: '#f7efe2', paper: '#ffffff', neon: '#07050f', frost: '#0b1220', royal: '#0f0a1a', sunset: '#140a0e' };
+      var fonts = { clubhouse: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap' };
+      window.hoopTheme = function (t) {
+        if (!bg[t]) t = 'arena';
+        var root = document.documentElement;
+        if (t === 'arena') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', bg[t]);
+        if (fonts[t] && !document.getElementById('font-' + t)) {
+          var l = document.createElement('link'); l.id = 'font-' + t; l.rel = 'stylesheet'; l.href = fonts[t];
+          document.head.appendChild(l);
+        }
+        return t;
+      };
+      var saved = null;
+      try { saved = localStorage.getItem('hoop-theme'); } catch (e) {}
+      hoopTheme(saved || 'arena');
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='themes.css') }}">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">

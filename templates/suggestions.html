@@ -19,14 +19,14 @@
     .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .stat { padding: 16px 18px; }
     .stat small { display: block; color: var(--muted); font-size: .72rem; letter-spacing: .8px; text-transform: uppercase; }
-    .stat .num { font-family: 'Barlow Condensed', sans-serif; font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
+    .stat .num { font-family: var(--font-display); font-size: 2.1rem; font-weight: 700; line-height: 1.1; }
     .stat .sub { color: var(--dim); font-size: .8rem; }
     .num.good { color: var(--good); } .num.bad { color: var(--bad); } .num.mid { color: var(--orange-2); }
 
     .plan { margin-bottom: 18px; }
     .plan ol { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
     .plan li { counter-increment: step; display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--border); animation: fadeUp .35s var(--ease) both; }
-    .plan li::before { content: counter(step); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 700; font-size: .82rem; color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
+    .plan li::before { content: counter(step); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 700; font-size: .82rem; color: var(--on-accent); background: linear-gradient(135deg, var(--orange-2), var(--orange)); }
     .plan li .kind { display: block; color: var(--dim); font-size: .72rem; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
     .plan li b { color: var(--text); }
     .plan li .why { color: var(--muted); font-size: .86rem; }
@@ -50,9 +50,9 @@
     .trade .arrow { text-align: center; color: var(--orange); }
     .trade .meta { color: var(--dim); font-size: .78rem; margin-top: 4px; }
     .tag { display: inline-block; font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 5px; margin-left: 4px; vertical-align: 1px; }
-    .tag.fair { color: var(--good); background: rgba(52, 211, 153, .12); }
-    .tag.hard { color: var(--orange-2); background: rgba(255, 176, 32, .12); }
-    .tag.st { color: var(--bad); background: rgba(248, 113, 113, .12); }
+    .tag.fair { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
+    .tag.hard { color: var(--orange-2); background: color-mix(in srgb, var(--orange-2) 12%, transparent); }
+    .tag.st { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
     .sub-h { color: var(--muted); font-size: .76rem; letter-spacing: .6px; text-transform: uppercase; margin: 14px 0 2px; }
     .empty-state { text-align: center; padding: 36px 20px; color: var(--muted); }
     .empty-state a { color: var(--orange); }

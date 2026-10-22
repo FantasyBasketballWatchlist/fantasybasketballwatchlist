@@ -19,7 +19,7 @@
 
     .clock { text-align: center; position: relative; overflow: hidden; }
     .clock .pick { color: var(--muted); font-size: .85rem; letter-spacing: .8px; text-transform: uppercase; }
-    .clock .who { font-family: 'Barlow Condensed', sans-serif; font-size: 2.3rem; font-weight: 700; line-height: 1.1; text-transform: uppercase; }
+    .clock .who { font-family: var(--font-display); font-size: 2.3rem; font-weight: 700; line-height: 1.1; text-transform: uppercase; }
     .clock.mine { border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
     .clock.mine .who { color: var(--orange); }
     .clock .until { color: var(--muted); font-size: .9rem; margin-top: 2px; }
@@ -58,7 +58,7 @@
     .by { color: var(--dim); font-size: .78rem; }
     td .note { display: block; color: var(--dim); font-weight: 400; font-size: .76rem; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
 
-    .roster-row, .log-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(148, 163, 184, .07); font-size: .9rem; }
+    .roster-row, .log-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--muted) 7%, transparent); font-size: .9rem; }
     .roster-row:last-child, .log-row:last-child { border-bottom: 0; }
     .roster-row .n, .log-row .n { color: var(--dim); font-variant-numeric: tabular-nums; min-width: 38px; }
     .roster-row b, .log-row b { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -73,9 +73,9 @@
     table.board { border-collapse: collapse; font-size: .8rem; min-width: 100%; }
     table.board th { color: var(--muted); font-weight: 500; padding: 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
     table.board th.me { color: var(--orange); }
-    table.board td { padding: 6px 8px; border: 1px solid rgba(148, 163, 184, .07); min-width: 110px; vertical-align: top; }
+    table.board td { padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--muted) 7%, transparent); min-width: 110px; vertical-align: top; }
     table.board td.rnd { color: var(--dim); min-width: 0; }
-    table.board td.me { background: rgba(255, 122, 26, .06); }
+    table.board td.me { background: color-mix(in srgb, var(--orange) 6%, transparent); }
     table.board td.now { outline: 2px solid var(--orange); outline-offset: -2px; }
     table.board td .pn { color: var(--dim); font-size: .7rem; display: block; }
     table.board td.open .pn { color: var(--orange); }
@@ -84,25 +84,25 @@
       border: 1px solid var(--border); border-radius: 6px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
     .settings .wide { grid-column: 1 / -1; }
     .alerts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; text-align: left; }
-    .alert-item { font-size: .85rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.03); }
-    .alert-item.urgent { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); color: #fecaca; }
-    .alert-item.warn { border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.07); color: #fde7b0; }
-    .alert-item.ok { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.06); color: #c9f5e3; }
+    .alert-item { font-size: .85rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: color-mix(in srgb, var(--tint) 3%, transparent); }
+    .alert-item.urgent { border-color: color-mix(in srgb, var(--bad) 45%, transparent); background: color-mix(in srgb, var(--bad) 8%, transparent); color: var(--bad-text); }
+    .alert-item.warn { border-color: color-mix(in srgb, var(--orange-2) 40%, transparent); background: color-mix(in srgb, var(--orange-2) 7%, transparent); color: var(--warn-text); }
+    .alert-item.ok { border-color: color-mix(in srgb, var(--good) 35%, transparent); background: color-mix(in srgb, var(--good) 6%, transparent); color: var(--good-text); }
     .suggest { margin-top: 12px; padding: 10px 12px; border-radius: 12px; text-align: left;
-      border: 1px solid color-mix(in srgb, var(--orange) 50%, transparent); background: rgba(255,122,26,.07); cursor: pointer; }
-    .suggest:hover { background: rgba(255,122,26,.12); }
+      border: 1px solid color-mix(in srgb, var(--orange) 50%, transparent); background: color-mix(in srgb, var(--orange) 7%, transparent); cursor: pointer; }
+    .suggest:hover { background: color-mix(in srgb, var(--orange) 12%, transparent); }
     .suggest small { display: block; color: var(--muted); font-size: .75rem; letter-spacing: .6px; text-transform: uppercase; }
     .suggest b { font-size: 1.05rem; }
     .suggest .why { display: block; color: var(--muted); font-size: .82rem; margin-top: 2px; }
-    .chip.sugg { color: #1a0d00; background: linear-gradient(135deg, var(--orange-2), var(--orange)); margin-left: 6px; }
+    .chip.sugg { color: var(--on-accent); background: linear-gradient(135deg, var(--orange-2), var(--orange)); margin-left: 6px; }
     table.outlook { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 8px; }
     table.outlook th { color: var(--dim); font-weight: 500; text-align: left; padding: 4px 4px; font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; }
-    table.outlook td { padding: 5px 4px; border-top: 1px solid rgba(148,163,184,.07); }
+    table.outlook td { padding: 5px 4px; border-top: 1px solid color-mix(in srgb, var(--muted) 7%, transparent); }
     table.outlook td.r, table.outlook th.r { text-align: right; }
     .lvl { font-size: .7rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .4px; }
-    .lvl.scarce { color: #fecaca; background: rgba(248,113,113,.15); }
-    .lvl.steady { color: var(--muted); background: rgba(148,163,184,.12); }
-    .lvl.plenty { color: #c9f5e3; background: rgba(52,211,153,.13); }
+    .lvl.scarce { color: var(--bad-text); background: color-mix(in srgb, var(--bad) 15%, transparent); }
+    .lvl.steady { color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+    .lvl.plenty { color: var(--good-text); background: color-mix(in srgb, var(--good) 13%, transparent); }
     .need-dot { color: var(--orange); font-weight: 700; }
     .slot-tag { color: var(--dim); font-size: .72rem; min-width: 38px; }
     .depth { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; font-size: .78rem; color: var(--muted); }
@@ -114,13 +114,13 @@
     .espn input, .espn select { flex: 1; min-width: 0; padding: 7px 8px; color: var(--text); background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .85rem; }
     .espn input:focus, .espn select:focus { outline: none; border-color: var(--orange); }
     .espn .status { font-size: .8rem; color: var(--muted); margin-top: 8px; }
-    .espn .status.bad { color: #fecaca; }
-    .espn .status.live { color: #c9f5e3; }
+    .espn .status.bad { color: var(--bad-text); }
+    .espn .status.live { color: var(--good-text); }
     .espn-debug { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: .75rem; color: var(--dim); }
     .espn-debug .btn { flex: none; }
     #espn-debug-text { width: 100%; height: 120px; margin-top: 8px; font: .7rem/1.4 ui-monospace, monospace; color: var(--muted);
       background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
-    .beta { font-size: .62rem; font-weight: 700; letter-spacing: .6px; padding: 1px 6px; border-radius: 999px; color: #1a0d00; background: var(--orange); vertical-align: 3px; }
+    .beta { font-size: .62rem; font-weight: 700; letter-spacing: .6px; padding: 1px 6px; border-radius: 999px; color: var(--on-accent); background: var(--orange); vertical-align: 3px; }
 
     @media (max-width: 1600px) { .hide-md { display: none; } }
     @media (max-width: 960px) {
@@ -594,7 +594,7 @@
         <th class="r">Projected</th><th class="r">vs avg</th><th class="hide-sm">Open spots now</th><th class="hide-sm">Best player</th></tr></thead><tbody>`
         + rows.map((r, i) => {
           const d = r.proj.value - avg, mine = r.t === state.slot;
-          return `<tr${mine ? ' style="background:rgba(255,122,26,.07)"' : ''}>
+          return `<tr${mine ? ' style="background:color-mix(in srgb, var(--orange) 7%, transparent)"' : ''}>
             <td><span class="rank-pill" style="--c:${i === 0 ? 'var(--t-super)' : 'var(--t-waiver)'}">${i + 1}</span></td>
             <td class="name"${mine ? ' style="color:var(--orange)"' : ''}>${teamName(r.t)}<small>now #${nowRank.get(r.t)}</small></td>
             <td class="r hide-xs">${r.picks}</td>
