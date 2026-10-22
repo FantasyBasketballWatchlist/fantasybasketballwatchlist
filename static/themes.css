@@ -126,3 +126,87 @@ html[data-theme="sunset"] {
   .theme-btn { position: absolute; top: 8px; left: 10px; width: 30px; height: 28px; border-radius: 9px; }
   .theme-menu { left: 10px; right: 10px; width: auto; top: 44px; }
 }
+
+/* ---------- per-theme motion ----------
+   Each theme gets its own entrance for table rows and list items, a one-time page-load touch, and at most one small
+   looping effect. Only transform and opacity animate (plus background-position on the short hero headline), so nothing
+   here repaints the page while scrolling. prefers-reduced-motion turns all of it off (app.css). */
+.hero h1, .hero p { animation: heroIn .6s var(--ease) both; }
+.hero p { animation-delay: .08s; }
+@keyframes heroIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Arena: the ball bounces in */
+.brand svg { animation: ballDrop .9s cubic-bezier(.3, 0, .3, 1) both; }
+@keyframes ballDrop {
+  0% { transform: translateY(-26px); opacity: 0; } 35% { transform: translateY(0); opacity: 1; }
+  55% { transform: translateY(-9px); } 75% { transform: translateY(0); } 87% { transform: translateY(-3px); } 100% { transform: none; }
+}
+
+/* Clubhouse: calm, soft rise; cards lift a little on hover */
+html[data-theme="clubhouse"] .brand svg { animation: none; }
+html[data-theme="clubhouse"] .row-in, html[data-theme="clubhouse"] .fade-up,
+html[data-theme="clubhouse"] .list-row, html[data-theme="clubhouse"] .plan li { animation-name: softRise; animation-duration: .7s; }
+@keyframes softRise { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+html[data-theme="clubhouse"] .hero h1 { animation: softRise 1s var(--ease) both; }
+html[data-theme="clubhouse"] .card { transition: transform .3s var(--ease); }
+html[data-theme="clubhouse"] .card:hover { transform: translateY(-2px); }
+
+/* Hardwood: fast-break slide, slam-dunk headline, buttons squash */
+html[data-theme="hardwood"] .row-in, html[data-theme="hardwood"] .fade-up,
+html[data-theme="hardwood"] .list-row, html[data-theme="hardwood"] .plan li { animation-name: fastBreak; animation-duration: .4s; }
+@keyframes fastBreak { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+html[data-theme="hardwood"] .hero h1 { animation: slam .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes slam { from { opacity: 0; transform: translateY(-22px) scale(1.06); } to { opacity: 1; transform: none; } }
+html[data-theme="hardwood"] .btn:active, html[data-theme="hardwood"] .nav-btn:active,
+html[data-theme="hardwood"] .seg button:active { transform: scale(.94); }
+
+/* Paper: crisp fades, a pen line under the headline */
+html[data-theme="paper"] .brand svg { animation: none; }
+html[data-theme="paper"] .row-in, html[data-theme="paper"] .fade-up,
+html[data-theme="paper"] .list-row, html[data-theme="paper"] .plan li { animation-name: inkIn; animation-duration: .25s; }
+@keyframes inkIn { from { opacity: 0; } to { opacity: 1; } }
+html[data-theme="paper"] .hero h1 { animation: inkIn .3s both; }
+html[data-theme="paper"] .hero h1 .accent { position: relative; }
+html[data-theme="paper"] .hero h1 .accent::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: .06em; height: .08em; background: var(--text);
+  transform-origin: left; animation: penLine .7s .25s var(--ease) both;
+}
+@keyframes penLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Neon: the headline flickers on like a sign; rows blink in */
+html[data-theme="neon"] .hero h1 { animation: neonOn 1.4s linear both; }
+@keyframes neonOn {
+  0% { opacity: 0; } 8% { opacity: .9; } 11% { opacity: .1; } 16% { opacity: 1; } 22% { opacity: .3; }
+  27% { opacity: 1; } 60% { opacity: 1; } 62% { opacity: .55; } 64%, 100% { opacity: 1; }
+}
+html[data-theme="neon"] .hero h1 .accent { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--orange) 55%, transparent)); }
+html[data-theme="neon"] .row-in, html[data-theme="neon"] .fade-up,
+html[data-theme="neon"] .list-row, html[data-theme="neon"] .plan li { animation-name: blinkIn; animation-duration: .5s; }
+@keyframes blinkIn { 0% { opacity: 0; } 30% { opacity: .8; } 45% { opacity: .2; } 70%, 100% { opacity: 1; transform: none; } }
+
+/* Shared: a light sweeping across the gradient headline (Frost ice, Royal gold, Sunset dusk) */
+html[data-theme="frost"] .hero h1 .accent, html[data-theme="royal"] .hero h1 .accent, html[data-theme="sunset"] .hero h1 .accent {
+  background-image: linear-gradient(100deg, var(--orange) 0%, var(--orange) 40%, var(--sweep, #fff) 50%, var(--orange-2) 60%, var(--orange-2) 100%);
+  background-size: 250% 100%; animation: sweep 5s ease-in-out infinite;
+}
+@keyframes sweep { 0%, 30% { background-position: 100% 0; } 70%, 100% { background-position: 0 0; } }
+
+/* Frost: rows drift down like snow */
+html[data-theme="frost"] { --sweep: #ffffff; }
+html[data-theme="frost"] .row-in, html[data-theme="frost"] .fade-up,
+html[data-theme="frost"] .list-row, html[data-theme="frost"] .plan li { animation-name: snowfall; animation-duration: .65s; }
+@keyframes snowfall { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* Royal: a gold glint, rows rise like a procession */
+html[data-theme="royal"] { --sweep: #fff7cc; }
+html[data-theme="royal"] .row-in, html[data-theme="royal"] .fade-up,
+html[data-theme="royal"] .list-row, html[data-theme="royal"] .plan li { animation-name: procession; animation-duration: .6s; }
+@keyframes procession { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+
+/* Sunset: the sky glow breathes; rows drift in from the right */
+html[data-theme="sunset"] { --sweep: #ffd6a5; }
+html[data-theme="sunset"] body::before { animation: dusk 9s ease-in-out infinite alternate; }
+@keyframes dusk { from { opacity: .55; } to { opacity: 1; } }
+html[data-theme="sunset"] .row-in, html[data-theme="sunset"] .fade-up,
+html[data-theme="sunset"] .list-row, html[data-theme="sunset"] .plan li { animation-name: duskIn; animation-duration: .6s; }
+@keyframes duskIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
