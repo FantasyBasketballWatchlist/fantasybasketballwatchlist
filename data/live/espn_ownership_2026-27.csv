@@ -1,392 +1,395 @@
 PLAYER_NAME,PCT_OWNED,PCT_STARTED,ADP
-Victor Wembanyama,99.93,86.22,3.07
-Nikola Jokic,99.92,96.01,1.42
-Shai Gilgeous-Alexander,99.92,95.8,2.99
-Anthony Edwards,99.92,97.57,7.18
-Luka Doncic,99.91,97.57,3.64
-Giannis Antetokounmpo,99.9,97.56,5.74
-Donovan Mitchell,99.9,95.26,11.41
-Tyrese Maxey,99.89,95.4,13.37
-Cade Cunningham,99.89,85.46,8.02
-Cooper Flagg,99.88,97.67,10.83
-Kevin Durant,99.87,97.06,20.98
-Karl-Anthony Towns,99.86,84.08,21.7
-Jayson Tatum,99.85,85.4,9.14
-Jalen Brunson,99.85,84.54,14.93
-Devin Booker,99.82,96.62,22.92
-LaMelo Ball,99.8,97.14,15.71
-Scottie Barnes,99.76,96.97,17.17
-Jaylen Brown,99.71,93.16,33.78
-Amen Thompson,99.67,96.95,21.55
-James Harden,99.57,93.78,29.48
-Jalen Johnson,99.56,96.9,8.68
-Bam Adebayo,99.53,94.76,31.0
-Kawhi Leonard,99.52,95.91,29.51
-Stephen Curry,99.5,92.55,32.74
-LeBron James,99.37,92.31,39.4
-Tyrese Haliburton,99.3,95.52,19.15
-Pascal Siakam,99.27,96.22,30.56
-Anthony Davis,99.24,95.35,31.01
-Jamal Murray,99.23,92.59,31.39
-Alperen Sengun,99.2,94.84,24.18
-Domantas Sabonis,99.0,95.76,17.59
-Trae Young,98.97,95.35,23.42
-Austin Reaves,98.92,93.84,32.54
-Paolo Banchero,98.85,91.45,41.58
-Jalen Williams,98.83,92.3,36.98
-Evan Mobley,98.83,91.66,36.42
-Jalen Duren,98.46,79.98,29.72
-Deni Avdija,97.62,90.58,34.49
-Derrick White,97.46,77.96,40.36
-Josh Giddey,97.39,93.21,24.43
-Desmond Bane,96.22,89.82,47.76
-Stephon Castle,96.2,71.69,51.98
-De'Aaron Fox,95.79,75.17,53.02
-Michael Porter Jr.,95.5,87.76,51.89
-Kon Knueppel,95.2,56.97,46.03
-Joel Embiid,94.91,84.73,66.48
-Darius Garland,94.72,87.12,49.11
-Kyrie Irving,94.41,84.51,54.58
-Naz Reid,93.59,85.61,49.59
-Lauri Markkanen,93.4,85.8,53.24
-Chet Holmgren,93.3,84.14,64.75
-Mikal Bridges,93.22,74.55,53.02
-Zion Williamson,93.15,83.6,64.01
-Julius Randle,92.89,83.83,60.01
-Nickeil Alexander-Walker,92.8,83.11,54.63
-Dyson Daniels,92.72,83.54,59.38
-Damian Lillard,91.61,79.37,68.98
-Tyler Herro,91.09,81.72,64.71
-Ja Morant,90.88,73.64,78.58
-Franz Wagner,90.42,80.45,69.01
-Jarrett Allen,90.01,77.49,66.03
-Brandon Miller,89.61,79.3,65.07
-Dylan Harper,89.16,56.04,79.15
-Paul George,89.06,40.81,100.54
-Trey Murphy III,88.13,78.01,71.3
-Keyonte George,87.77,73.95,73.75
-AJ Dybantsa,87.7,41.44,81.5
-VJ Edgecombe,87.33,74.42,79.95
-Walker Kessler,87.26,74.08,75.32
-Dejounte Murray,86.83,75.34,69.49
-OG Anunoby,86.81,56.75,85.32
-Cameron Boozer,86.61,72.61,74.2
-Rudy Gobert,86.13,72.98,78.47
-Caleb Wilson,86.0,72.9,72.84
-Onyeka Okongwu,85.47,73.95,76.48
-Jaren Jackson Jr.,85.03,70.78,86.36
-Norman Powell,84.96,73.77,80.77
-Ivica Zubac,84.68,70.87,85.07
-Ty Jerome,84.66,69.16,77.9
-Donovan Clingan,84.09,70.16,79.03
-Jaden McDaniels,82.69,61.65,96.68
-Josh Hart,81.81,49.04,101.86
-DeMar DeRozan,81.62,67.75,99.24
-Alex Sarr,81.29,68.52,89.5
-Miles Bridges,80.91,67.07,93.45
-Ausar Thompson,80.34,38.53,101.53
-CJ McCollum,80.02,62.11,97.35
-Jalen Green,79.76,59.01,99.22
-Payton Pritchard,79.48,43.74,98.18
-Matas Buzelis,79.44,65.17,89.02
-Immanuel Quickley,77.43,47.95,106.7
-Coby White,75.53,35.22,102.24
-RJ Barrett,74.47,43.53,112.43
-Darryn Peterson,72.62,37.6,109.72
-Kel'el Ware,72.35,53.55,92.0
-Fred VanVleet,71.61,48.34,103.12
-Brandon Ingram,71.52,15.71,118.74
-Darius Acuff Jr.,71.22,42.79,104.72
-Brandin Podziemski,70.93,37.52,92.91
-Derik Queen,70.91,53.02,101.45
-Ryan Rollins,70.89,38.32,109.39
-Reed Sheppard,70.83,49.87,105.3
-Andrew Wiggins,69.38,38.67,115.67
-John Collins,68.49,26.21,114.22
-Jabari Smith Jr.,66.49,30.43,121.84
-Zach LaVine,65.79,32.43,124.9
-Zach Edey,63.92,26.4,119.98
-Ayo Dosunmu,63.11,30.18,115.58
-Nikola Vucevic,61.28,31.32,117.43
-Kristaps Porzingis,58.66,19.29,116.58
-Yaxel Lendeborg,58.13,23.97,126.78
-Myles Turner,57.95,26.77,127.61
-Jaime Jaquez Jr.,57.82,23.87,125.04
-Andrew Nembhard,57.79,22.1,131.17
-Tobias Harris,56.94,10.92,124.08
-Keegan Murray,55.81,23.4,125.09
-Kevin Porter Jr.,55.6,19.52,118.46
-Peyton Watson,54.46,34.19,126.54
-Jakob Poeltl,53.27,21.59,129.14
-Jeremiah Fears,52.14,20.38,122.33
-Aaron Gordon,51.97,35.31,131.3
-Egor Demin,51.34,19.51,122.67
-Nic Claxton,51.31,6.3,129.04
-Cedric Coward,48.8,19.03,128.99
-Quentin Grimes,45.85,17.52,130.57
-Ace Bailey,44.77,18.88,130.84
-Jared McCain,44.5,33.4,138.1
-Isaiah Hartenstein,42.73,28.64,131.76
-Collin Gillespie,42.4,12.91,130.39
-Kyshawn George,39.58,15.6,134.11
-Jimmy Butler III,38.5,6.05,138.32
-Dillon Brooks,37.84,17.17,132.14
-Devin Vassell,33.99,10.08,135.28
-Julian Champagnie,32.83,10.01,134.67
-Jonathan Kuminga,32.52,12.58,136.49
-Collin Sexton,32.5,6.28,135.11
-Draymond Green,31.93,12.97,136.49
-Jalen Suggs,29.99,10.05,136.76
-Jrue Holiday,29.62,10.94,136.87
-Daniel Gafford,28.71,9.06,136.89
-Cason Wallace,27.34,19.34,136.76
-Neemias Queta,26.77,5.98,135.84
-Rui Hachimura,24.58,9.97,137.05
-Mitchell Robinson,23.95,5.92,136.12
-Anthony Black,23.31,4.32,137.6
-Yves Missi,23.29,6.67,
-Toumani Camara,23.03,8.46,139.51
-Andre Drummond,22.52,5.02,139.85
-Oso Ighodaro,21.83,6.02,138.27
-Scotty Pippen Jr.,20.25,7.08,138.09
-Saddiq Bey,20.09,8.02,139.06
-Christian Braun,19.98,17.22,
-Moussa Diabate,19.82,6.43,
-Day'Ron Sharpe,19.06,6.48,138.39
-Bennedict Mathurin,18.31,6.03,
-Collin Murray-Boyles,17.54,5.68,138.64
-Davion Mitchell,17.48,5.8,139.52
-Malik Monk,17.41,4.18,
-Cameron Johnson,17.15,13.38,
-Anfernee Simons,17.12,12.3,
-Alex Caruso,16.28,12.14,138.88
-Jerami Grant,15.83,5.46,
-Jordan Poole,15.45,9.07,139.83
-Deandre Ayton,14.92,5.37,
-Keaton Wagler,14.52,4.61,
-Brook Lopez,14.48,5.02,139.73
-Keldon Johnson,14.11,3.31,
-Aday Mara,13.84,10.03,138.81
-Bobby Portis,13.81,4.51,
-P.J. Washington,13.36,5.11,
-Klay Thompson,12.18,5.38,138.84
-Duncan Robinson,11.6,2.84,
-Ajay Mitchell,11.54,9.29,139.76
-Scoot Henderson,11.19,3.85,
-Grayson Allen,11.09,3.73,
-Wendell Carter Jr.,10.89,3.54,
-Jake LaRavia,10.47,3.69,
-T.J. McConnell,10.29,2.55,
-Mikel Brown Jr.,9.32,2.85,
-Shaedon Sharpe,9.27,2.11,
-Kyle Filipowski,8.76,2.92,
-Mark Williams,8.28,2.47,
-Jalen Smith,8.2,2.62,
-Jusuf Nurkic,7.92,0.64,
-Santi Aldama,7.54,0.76,
-Dereck Lively II,7.1,1.02,
-Khaman Maluach,7.07,1.9,
-Tari Eason,6.81,1.8,
-Tre Jones,6.71,1.95,
-Jaylon Tyson,6.35,5.35,
-Tim Hardaway Jr.,6.23,2.38,
-Kelly Oubre Jr.,6.19,2.24,
-Precious Achiuwa,6.09,2.12,
-Cam Thomas,5.95,0.84,139.99
-Dennis Schroder,5.8,1.83,
-D'Angelo Russell,5.78,0.83,
-Bilal Coulibaly,5.23,1.77,
-Sandro Mamukelashvili,5.16,1.68,
-Morez Johnson Jr.,5.09,1.65,
-Kyle Kuzma,4.93,1.76,
-Isaiah Stewart,4.52,0.83,
-Isaiah Collier,4.39,1.21,
-Brayden Burries,4.11,1.21,
-Bronny James,4.08,1.35,138.5
-Danny Wolf,3.92,1.24,
-Naji Marshall,3.84,1.23,
-Kingston Flemings,3.65,1.08,
-Aaron Nesmith,3.6,0.57,
-Kentavious Caldwell-Pope,3.58,3.14,
-Obi Toppin,3.48,1.08,
-Zaccharie Risacher,3.42,0.98,
-Isaiah Jackson,3.24,0.94,
-De'Andre Hunter,3.23,1.08,
-Bub Carrington,3.01,0.95,
-Luguentz Dort,2.88,1.04,
-Gui Santos,2.88,0.82,
-Jamal Shead,2.82,0.79,
-Sam Hauser,2.6,0.62,
-Robert Williams III,2.56,0.84,
-GG Jackson,2.51,0.76,
-Max Christie,2.43,0.77,
-Donte DiVincenzo,2.39,0.45,139.89
-Jaylin Williams,2.33,1.61,139.96
-Russell Westbrook,2.3,0.52,139.78
-Royce O'Neale,2.25,0.74,
-Herbert Jones,2.24,0.72,
-Bradley Beal,2.1,0.2,
-Tre Johnson,2.01,0.62,
-Gradey Dick,1.96,0.7,
-Tristan da Silva,1.95,0.56,
-Jaxson Hayes,1.94,0.55,
-Ben Simmons,1.92,0.27,139.37
-Ryan Kalkbrenner,1.91,0.6,
-Brice Sensabaugh,1.9,0.55,
-Aaron Wiggins,1.88,0.62,
-Walter Clayton Jr.,1.86,0.32,
-Jose Alvarado,1.83,0.54,
-De'Anthony Melton,1.82,0.65,
-Cam Spencer,1.8,0.52,
-Kris Dunn,1.79,0.54,
-Maxime Raynaud,1.74,0.06,
-Nikola Jovic,1.71,0.71,139.77
-Marcus Smart,1.71,0.63,
-Al Horford,1.66,0.68,
-Kevin Huerter,1.62,0.4,
-Marvin Bagley III,1.61,1.28,
-Chris Paul,1.59,0.39,139.93
-Isaiah Joe,1.56,0.32,
-Jaylen Wells,1.53,0.45,
-Pelle Larsson,1.4,0.4,
-Javonte Green,1.39,0.21,139.99
-Sam Merrill,1.3,1.08,
-Nique Clifford,1.26,0.39,
-Labaron Philon Jr.,1.24,0.73,139.82
-Derrick Jones Jr.,1.23,0.44,
-Paul Reed,1.23,0.26,
-Carter Bryant,1.23,0.4,139.84
-Miles McBride,1.16,0.35,
-Bones Hyland,1.15,0.45,139.89
-Hannes Steinbach,1.12,0.27,
-Baylor Scheierman,1.11,0.25,
-Hugo Gonzalez,1.11,0.24,
-Luke Kennard,1.09,0.28,
-Kasparas Jakucionis,1.08,0.25,
-Meleek Thomas,0.98,0.56,139.91
-Luke Kornet,0.98,0.31,
-Max Strus,0.94,0.1,
-Keon Ellis,0.92,0.3,
-Jordan Walsh,0.9,0.24,
-Nolan Traore,0.86,0.21,
-Leonard Miller,0.86,0.21,
-Cameron Carr,0.83,0.13,139.98
-Cam Whitmore,0.77,0.32,
-Harrison Barnes,0.77,0.23,
-Tacko Fall,0.72,0.29,139.79
-AJ Green,0.71,0.23,
-Joan Beringer,0.7,0.17,
-Brandon Williams,0.7,0.18,
-Nate Ament,0.65,0.13,
-Buddy Hield,0.65,0.25,
-Ja'Kobe Walter,0.63,0.18,
+Victor Wembanyama,99.93,86.7,3.08
+Nikola Jokic,99.92,98.05,1.42
+Shai Gilgeous-Alexander,99.92,97.91,2.98
+Anthony Edwards,99.91,97.14,7.17
+Luka Doncic,99.91,97.19,3.64
+Donovan Mitchell,99.9,97.49,11.42
+Tyrese Maxey,99.89,97.71,13.36
+Giannis Antetokounmpo,99.89,97.21,5.75
+Cade Cunningham,99.89,86.03,8.03
+Cooper Flagg,99.87,97.35,10.83
+Kevin Durant,99.87,96.65,20.96
+Karl-Anthony Towns,99.86,84.53,21.71
+Jayson Tatum,99.84,85.89,9.16
+Jalen Brunson,99.84,85.13,14.94
+Devin Booker,99.81,96.03,22.94
+LaMelo Ball,99.8,96.71,15.69
+Scottie Barnes,99.75,96.51,17.18
+Jaylen Brown,99.71,95.84,33.77
+Amen Thompson,99.65,96.48,21.56
+James Harden,99.58,96.07,29.48
+Jalen Johnson,99.55,96.5,8.69
+Kawhi Leonard,99.52,95.49,29.49
+Bam Adebayo,99.5,94.26,31.02
+Stephen Curry,99.49,92.19,32.72
+LeBron James,99.37,94.89,39.36
+Tyrese Haliburton,99.31,95.08,19.15
+Pascal Siakam,99.26,95.8,30.57
+Anthony Davis,99.26,95.01,30.96
+Jamal Murray,99.23,95.12,31.41
+Alperen Sengun,99.17,94.26,24.21
+Domantas Sabonis,99.0,95.36,17.59
+Trae Young,98.96,94.98,23.42
+Austin Reaves,98.92,93.22,32.55
+Paolo Banchero,98.86,90.94,41.59
+Evan Mobley,98.82,94.26,36.47
+Jalen Williams,98.81,94.72,37.0
+Jalen Duren,98.45,80.65,29.74
+Deni Avdija,97.59,90.32,34.52
+Derrick White,97.4,78.58,40.4
+Josh Giddey,96.89,91.42,24.47
+Desmond Bane,96.15,89.19,47.79
+Stephon Castle,96.13,72.26,52.02
+De'Aaron Fox,95.72,75.75,53.02
+Michael Porter Jr.,95.49,87.23,51.91
+Kon Knueppel,95.04,56.32,46.07
+Joel Embiid,94.99,88.1,66.51
+Darius Garland,94.72,86.59,49.1
+Kyrie Irving,94.27,83.55,54.65
+Naz Reid,93.6,85.19,49.6
+Chet Holmgren,93.36,87.02,64.81
+Lauri Markkanen,93.27,85.07,53.35
+Zion Williamson,93.08,82.87,64.05
+Julius Randle,92.92,83.36,60.03
+Mikal Bridges,92.89,74.78,53.05
+Nickeil Alexander-Walker,92.87,82.66,54.63
+Dyson Daniels,92.69,82.96,59.42
+Damian Lillard,91.67,78.78,68.96
+Tyler Herro,91.06,81.07,64.78
+Ja Morant,90.93,72.84,78.56
+Franz Wagner,90.37,79.9,69.07
+Jarrett Allen,89.81,80.06,66.16
+Brandon Miller,89.4,78.45,65.19
+Paul George,89.31,41.56,100.36
+Dylan Harper,89.07,56.36,79.18
+Trey Murphy III,87.78,77.01,71.43
+Keyonte George,87.71,73.16,73.85
+AJ Dybantsa,87.5,40.12,81.57
+Walker Kessler,87.47,73.54,75.31
+VJ Edgecombe,87.32,77.61,79.98
+Dejounte Murray,87.01,75.03,69.49
+OG Anunoby,86.6,56.93,85.42
+Cameron Boozer,86.18,71.39,74.33
+Rudy Gobert,85.67,71.68,78.56
+Caleb Wilson,85.43,71.57,72.95
+Ty Jerome,85.24,69.21,77.84
+Onyeka Okongwu,85.12,73.01,76.57
+Jaren Jackson Jr.,84.87,69.78,86.48
+Ivica Zubac,84.61,70.12,85.15
+Norman Powell,84.61,72.82,80.85
+Donovan Clingan,83.7,69.11,79.15
+Jaden McDaniels,82.77,60.86,96.68
+DeMar DeRozan,81.84,71.01,99.29
+Josh Hart,81.73,49.27,101.89
+Alex Sarr,80.78,67.32,89.6
+Ausar Thompson,80.33,38.89,101.56
+Miles Bridges,80.3,65.78,93.53
+CJ McCollum,79.89,61.24,97.4
+Jalen Green,79.21,57.57,99.29
+Payton Pritchard,79.2,43.88,98.27
+Matas Buzelis,79.07,64.12,89.14
+Immanuel Quickley,77.68,47.33,106.69
+Coby White,75.15,34.62,102.31
+RJ Barrett,74.36,42.35,112.46
+Darryn Peterson,71.98,35.73,109.8
+Fred VanVleet,71.96,47.73,103.15
+Brandon Ingram,71.26,15.16,118.77
+Kel'el Ware,71.03,51.86,92.09
+Brandin Podziemski,70.5,37.18,92.97
+Derik Queen,70.43,51.99,101.52
+Darius Acuff Jr.,70.31,40.9,104.78
+Ryan Rollins,70.17,36.78,109.47
+Reed Sheppard,69.47,47.77,105.34
+Andrew Wiggins,68.63,37.22,115.71
+John Collins,67.97,26.19,114.27
+Jabari Smith Jr.,67.52,30.09,121.78
+Zach LaVine,66.13,31.52,124.89
+Zach Edey,63.37,25.1,120.05
+Ayo Dosunmu,62.93,29.17,115.58
+Nikola Vucevic,59.21,29.28,117.47
+Andrew Nembhard,58.61,21.52,131.13
+Jaime Jaquez Jr.,58.18,23.36,125.01
+Kristaps Porzingis,57.74,18.71,116.59
+Yaxel Lendeborg,57.64,22.61,126.79
+Myles Turner,57.48,25.74,127.64
+Tobias Harris,56.58,10.92,124.08
+Peyton Watson,55.38,37.92,126.57
+Kevin Porter Jr.,54.49,19.23,118.47
+Keegan Murray,54.47,21.97,125.14
+Aaron Gordon,53.94,40.05,131.32
+Jakob Poeltl,52.29,20.44,129.15
+Nic Claxton,50.91,6.0,129.04
+Jeremiah Fears,50.72,18.69,122.36
+Egor Demin,49.86,17.91,122.69
+Jared McCain,49.69,40.92,138.03
+Cedric Coward,48.14,17.96,129.03
+Quentin Grimes,45.45,16.61,130.57
+Ace Bailey,44.91,18.25,130.84
+Isaiah Hartenstein,43.1,31.05,131.79
+Collin Gillespie,41.23,11.76,130.38
+Kyshawn George,39.88,15.21,134.09
+Jimmy Butler III,38.36,5.87,138.31
+Dillon Brooks,36.65,15.79,132.17
+Jonathan Kuminga,33.46,12.46,136.47
+Devin Vassell,33.34,9.88,135.3
+Julian Champagnie,32.77,10.07,134.66
+Collin Sexton,32.12,5.84,135.11
+Draymond Green,31.43,12.24,136.46
+Jalen Suggs,29.34,9.28,136.78
+Yves Missi,29.22,8.26,
+Jrue Holiday,29.16,10.26,136.86
+Daniel Gafford,27.99,8.37,136.89
+Cason Wallace,27.58,21.05,136.77
+Neemias Queta,26.11,5.86,135.86
+Moussa Diabate,24.0,7.64,
+Rui Hachimura,23.96,9.25,137.07
+Mitchell Robinson,23.3,5.77,136.14
+Andre Drummond,23.29,5.27,139.83
+Toumani Camara,23.06,8.17,139.5
+Anthony Black,23.03,4.08,137.61
+Christian Braun,22.46,20.17,
+Oso Ighodaro,21.32,5.54,138.25
+Scotty Pippen Jr.,19.96,6.72,138.08
+Saddiq Bey,19.58,7.52,139.06
+Day'Ron Sharpe,18.91,6.22,138.4
+Anfernee Simons,18.75,14.46,
+Cameron Johnson,18.4,15.36,
+Alex Caruso,18.27,14.88,138.86
+Bennedict Mathurin,17.92,5.61,
+Davion Mitchell,17.58,5.54,139.5
+Collin Murray-Boyles,17.32,5.34,138.65
+Malik Monk,17.13,3.94,
+Jerami Grant,15.61,5.17,
+Keaton Wagler,15.56,4.71,
+Jordan Poole,15.04,8.66,139.82
+Deandre Ayton,14.74,5.12,
+Brook Lopez,14.68,4.95,139.7
+Aday Mara,14.25,11.28,138.78
+Keldon Johnson,13.87,3.3,
+Bobby Portis,13.57,4.25,
+P.J. Washington,13.09,4.79,
+Wendell Carter Jr.,12.15,3.81,
+Ajay Mitchell,12.07,10.4,139.76
+Klay Thompson,11.93,5.06,138.82
+Duncan Robinson,11.78,2.93,
+Grayson Allen,11.39,3.66,
+Scoot Henderson,11.01,3.6,
+Jake LaRavia,10.23,3.43,
+T.J. McConnell,10.18,2.48,
+Shaedon Sharpe,9.18,2.06,
+Mikel Brown Jr.,8.98,2.6,
+Kyle Filipowski,8.37,2.65,
+Jalen Smith,8.25,2.5,
+Mark Williams,8.21,2.42,
+Jusuf Nurkic,7.87,0.61,
+Jaylon Tyson,7.57,6.74,
+Santi Aldama,7.46,0.72,
+Dereck Lively II,7.0,0.98,
+Khaman Maluach,6.7,1.68,
+Tari Eason,6.66,1.66,
+Tre Jones,6.56,1.82,
+Precious Achiuwa,6.18,2.08,
+Dennis Schroder,6.06,1.83,
+Kelly Oubre Jr.,6.05,2.06,
+Tim Hardaway Jr.,6.03,2.19,
+Cam Thomas,5.89,0.83,139.99
+Bilal Coulibaly,5.83,1.94,
+D'Angelo Russell,5.72,0.83,
+Morez Johnson Jr.,4.94,1.52,
+Sandro Mamukelashvili,4.87,1.48,
+Kyle Kuzma,4.84,1.66,
+Kentavious Caldwell-Pope,4.78,4.4,
+Isaiah Stewart,4.46,0.79,
+Isaiah Collier,4.24,1.1,
+Brayden Burries,4.04,1.12,
+Naji Marshall,3.99,1.23,
+Bronny James,3.98,1.24,138.5
+Obi Toppin,3.89,1.18,
+Danny Wolf,3.75,1.14,
+Aaron Nesmith,3.56,0.56,
+Kingston Flemings,3.53,0.98,
+Zaccharie Risacher,3.35,0.91,
+Isaiah Jackson,3.14,0.88,
+De'Andre Hunter,3.13,1.0,
+Bub Carrington,3.0,0.91,
+Luguentz Dort,2.82,0.98,
+Gui Santos,2.81,0.77,
+Jamal Shead,2.75,0.74,
+Sam Hauser,2.56,0.62,
+Jaylin Williams,2.55,1.92,139.96
+Robert Williams III,2.51,0.8,
+GG Jackson,2.5,0.73,
+Jaxson Hayes,2.42,0.65,
+Max Christie,2.37,0.73,
+Donte DiVincenzo,2.36,0.43,139.89
+Kris Dunn,2.31,0.67,
+Russell Westbrook,2.27,0.53,139.77
+Royce O'Neale,2.23,0.72,
+Herbert Jones,2.16,0.68,
+Bradley Beal,2.09,0.19,
+Tristan da Silva,2.0,0.55,
+Aaron Wiggins,1.99,0.63,
+Tre Johnson,1.96,0.58,
+Marvin Bagley III,1.96,1.69,
+Gradey Dick,1.94,0.67,
+Ryan Kalkbrenner,1.88,0.57,
+Ben Simmons,1.86,0.25,139.37
+Jose Alvarado,1.83,0.55,
+Brice Sensabaugh,1.83,0.51,
+Walter Clayton Jr.,1.82,0.32,
+De'Anthony Melton,1.75,0.59,
+Maxime Raynaud,1.73,0.06,
+Cam Spencer,1.73,0.47,
+Marcus Smart,1.7,0.59,
+Sam Merrill,1.69,1.5,
+Nikola Jovic,1.68,0.68,139.77
+Jaylen Wells,1.66,0.47,
+Al Horford,1.6,0.63,
+Kevin Huerter,1.59,0.39,
+Chris Paul,1.58,0.38,139.93
+Isaiah Joe,1.53,0.31,
+Javonte Green,1.44,0.22,139.99
+Pelle Larsson,1.37,0.38,
+Derrick Jones Jr.,1.25,0.42,
+Labaron Philon Jr.,1.24,0.79,139.82
+Nique Clifford,1.22,0.36,
+Carter Bryant,1.21,0.39,139.84
+Paul Reed,1.2,0.25,
+Kasparas Jakucionis,1.16,0.27,
+Miles McBride,1.14,0.35,
+Bones Hyland,1.12,0.41,139.89
+Baylor Scheierman,1.09,0.25,
+Luke Kennard,1.07,0.27,
+Hannes Steinbach,1.07,0.24,
+Hugo Gonzalez,1.07,0.23,
+Meleek Thomas,1.02,0.65,139.91
+Keon Ellis,0.98,0.31,
+Luke Kornet,0.97,0.3,
+Max Strus,0.93,0.1,
+Jordan Walsh,0.88,0.24,
+Nolan Traore,0.84,0.2,
+Cam Whitmore,0.82,0.38,
+Cameron Carr,0.82,0.12,139.98
+Leonard Miller,0.82,0.19,
+Brandon Williams,0.76,0.18,
+Harrison Barnes,0.76,0.23,
+AJ Green,0.71,0.22,
+Tacko Fall,0.71,0.29,139.79
+Joan Beringer,0.66,0.16,
+Adem Bona,0.65,0.53,
+Ja'Kobe Walter,0.65,0.18,
+Trevon Brazile,0.64,0.5,139.95
+Tyus Jones,0.63,0.46,
+Nate Ament,0.63,0.12,
+Buddy Hield,0.63,0.23,
 Landry Shamet,0.62,0.22,139.96
-Jordan Clarkson,0.62,0.25,
-Vit Krejci,0.6,0.16,
-Ronald Holland II,0.59,0.13,
-Adem Bona,0.58,0.45,
-Trevon Brazile,0.58,0.4,139.95
-Ziaire Williams,0.55,0.19,
-Khris Middleton,0.54,0.21,
-Jarace Walker,0.54,0.18,
-Tyus Jones,0.53,0.36,
-Svi Mykhailiuk,0.53,0.04,
+Jordan Clarkson,0.61,0.25,
+Vit Krejci,0.6,0.15,
+Svi Mykhailiuk,0.6,0.05,
+Ronald Holland II,0.58,0.13,
+Ziaire Williams,0.56,0.19,
+Khris Middleton,0.53,0.2,
+Jarace Walker,0.53,0.17,
+Dean Wade,0.53,0.37,139.99
 Lonzo Ball,0.52,0.18,139.86
-Ryan Dunn,0.51,0.17,
-Ebuka Okorie,0.51,0.08,139.96
-Dean Wade,0.51,0.33,139.99
-Terrence Shannon Jr.,0.5,0.2,
-Matisse Thybulle,0.47,0.17,
-Jay Huff,0.47,0.14,139.99
+Ryan Dunn,0.5,0.16,
+Terrence Shannon Jr.,0.5,0.19,
+Ebuka Okorie,0.5,0.08,139.96
+Matisse Thybulle,0.45,0.16,
 Yang Hansen,0.43,0.12,139.97
-Steven Adams,0.42,0.13,139.99
-Bogdan Bogdanovic,0.41,0.17,
-Sergio de Larrea,0.4,0.12,139.9
+Jay Huff,0.43,0.12,139.99
+Steven Adams,0.41,0.13,139.99
 Rob Dillingham,0.4,0.09,
-Clint Capela,0.39,0.13,
-Seth Curry,0.39,0.19,139.77
-Jayden Quaintance,0.39,0.04,139.98
-Yanic Konan Niederhauser,0.38,0.02,
+Bogdan Bogdanovic,0.4,0.16,
+Mario Hezonja,0.39,0.37,139.99
+Sergio de Larrea,0.39,0.12,139.89
+Seth Curry,0.39,0.19,139.76
+Yanic Konan Niederhauser,0.39,0.02,
+Clint Capela,0.38,0.13,
+Jayden Quaintance,0.38,0.03,139.98
 Caris LeVert,0.38,0.13,
 Moses Moody,0.37,0.06,
 Noah Clowney,0.36,0.12,
-Bennett Stirtz,0.36,0.21,139.96
-Ryan Conwell,0.35,0.08,139.99
-Allen Graves,0.35,0.06,
-Jeremy Sochan,0.34,0.07,
-Koa Peat,0.33,0.08,139.97
+Allen Graves,0.36,0.06,
+Bennett Stirtz,0.36,0.22,139.96
+Ryan Conwell,0.33,0.07,139.99
+Jeremy Sochan,0.33,0.07,
+Koa Peat,0.32,0.08,139.97
 Terance Mann,0.31,0.1,
+Jock Landale,0.3,0.08,
 Gary Payton II,0.29,0.11,
-Mario Hezonja,0.29,0.26,
-Tarris Reed Jr.,0.29,0.06,139.98
-Daniss Jenkins,0.28,0.05,
-Jock Landale,0.28,0.08,
-Cody Williams,0.28,0.1,
+Tarris Reed Jr.,0.28,0.05,139.98
 Mike Conley,0.28,0.09,
+Daniss Jenkins,0.27,0.05,
 Trayce Jackson-Davis,0.27,0.08,
-Christian Anderson,0.27,0.06,139.99
-Chris Cenac Jr.,0.26,0.04,139.98
-Isaiah Evans,0.26,0.08,139.96
+Cody Williams,0.27,0.1,
+Chris Cenac Jr.,0.26,0.05,139.98
+Christian Anderson,0.26,0.06,139.99
+Isaiah Evans,0.26,0.07,139.95
 Kevon Looney,0.25,0.11,
-Thanasis Antetokounmpo,0.25,0.1,139.87
+Thanasis Antetokounmpo,0.25,0.09,139.87
 Dailyn Swain,0.25,0.03,
 Moritz Wagner,0.25,0.08,
+Justin Champagnie,0.25,0.07,139.99
+Marcus Sasser,0.24,0.06,
 Dalton Knecht,0.24,0.07,
-Justin Champagnie,0.23,0.07,139.99
-Karim Lopez,0.23,0.06,139.96
 Gary Trent Jr.,0.22,0.07,
-Will Riley,0.22,0.05,139.99
-Kyle Anderson,0.22,0.09,
 Goga Bitadze,0.22,0.08,
+Karim Lopez,0.22,0.05,139.96
+Will Riley,0.21,0.05,139.99
+Kyle Anderson,0.21,0.09,
 Dominick Barlow,0.21,0.07,139.98
-Marcus Sasser,0.2,0.06,
+Kenrich Williams,0.2,0.15,
+Thomas Bryant,0.2,0.14,
 Tyler Kolek,0.2,0.05,139.94
-Luka Garza,0.19,0.05,139.97
 Jarred Vanderbilt,0.19,0.08,
-Mohamed Diawara,0.19,0.07,139.98
-Bol Bol,0.19,0.09,139.91
-Simone Fontecchio,0.19,0.08,
+Mohamed Diawara,0.19,0.07,139.99
+Bol Bol,0.19,0.08,139.92
+Simone Fontecchio,0.19,0.07,
+Luka Garza,0.18,0.05,139.97
 Corey Kispert,0.18,0.06,
 Patrick Williams,0.18,0.07,
-Kenrich Williams,0.18,0.13,
-Thomas Bryant,0.18,0.11,
 Mo Bamba,0.17,0.07,139.94
 Asa Newell,0.17,0.04,
-Dylan Cardwell,0.17,0.02,139.99
-Noa Essengue,0.16,0.06,
+Dylan Cardwell,0.17,0.01,139.99
+Noa Essengue,0.16,0.05,
 Olivier-Maxence Prosper,0.16,0.05,
-Jaylen Clark,0.16,0.05,139.98
 Zuby Ejiofor,0.16,0.04,139.98
 Trey Lyles,0.16,0.09,
-Grant Williams,0.16,0.04,
-Nikola Topic,0.16,0.04,139.99
+Nikola Topic,0.16,0.04,139.98
 Isaac Okoro,0.16,0.06,
 Jaden Ivey,0.16,0.04,
-Larry Nance Jr.,0.15,0.06,
-Johnny Furphy,0.15,0.02,
-Jonas Valanciunas,0.15,0.05,
+Larry Nance Jr.,0.15,0.05,
+Jaylen Clark,0.15,0.05,139.98
 Ousmane Dieng,0.15,0.04,139.99
-Yuki Kawamura,0.15,0.04,139.94
+Grant Williams,0.15,0.04,
 Tre Mann,0.15,0.05,
+Ryan Nembhard,0.14,0.11,
 Kobe Brown,0.14,0.06,139.98
-Jordan Goodwin,0.14,0.06,
-Liam McNeeley,0.14,0.04,
+Jordan Goodwin,0.14,0.05,
+Johnny Furphy,0.14,0.03,
+Jonas Valanciunas,0.14,0.05,
+Yuki Kawamura,0.14,0.04,139.94
+Craig Porter Jr.,0.14,0.12,139.99
 Ben Sheppard,0.14,0.06,
 Jamal Cain,0.13,0.04,
 Julian Strawther,0.13,0.05,
+Will Richard,0.13,0.04,139.99
 Justin Edwards,0.13,0.07,139.97
+Liam McNeeley,0.13,0.04,
 Charles Bassey,0.13,0.04,139.99
 James Wiseman,0.13,0.04,139.96
-Caleb Love,0.13,0.06,139.95
-Ryan Nembhard,0.12,0.08,
-Pacome Dadiet,0.12,0.04,139.97
-Nick Richards,0.12,0.05,
-Will Richard,0.12,0.05,139.99
+Caleb Love,0.13,0.07,139.95
+Pacome Dadiet,0.12,0.04,139.98
 Tristan Vukcevic,0.12,0.02,
 Leaky Black,0.12,0.05,139.96
 Jase Richardson,0.12,0.03,
+Kyle Lowry,0.12,0.07,139.99
+Quenton Jackson,0.12,0.03,
 Jericho Sims,0.11,0.04,
 Jalen Wilson,0.11,0.04,
+Nick Richards,0.11,0.05,
 Chris Youngblood,0.11,0.06,139.92
 Braden Smith,0.11,0.04,139.96
 Jaden Hardy,0.11,0.04,
@@ -395,9 +398,6 @@ Joshua Jefferson,0.11,0.03,139.99
 Kris Murray,0.11,0.03,
 Baba Miller,0.11,0.03,
 Thomas Sorber,0.11,0.06,139.99
-Kyle Lowry,0.11,0.06,139.99
-Craig Porter Jr.,0.11,0.09,139.99
-Quenton Jackson,0.11,0.03,
 Kevin Love,0.11,0.04,139.97
 Zach Collins,0.11,0.04,
 Rayan Rupert,0.1,0.06,
@@ -407,37 +407,37 @@ Jabari Walker,0.1,0.06,139.98
 Alex Antetokounmpo,0.1,0.05,139.95
 Georges Niang,0.1,0.05,
 Taurean Prince,0.1,0.04,
-Taylor Hendricks,0.1,0.02,
 Josh Green,0.1,0.04,
 Chris Boucher,0.09,0.03,
 Dorian Finney-Smith,0.09,0.03,
-Alex Karaban,0.09,0.02,
+Alex Karaban,0.09,0.02,139.99
 Vince Williams Jr.,0.09,0.01,
 Jonathan Mogbo,0.09,0.03,
 Bruce Thornton,0.09,0.02,139.98
-Caleb Martin,0.09,0.02,
+Caleb Martin,0.09,0.03,
 Rocco Zikarsky,0.09,0.05,139.93
+Taylor Hendricks,0.09,0.02,
 Cole Anthony,0.09,0.03,
 Pat Spencer,0.09,0.03,139.97
-Jalen Pickett,0.09,0.04,139.98
-Jordan McLaughlin,0.08,0.04,
+Jalen Pickett,0.09,0.04,139.99
+Jordan McLaughlin,0.08,0.03,
 Jalen McDaniels,0.08,0.03,139.95
 Ben Saraf,0.08,0.03,139.99
-Gabe Vincent,0.08,0.02,
+Paul Zipser,0.08,0.06,139.92
 Jordan Miller,0.08,0.02,
-Tyrese Proctor,0.08,0.04,139.97
-Julian Reese,0.08,0.03,139.99
+Tyrese Proctor,0.08,0.04,139.98
 Jordan Hawkins,0.08,0.02,
 Kobe Sanders,0.08,0.03,
 Sion James,0.08,0.03,139.99
 Ron Harper Jr.,0.08,0.02,139.98
 Jonathan Isaac,0.08,0.03,
 Sidy Cissoko,0.08,0.03,
-Quinten Post,0.08,0.03,139.99
+Quinten Post,0.08,0.02,139.99
 Wang Zhelin,0.07,0.05,139.94
 Guerschon Yabusele,0.07,0.03,
+Gabe Vincent,0.07,0.02,
 Johni Broome,0.07,0.03,139.98
-Paul Zipser,0.07,0.06,139.92
+Julian Reese,0.07,0.02,139.99
 Jevon Carter,0.07,0.03,
 Ja'Kobi Gillespie,0.07,0.02,139.98
 Rasheer Fleming,0.07,0.02,139.99
@@ -466,8 +466,7 @@ Javon Small,0.05,0.01,
 Rade Zagorac,0.05,0.04,139.94
 Jamison Battle,0.05,0.02,
 Jaylen Nowell,0.05,0.02,
-Noah Penda,0.05,0.01,
-Nae'Qwan Tomlin,0.05,0.02,139.97
+Nae'Qwan Tomlin,0.05,0.02,139.98
 Patric Young,0.05,0.04,139.96
 Terry Rozier,0.05,0.02,139.99
 Spencer Jones,0.05,0.04,139.99
@@ -480,7 +479,7 @@ Kelly Olynyk,0.05,0.02,
 DeAndre Jordan,0.05,0.03,139.98
 Tyler Nickel,0.05,0.01,139.99
 Moses Wright,0.04,0.03,139.97
-Zhou Qi,0.04,0.02,139.99
+Zhou Qi,0.04,0.02,139.98
 DaRon Holmes II,0.04,0.02,
 Pat Connaughton,0.04,0.02,
 Josh Minott,0.04,0.02,
@@ -493,6 +492,7 @@ McKinley Wright IV,0.04,0.02,139.97
 Boban Marjanovic,0.04,0.02,139.99
 Emanuel Sharp,0.04,0.01,
 Karlo Matkovic,0.04,0.01,139.99
+Noah Penda,0.04,0.01,
 Christian Wood,0.04,0.03,139.97
 Jaden Bradley,0.04,0.01,139.99
 Dariq Whitehead,0.04,0.02,
@@ -501,7 +501,6 @@ John Konchar,0.03,0.02,
 Xavier Tillman,0.03,0.01,
 AJ Johnson,0.03,0.02,139.99
 Drew Timme,0.03,0.01,139.99
-Tarik Biberovic,0.03,0.0,
 Zeke Nnaji,0.03,0.02,139.99
 Taj Gibson,0.03,0.01,139.99
 KJ Martin,0.03,0.01,
@@ -513,7 +512,7 @@ Nick Smith Jr.,0.03,0.01,
 Anthony Brown,0.03,0.02,139.99
 Bismack Biyombo,0.03,0.01,139.99
 Josh Okogie,0.03,0.01,
-Mason Plumlee,0.03,0.02,
+Mason Plumlee,0.03,0.01,
 Hunter Dickinson,0.03,0.01,139.98
 Andre Jackson Jr.,0.03,0.01,
 Cameron Payne,0.03,0.01,
@@ -526,12 +525,12 @@ Maxi Kleber,0.03,0.01,
 Bogoljub Markovic,0.03,0.01,139.99
 P.J. Tucker,0.03,0.01,
 Jeremiah Robinson-Earl,0.03,0.01,
-Isaiah Mobley,0.03,0.02,139.98
 Duop Reath,0.03,0.01,
 Oscar Tshiebwe,0.03,0.01,139.99
 Daeqwon Plowden,0.03,0.01,139.99
 Moussa Cisse,0.03,0.01,
 Micah Potter,0.03,0.01,
+Jeff Green,0.03,0.01,
 Shake Milton,0.02,0.01,
 Torrey Craig,0.02,0.01,
 Michael Cobbins,0.02,0.01,
@@ -547,8 +546,11 @@ Shabazz Muhammad,0.02,0.01,
 Kevin McCullar Jr.,0.02,0.01,139.99
 Vasilije Micic,0.02,0.01,
 Dante Exum,0.02,0.01,
+Tarik Biberovic,0.02,0.0,
 Tristan Enaruna,0.02,0.01,139.99
+Ron Baker,0.02,0.01,139.99
 Ugonna Onyenso,0.02,0.01,139.99
+Kevin Knox II,0.02,0.01,
 Trendon Watford,0.02,0.01,139.99
 Tyler Bilodeau,0.02,0.01,
 Dillon Jones,0.02,0.01,139.99
@@ -557,7 +559,7 @@ Patty Mills,0.02,0.01,
 TyTy Washington Jr.,0.02,0.01,139.99
 Blake Hinson,0.02,0.0,
 Keshad Johnson,0.02,0.01,139.99
-Jamaree Bouyea,0.02,0.01,
+Jamaree Bouyea,0.02,0.01,139.99
 Mitchell Watt,0.02,0.01,
 JT Thor,0.02,0.01,139.99
 Greg Whittington,0.02,0.01,
@@ -581,7 +583,8 @@ Mindaugas Kuzminskas,0.02,0.01,139.99
 Drew Eubanks,0.02,0.01,
 Hunter Tyson,0.02,0.01,
 Cam Reddish,0.02,0.01,139.99
-Alpha Diallo,0.02,0.01,
+Alpha Diallo,0.02,0.02,
+Cristiano Felicio,0.02,0.01,
 Satnam Singh Bhamara,0.02,0.01,
 Delon Wright,0.02,0.01,
 Nikola Radicevic,0.02,0.01,
@@ -607,12 +610,12 @@ Mike James,0.02,0.01,
 Jaron Pierre Jr.,0.02,0.01,139.99
 C.J. Williams,0.02,0.01,139.99
 J.J. Barea,0.02,0.01,
+Isaiah Mobley,0.02,0.02,139.98
 Jalen Slawson,0.02,0.01,139.99
 PJ Hall,0.02,0.01,
 Dee Bost,0.02,0.01,
 Jalen Bridges,0.02,0.01,139.99
 Antonio Reeves,0.02,0.01,139.98
-Jeff Green,0.02,0.01,
 Shaquille Harrison,0.02,0.01,139.99
 Dalen Terry,0.02,0.01,
 Anthony Tolliver,0.02,0.01,
@@ -625,7 +628,7 @@ Chaney Johnson,0.02,0.01,139.99
 Matthew Dellavedova,0.02,0.01,
 Eric Gordon,0.02,0.01,
 Ryan Broekhoff,0.02,0.01,
-Markelle Fultz,0.02,0.01,
+Markelle Fultz,0.02,0.01,139.99
 Ian Clark,0.01,0.01,
 Colby Jones,0.01,0.0,
 Eric Mika,0.01,0.0,
@@ -650,7 +653,6 @@ Jeff Dowtin Jr.,0.01,0.01,
 Chris Johnson,0.01,0.01,
 Tim Quarterman,0.01,0.01,
 Josh Magette,0.01,0.0,
-Dakota Mathias,0.01,0.0,
 Xavier Rathan-Mayes,0.01,0.0,
 Brandon Goodwin,0.01,0.0,
 Jahlil Okafor,0.01,0.0,
@@ -707,7 +709,7 @@ Isaiah Livers,0.01,0.0,
 Eric Atkins,0.01,0.01,
 DeAndre Daniels,0.01,0.01,
 Joel Ayayi,0.01,0.0,
-Kai Jones,0.01,0.01,139.99
+Kai Jones,0.01,0.01,
 Anton Watson,0.01,0.0,139.99
 Khem Birch,0.01,0.0,
 Damien Inglis,0.01,0.0,
@@ -724,11 +726,9 @@ Arturas Gudaitis,0.01,0.0,
 Oshae Brissett,0.01,0.0,
 Olivier Sarr,0.01,0.0,
 Chaundee Brown Jr.,0.01,0.0,
-Ron Baker,0.01,0.01,
 Max Shulga,0.01,0.0,
 Cam Christie,0.01,0.0,
 Darrun Hilliard,0.01,0.0,
-Kevin Knox II,0.01,0.01,
 Scotty Hopson,0.01,0.01,
 Tyler Harvey,0.01,0.0,
 Keion Brooks Jr.,0.01,0.01,139.99
@@ -753,8 +753,8 @@ Bobi Klintman,0.01,0.0,
 Norchad Omier,0.01,0.0,
 Talen Horton-Tucker,0.01,0.01,139.99
 Jesse Edwards,0.01,0.0,
-Isaac Jones,0.01,0.01,139.99
-Tosan Evbuomwan,0.01,0.0,
+Isaac Jones,0.01,0.0,139.99
+Tosan Evbuomwan,0.01,0.0,139.99
 Sheldon Mac,0.01,0.0,
 Skal Labissiere,0.01,0.0,
 Isaiah Briscoe,0.01,0.0,
@@ -875,16 +875,16 @@ Justin Holiday,0.01,0.01,
 Trey Jemison III,0.01,0.01,139.99
 Drew Peterson,0.01,0.0,139.99
 Kessler Edwards,0.01,0.0,139.99
-Markus Howard,0.01,0.01,
+Markus Howard,0.01,0.0,
 Marcus Eriksson,0.01,0.0,
 Kendrick Nunn,0.01,0.0,
 Tim Frazier,0.01,0.01,
-Cristiano Felicio,0.01,0.01,
 Cody Martin,0.01,0.0,
 Malique Lewis,0.01,0.0,
 Axel Toupane,0.01,0.01,
 Joel Berry II,0.01,0.0,
 Gary Clark,0.01,0.0,
+Armel Traore,0.01,0.0,
 Quinn Cook,0.01,0.01,
 KJ McDaniels,0.01,0.0,
 Theo Pinson,0.01,0.0,
@@ -904,7 +904,7 @@ Aaron Harrison,0.01,0.0,
 Amida Brimah,0.01,0.0,
 Derrick Walton Jr.,0.01,0.01,
 Bonzie Colson,0.01,0.01,
-Mamadi Diakite,0.01,0.01,
+Mamadi Diakite,0.01,0.0,
 Chris Manon,0.01,0.0,
 Trevor Keels,0.01,0.0,
 Karim Mane,0.01,0.0,
@@ -915,18 +915,19 @@ Jaylen Hoard,0.01,0.0,
 Jared Butler,0.01,0.0,139.99
 DeVaughn Akoon-Purcell,0.01,0.01,
 Isaiah Hicks,0.01,0.0,
+Mason Jones,0.01,0.0,
 Malcolm Delaney,0.01,0.0,
 AJ Griffin,0.01,0.0,139.99
 Keaton Wallace,0.01,0.0,
 Jacob Toppin,0.01,0.0,
 Zoran Dragic,0.01,0.01,
 Marcelo Huertas,0.01,0.01,
-Myke Henry,0.01,0.0,
 JD Davison,0.01,0.01,139.99
 Nicolas Laprovittola,0.01,0.0,
 Naz Mitrou-Long,0.01,0.01,
 N'Faly Dante,0.01,0.0,139.99
 Aron Baynes,0.01,0.0,
+Chris Duarte,0.01,0.0,
 Issuf Sanon,0.01,0.0,
 Isaiah Cousins,0.01,0.0,
 Jacob Wiley,0.01,0.01,
@@ -947,8 +948,8 @@ Ibou Badji,0.01,0.0,
 Mitch McGary,0.01,0.0,
 Malcolm Cazalon,0.01,0.0,
 Hugo Besson,0.01,0.0,
+Emanuel Miller,0.01,0.0,
 Jorge Gutierrez,0.01,0.01,
-Tyson Etienne,0.01,0.0,
 Yogi Ferrell,0.01,0.0,
 Grant Jerrett,0.01,0.0,
 Drew Gordon,0.01,0.01,
@@ -962,6 +963,7 @@ David Nwaba,0.01,0.0,
 Ben Bentil,0.01,0.01,
 Johnny Juzang,0.01,0.01,139.99
 E.J. Liddell,0.01,0.0,
+D.J. Carton,0.01,0.0,
 Mangok Mathiang,0.01,0.01,
 Wenyen Gabriel,0.01,0.01,
 J.P. Macura,0.01,0.0,
@@ -974,6 +976,7 @@ Tyler Johnson,0.01,0.01,
 Dusty Hannahs,0.01,0.0,
 Zavier Simpson,0.01,0.0,
 Jon Teske,0.01,0.0,
+Alex Ducas,0.01,0.0,
 Justin Jackson,0.01,0.0,
 Danuel House Jr.,0.01,0.0,
 Tyler Cook,0.01,0.0,
@@ -981,7 +984,7 @@ AJ Hammons,0.01,0.01,
 Haywood Highsmith,0.01,0.0,
 Kyle Collinsworth,0.01,0.01,
 Chris Clemons,0.01,0.0,
-Kobi Simmons,0.01,0.0,
+Kobi Simmons,0.01,0.01,
 JaMychal Green,0.01,0.01,
 Rawle Alkins,0.01,0.0,
 Jalen Jones,0.01,0.01,
@@ -996,6 +999,3 @@ J.J. O'Brien,0.01,0.0,
 Kay Felder,0.01,0.0,
 Cleanthony Early,0.01,0.01,
 Ricky Council IV,0.01,0.0,
-Eugene Omoruyi,0.01,0.0,
-DJ Steward,0.01,0.0,
-Lamar Stevens,0.01,0.0,
