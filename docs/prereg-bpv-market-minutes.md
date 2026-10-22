@@ -56,3 +56,11 @@ already better calibrated for that horizon.
   (1 + alpha x V x his share of the team's active minutes / his minutes per game); alpha in {0, 0.25, 0.5, 0.75, 1}.
 - Same dates, same error measure, same pass rule (chosen on the design dates, kept only if it lowers the error; test
   on the four January dates: lower pooled and on 3 of 4).
+
+## Addendum result (2026-10-21)
+
+`analysis/bpv_teammates.json`. **Not kept**: every alpha above 0 made the design dates worse (3.769 at 0; 3.800 /
+3.840 / 3.896 / 3.968 at 0.25-1). Test dates unchanged (3.872; rank correlation 0.795). Players with an injured rotation
+teammate are harder to project (error 4.26 vs 3.87 overall), but scaling up their minutes doesn't help: by the time a
+teammate is listed Out for a long stretch, the player's season-to-date numbers already partly reflect it, and minutes
+gained in a teammate's absence come with a lower rate per minute.
