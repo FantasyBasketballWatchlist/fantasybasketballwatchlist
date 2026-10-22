@@ -65,6 +65,7 @@ def season_frame(pg, tg, hist, league_p, league_q, t, names):
     h_prod = prod.where(~veteran, (1 - ratings.ESPN_FPG_WEIGHT) * prod + ratings.ESPN_FPG_WEIGHT * e_fpg)
     h_p = df.p_hat.where(~veteran, (e_gp * ratings.ESPN_GAMES_SCALE / team_games).clip(0, 1))
     df["BPV + ESPN hybrid (app)"] = bpv.bpv_value(h_prod, h_p, league_q, R)
+    df["hybrid_production"], df["hybrid_availability"] = h_prod, h_p      # used by analysis/draft_backtest.py
     df[ESPN] = e_tot
     for c in MODELS + [ESPN]:
         df[c] = df[c].fillna(-math.inf)

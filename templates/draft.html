@@ -501,8 +501,9 @@
 
     // Another team's pick in the play-out: like most drafters, the best BPV left unless one of the next few fills a
     // starting spot it can't fill yet (so centers don't sit there for you just because a guard ranks higher).
-    // Looking further down (12, "positional runs") did worse in replays of real drafts (docs/prereg-draft-suggestion-v2.md).
-    const OPPONENT_REACH = 6;
+    // They look up to 12 players down for a position they need ("positional runs"): passed its rule on four past seasons
+    // scored by real games (docs/prereg-draft-backtest.md), by a small margin; it lost in the simulated test before that.
+    const OPPONENT_REACH = 12;
     function opponentPick(pool, roster) {
       const open = fillLineup(roster).openSpecific;
       if (open.length) {
