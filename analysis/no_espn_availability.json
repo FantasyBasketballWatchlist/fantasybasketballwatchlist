@@ -1,0 +1,39 @@
+{
+ "rules": "docs/prereg-no-espn-availability.md",
+ "s": 0.8538411479937672,
+ "seasons": {
+  "2021-22": {
+   "players": 54,
+   "mae_current": 0.21772186899376858,
+   "mae_scaled": 0.2190880638750469,
+   "bias_current": 0.11200407615714854,
+   "bias_scaled": 0.0052911465222207415,
+   "role": "design"
+  },
+  "2023-24": {
+   "players": 44,
+   "mae_current": 0.19499422685887816,
+   "mae_scaled": 0.207535773514428,
+   "bias_current": 0.09358390028289086,
+   "bias_scaled": -0.011078910715795092,
+   "role": "design"
+  },
+  "2024-25": {
+   "players": 14,
+   "mae_current": 0.22806046550041742,
+   "mae_scaled": 0.2256938446441144,
+   "bias_current": 0.11663197405369378,
+   "bias_scaled": 0.014410725663933473,
+   "role": "design"
+  },
+  "2025-26": {
+   "players": 28,
+   "mae_current": 0.2737810971890359,
+   "mae_scaled": 0.2692599551978019,
+   "bias_current": 0.18672749605973002,
+   "bias_scaled": 0.0922127329606285,
+   "role": "test"
+  }
+ },
+ "passes": true
+}

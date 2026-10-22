@@ -139,6 +139,13 @@ EARLY_ESPN_K = 41
 # BPV used to ignore the flag and project ~55-60. Found by the expert-gap decomposition (docs/prereg-ecr-gap.md).
 ESPN_OUT_GAMES = 23
 
+# Before a season, a veteran (15+ mpg last season) ESPN doesn't project at all, but doesn't list as out either, keeps his
+# history-based availability x this (often an injury ESPN knows about, or a lost role). Such veterans played 0.58-0.62 of
+# their team's games vs our 0.70-0.73 estimate; fitted on 2021-22, 2023-24, 2024-25, tested on 2025-26
+# (docs/prereg-no-espn-availability.md): error 0.274 -> 0.269, overestimate 0.19 -> 0.09.
+NO_ESPN_AVAIL_SCALE = 0.854
+NO_ESPN_MIN_MPG = 15
+
 # Between seasons, last season's FPTS/game is replaced by per-minute rates x last season's minutes. Each
 # scoring stat's rate uses the last 3 seasons, each game weighted 0.5 ** (days before the new season /
 # half-life), padded with `pad` minutes at the league-average rate. Half-lives and pads were fitted per
@@ -583,12 +590,22 @@ def build(today=None):
         if r["id"] in espn_out:
             r["availability"] = ESPN_OUT_GAMES / SEASON_GAMES
             r["production_note"] += "; ESPN expects him to miss most of the season"
+    no_espn = set()
+    if mode != "in-season":
+        for r in rows:
+            if (r["espn_games"] is None and r["id"] not in espn_out and not r["rookie"]
+                    and (r["minutes"] or 0) >= NO_ESPN_MIN_MPG):
+                r["availability"] *= NO_ESPN_AVAIL_SCALE
+                r["production_note"] += "; no ESPN projection (check injury news)"
+                no_espn.add(r["id"])
     if mode != "in-season" and live and not _season_started(target_season):
         _save_preseason_prior(target_season, preseason_prior)
         # The early-season fade turns saved games into availability (x ESPN_GAMES_SCALE), so out players are saved
         # at the games that give ESPN_OUT_GAMES.
         saved_games = {int(r["id"]): r["espn_games"] for r in rows if r.get("espn_games")}
         saved_games.update({int(r["id"]): ESPN_OUT_GAMES / ESPN_GAMES_SCALE for r in rows if r["id"] in espn_out})
+        # ...and the scaled-down availability of veterans ESPN doesn't project, so it carries into the early-season fade.
+        saved_games.update({int(r["id"]): r["availability"] * SEASON_GAMES / ESPN_GAMES_SCALE for r in rows if r["id"] in no_espn})
         _save_preseason_espn_games(target_season, saved_games)
     df = pd.DataFrame(rows)
     ranked = df[df["games"] >= MIN_GAMES_RANKED]
@@ -601,6 +618,7 @@ def build(today=None):
         replacement = bpv.replacement_level(prev["fpts_pg"], REPLACEMENT_RANK)
     df["manageable"] = league_q
     df["injury_note"] = ""
+    df.loc[df["id"].isin(no_espn), "injury_note"] = "no ESPN projection: check injury news"
 
     # Games left for each team (in-season), for known injuries.
     team_games_played = tg[production_season].groupby("TEAM_ABBREVIATION").size() if mode == "in-season" else None
