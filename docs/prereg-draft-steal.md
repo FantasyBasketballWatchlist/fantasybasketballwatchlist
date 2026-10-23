@@ -45,3 +45,24 @@ Design leagues (sanity check): -0.25 per night, better in 12 of 30. **Test leagu
 higher in 2 of 3 leagues (+0.83, +0.52, -0.84): passes; shipped.** Over all six leagues it's about even (-0.04). Steals
 were suggested about 4 times per draft and the waited-on player ended up on our team about 40% of the time, so the
 lasting chance from ADP is optimistic or the engine changes its mind at the next pick. ADP is now in /api/rankings.
+
+## Calibration fix (2026-10-23; not a new test)
+
+The first harness wasn't saved; rebuilt as `analysis/draft_steal_data.py` (inputs), `analysis/draft_steal_replay.js`,
+`analysis/draft_steal_calib.py`, `analysis/draft_steal_summary.js`. Today's ratings and ADP, so numbers differ from above.
+
+- **The lasting chance was too low, not too high.** On the six real drafts (every slot's pick, the top 10 left by BPV
+  with an ADP, did he last to that slot's next pick): when the normal formula said 0.40 he lasted 0.50, 0.59 -> 0.82,
+  0.80 -> 0.89. It ignores that a player still there past his ADP tends to keep sliding. Replaced with a logistic in
+  ln(next / ADP) and ln(now / ADP), fitted on all six (-0.334, -13.743, 1.751). Cross-fitted (each half of the leagues
+  scored by the other half's fit) it's better calibrated: 0.40 -> 0.36, 0.60 -> 0.70, 0.80 -> 0.84; Brier 0.121 vs
+  0.136.
+- **The "40% ended on our team" was the engine changing its mind**, not players being taken: in the replay 99 of 158
+  waited-on players lasted and 71 were taken. The page now follows through: at the next pick it suggests T if he's
+  there (the steal's value assumed that). The plan is kept in the draft state.
+- **Value (replay, 60 slot-drafts, vs no steal):** first version +0.17 per night (better in 28, worse in 23); with the
+  logistic and follow-through +0.21 (27 better, 22 worse; per league +0.55, -0.20, +0.17, +0.35, -0.29, +0.69). Within
+  the noise: not evidence that stealing helps, and these leagues are no longer untouched (the fit used them). The page's
+  own code reproduces the harness's logistic + follow-through run exactly (0 of 60 drafts differ).
+- In the replay the room lasts longer than the real one (when our pick differs from the real pick at our slot, every
+  later pick shifts back one), so replay lasting rates run above the real-draft calibration.

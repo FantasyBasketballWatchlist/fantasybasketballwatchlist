@@ -543,18 +543,27 @@
     }
 
     // "Steal" (docs/prereg-draft-steal.md): if the best pick T will probably last to your next pick, take the best other
-    // candidate now and T then. ln(actual pick / ESPN ADP) ~ Normal(STEAL_MU, STEAL_SD) in real drafts.
-    let STEAL = true;      // passed on the 3 test leagues (+0.17/night, 2 of 3); about even over all 6 (docs/prereg-draft-steal.md)
-    const STEAL_MU = -0.095, STEAL_SD = 0.211;
-    const normCdf = (z) => { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2);
-      const q = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - q : q; };
+    // candidate now and T then. Lasting chance: logistic in ln(next pick / ADP) and ln(this pick / ADP) (a player already
+    // past his ADP tends to keep sliding), fitted on six real drafts; the first version (normal in ln(pick / ADP), not
+    // conditioned on him being there now) said ~59% for players who lasted ~80% of the time.
+    let STEAL = true;      // about even with no steal over 6 leagues; see docs/prereg-draft-steal.md
+    const STEAL_W = [-0.334, -13.743, 1.751];
+    const lastChance = (adp, now, next) => 1 / (1 + Math.exp(-(STEAL_W[0] + STEAL_W[1] * Math.log(next / adp) + STEAL_W[2] * Math.log(now / adp))));
+    // The steal being followed: at its next pick, take T if he's still there (the value above assumed that). Kept in the
+    // draft state so it survives a reload; void once pick `at` is undone or was T himself.
+    const stealPlan = (pool, at) => {
+      const s = state.steal;
+      if (!s || s.next !== at || !(s.at in state.picks) || state.picks[s.at] === s.t) return null;
+      const t = pool.find(p => p.id === s.t);
+      return t ? { ...s, c: t } : null;
+    };
     function stealCheck(top, results, pool, mineIds, now) {
       const t = top.c;
       if (t.adp == null) return null;
       let next = null;
       for (let n = now + 1; n <= totalPicks(); n++) if (!(n in state.picks) && teamOf(n) === state.slot) { next = n; break; }
       if (next == null) return null;
-      const p = 1 - normCdf((Math.log(next / t.adp) - STEAL_MU) / STEAL_SD);
+      const p = lastChance(t.adp, now, next);
       let best = null;
       for (const r of results) {
         if (r.c === t) continue;
@@ -583,6 +592,12 @@
           pool = pool.filter(p => p !== x); gone.push(x);
         }
       }
+      const plan = STEAL ? stealPlan(pool, at) : null;
+      if (plan) {
+        const why = `${plan.c.name} lasted, as planned at pick #${plan.at}: take him now.`;
+        lookCache = { key, value: { pick: plan.c, why: at !== now ? `Your next pick is #${at} (${at - now} picks away). If he's still there: ${why}` : why, at } };
+        return lookCache.value;
+      }
       const results = shortlist(pool, LOOKAHEAD_CANDIDATES).map(c => {
         const value = dailyValue(playOut([...mineIds, c.id], pool.filter(x => x !== c), at + 1, extra));
         return { c, value, score: value };
@@ -590,7 +605,7 @@
       let top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
       const bestBpv = results.find(r => r.c === pool[0]);
       const steal = STEAL && at === now ? stealCheck(top, results, pool, mineIds, now) : null;
-      if (steal) top = steal.result;
+      if (steal) { top = steal.result; state.steal = { at: now, t: steal.t.id, next: steal.next }; }
       const before = fillLineup(mineIds), after = fillLineup([...mineIds, top.c.id]);
       let why;
       if (top.c === pool[0]) {
@@ -838,7 +853,7 @@
         return;
       }
       clearTimeout(resetTimer); b.classList.remove('armed'); b.textContent = 'Reset draft';
-      state.picks = {}; state.history = [];
+      state.picks = {}; state.history = []; state.steal = null;
       save(); render();
     });
     document.getElementById('undo').addEventListener('click', undo);
