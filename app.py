@@ -307,7 +307,7 @@ def get_rankings():
     limit = request.args.get("limit", default=200, type=int)
     cols = ["rank", "id", "name", "team", "games", "production", "season_fpts", "recent_fpts", "range_low", "range_high", "availability", "bpv",
             "value_over_replacement", "heat_check_index", "playoff_games", "playoff_fpts", "week_games", "week_fpts", "injury_note", "report_status", "play_probability", "rookie",
-            "report_reason", "minutes_change_fpts", "efficiency_change_fpts"]
+            "report_reason", "minutes_change_fpts", "efficiency_change_fpts", "adp"]
     return jsonify({"players": _records(players[cols].head(limit)), "meta": _meta(meta)})
 
 

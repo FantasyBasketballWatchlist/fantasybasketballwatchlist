@@ -520,11 +520,12 @@
       if (extra) for (const [t, ids] of Object.entries(extra)) (others[t] = others[t] || []).push(...ids);
       return others;
     }
-    function playOut(roster, pool, from, extra) {
+    // skipAt: your pick that's already spoken for (a "steal": the player is in roster already and not in pool).
+    function playOut(roster, pool, from, extra, skipAt) {
       roster = roster.slice(); pool = pool.slice();
       const others = otherRosters(extra);
       for (let n = from; n <= totalPicks() && pool.length; n++) {
-        if (n in state.picks) continue;
+        if (n in state.picks || n === skipAt) continue;
         const t = teamOf(n);
         if (t !== state.slot) {
           const x = opponentPick(pool, others[t] || []);
@@ -539,6 +540,29 @@
         roster.push(best.id); pool.splice(pool.indexOf(best), 1);
       }
       return roster;
+    }
+
+    // "Steal" (docs/prereg-draft-steal.md): if the best pick T will probably last to your next pick, take the best other
+    // candidate now and T then. ln(actual pick / ESPN ADP) ~ Normal(STEAL_MU, STEAL_SD) in real drafts.
+    let STEAL = true;      // passed on the 3 test leagues (+0.17/night, 2 of 3); about even over all 6 (docs/prereg-draft-steal.md)
+    const STEAL_MU = -0.095, STEAL_SD = 0.211;
+    const normCdf = (z) => { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2);
+      const q = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - q : q; };
+    function stealCheck(top, results, pool, mineIds, now) {
+      const t = top.c;
+      if (t.adp == null) return null;
+      let next = null;
+      for (let n = now + 1; n <= totalPicks(); n++) if (!(n in state.picks) && teamOf(n) === state.slot) { next = n; break; }
+      if (next == null) return null;
+      const p = 1 - normCdf((Math.log(next / t.adp) - STEAL_MU) / STEAL_SD);
+      let best = null;
+      for (const r of results) {
+        if (r.c === t) continue;
+        const withT = dailyValue(playOut([...mineIds, r.c.id, t.id], pool.filter(x => x !== r.c && x !== t), now + 1, null, next));
+        const v = p * withT + (1 - p) * r.value;
+        if (v > top.value + 1e-9 && (!best || v > best.v)) best = { v, r };
+      }
+      return best && { result: { ...best.r, value: best.v, score: best.v }, t, p, next, gain: best.v - top.value };
     }
 
     function lookAhead(available, mineIds, now) {
@@ -563,8 +587,10 @@
         const value = dailyValue(playOut([...mineIds, c.id], pool.filter(x => x !== c), at + 1, extra));
         return { c, value, score: value };
       });
-      const top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
+      let top = results.reduce((a, b) => (b.score > a.score + 1e-9 ? b : a));
       const bestBpv = results.find(r => r.c === pool[0]);
+      const steal = STEAL && at === now ? stealCheck(top, results, pool, mineIds, now) : null;
+      if (steal) top = steal.result;
       const before = fillLineup(mineIds), after = fillLineup([...mineIds, top.c.id]);
       let why;
       if (top.c === pool[0]) {
@@ -575,6 +601,9 @@
         why = `Balances your roster at ${posOf(top.c.id).join('/')}: playing out the rest of the draft, your daily lineups end up ${fmt(gain)} BPV `
           + `better than if you take ${pool[0].name} (${fmt(pool[0].bpv - top.c.bpv)} BPV more on his own) now.`;
       }
+      if (steal) why = `Take ${top.c.name} now: ${steal.t.name} (the best pick by value) usually goes around pick `
+        + `${Math.round(steal.t.adp)} on ESPN, so he has about a ${Math.round(steal.p * 100)}% chance of lasting to your next pick (#${steal.next}). `
+        + `Counting the chance he doesn't, your daily lineups end up ${fmt(steal.gain)} BPV better.`;
       if (at !== now) {
         const likelyGone = available.filter(p => gone.includes(p)).slice(0, 3).map(p => p.name);
         why = `Your next pick is #${at} (${at - now} picks away). ${likelyGone.length ? `${likelyGone.join(', ')} will probably be gone by then. ` : ''}`

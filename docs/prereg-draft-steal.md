@@ -1,0 +1,47 @@
+# Preregistration: take someone else now when the suggested player will likely last ("steal")
+
+Written 2026-10-22, before any result. Code: the draft page's engine (`templates/draft.html`, `STEAL`), run on the page's
+own script under Node; results in `analysis/draft_steal.json`.
+
+## Why
+
+A user's suggestion at pick 78 was a player ESPN ranks about 94th, with their next pick at 82. Two earlier tests
+(docs/prereg-draft-opponents.md, docs/prereg-draft-suggestion-v2.md) modeled every other team as drafting by ADP for the
+whole play-out and lost. This is narrower: only the suggested player, and only his chance of lasting to the next pick.
+
+## Rule (on the clock, with a next pick)
+
+- T = the engine's suggestion. p = chance T is still there at the next pick N: 1 - Phi((ln(N / ADP_T) - mu) / sd), where
+  ln(actual pick / ADP) ~ Normal(mu, sd) in real drafts (mu, sd fitted on the design leagues' picks).
+- For every other shortlist candidate c: value = p x (roster with c now and T at N, rest played out) + (1 - p) x
+  (c now, rest played out as usual). If the best such value beats T's, suggest c ("take c now; T has a p% chance of
+  lasting to your next pick").
+- Players without ADP: no steal.
+
+## Replay and score
+
+As in docs/prereg-draft-suggestion-v2.md: each league, each slot 1-10, our team follows the suggestion; the others take the
+first available player in the league's actual pick order unless one of their next 6 fills an open starting spot. Score:
+the same 400-night season simulation (per-game production, availability, ESPN slots, empty spots 0). Note: the real
+room, not ADP, decides whether T actually lasts.
+
+- **Design** (fit mu, sd; a sanity check): 538977698, 1854297225, 1503540199.
+- **Test (once):** 34650931, 1192115637, 2029687819 (never used).
+
+## Pass
+
+On the test leagues: mean score above the current engine over the 30 slot-drafts **and** above it in at least 2 of 3
+leagues. Reported: how often a steal was suggested and how often T actually lasted.
+
+## Known limits
+
+Scored with our projections (the question is the room, which the real picks supply); ratings are today's, the drafts were
+1-2 days earlier; ADP is ESPN's season ADP (includes drafts after these).
+
+## Result (2026-10-22)
+
+`analysis/draft_steal.json`. mu = -0.095, sd = 0.211 (385 design-league picks: real picks come ~9% before ESPN ADP).
+Design leagues (sanity check): -0.25 per night, better in 12 of 30. **Test leagues: +0.17 per night, better in 16 of 30,
+higher in 2 of 3 leagues (+0.83, +0.52, -0.84): passes; shipped.** Over all six leagues it's about even (-0.04). Steals
+were suggested about 4 times per draft and the waited-on player ended up on our team about 40% of the time, so the
+lasting chance from ADP is optimistic or the engine changes its mind at the next pick. ADP is now in /api/rankings.
