@@ -1,9 +1,9 @@
 {
  "rules": "docs/prereg-corners.md",
  "source": "live",
- "updated": "2026-10-22",
- "game_days": 0,
- "bets": 0,
- "mean_clv": null,
+ "updated": "2026-10-23",
+ "game_days": 1,
+ "bets": 674,
+ "mean_clv": -0.06491506674882923,
  "status": "collecting"
 }
