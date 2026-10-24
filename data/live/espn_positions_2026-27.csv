@@ -7,8 +7,8 @@ Luka Doncic,PG
 Giannis Antetokounmpo,PF/C
 Donovan Mitchell,PG/SG
 Tyrese Maxey,PG/SG
-Cade Cunningham,PG
 Cooper Flagg,SF/PF
+Cade Cunningham,PG
 Kevin Durant,SF/PF
 Karl-Anthony Towns,C
 Jayson Tatum,SF/PF
@@ -23,36 +23,36 @@ Jalen Johnson,PF
 Kawhi Leonard,SF/PF
 Stephen Curry,PG
 Bam Adebayo,PF/C
-LeBron James,SF/PF
 Tyrese Haliburton,PG/SG
+LeBron James,SF/PF
 Anthony Davis,PF/C
 Pascal Siakam,PF
 Alperen Sengun,C
 Domantas Sabonis,PF/C
-Jamal Murray,PG
 Trae Young,PG
 Austin Reaves,PG/SG
 Paolo Banchero,SF/PF
 Jalen Williams,SF/PF
+Jamal Murray,PG
 Evan Mobley,PF/C
 Jalen Duren,C
 Deni Avdija,SF/PF
 Derrick White,PG/SG
-Josh Giddey,PG/SG
 Stephon Castle,PG/SG
+Josh Giddey,PG/SG
 Desmond Bane,SG/SF
 Michael Porter Jr.,SF/PF
 De'Aaron Fox,PG/SG
 Joel Embiid,C
-Kon Knueppel,SG/SF
 Darius Garland,PG
+Kon Knueppel,SG/SF
 Kyrie Irving,PG
 Naz Reid,PF/C
 Chet Holmgren,PF/C
-Lauri Markkanen,SF/PF
 Nickeil Alexander-Walker,PG/SG
-Zion Williamson,PF/C
 Julius Randle,PF
+Lauri Markkanen,SF/PF
+Zion Williamson,PF/C
 Dyson Daniels,PG/SG
 Mikal Bridges,SG/SF
 Damian Lillard,PG
@@ -61,60 +61,60 @@ Tyler Herro,PG/SG
 Franz Wagner,SF/PF
 Paul George,SF/PF
 Jarrett Allen,C
-Brandon Miller,SG/SF
 Dylan Harper,PG/SG
+Brandon Miller,SG/SF
 Walker Kessler,C
-Keyonte George,PG/SG
-Trey Murphy III,SG/SF
 Dejounte Murray,PG/SG
+Keyonte George,PG/SG
 VJ Edgecombe,SG
+Trey Murphy III,SG/SF
 AJ Dybantsa,SF
-OG Anunoby,SF/PF
 Ty Jerome,PG/SG
+OG Anunoby,SF/PF
 Cameron Boozer,PF
 Rudy Gobert,C
 Caleb Wilson,SF
-Onyeka Okongwu,C
-Jaren Jackson Jr.,PF/C
 Ivica Zubac,C
+Jaren Jackson Jr.,PF/C
+Onyeka Okongwu,C
 Norman Powell,SG/SF
-Donovan Clingan,C
 Jaden McDaniels,SF/PF
+Donovan Clingan,C
 Josh Hart,SG/SF
 Ausar Thompson,SF/PF
 Alex Sarr,PF/C
-DeMar DeRozan,SF/PF
 CJ McCollum,PG/SG
 Miles Bridges,SF/PF
+DeMar DeRozan,SF/PF
 Payton Pritchard,PG/SG
-Matas Buzelis,SF/PF
-Jalen Green,SG/SF
 Immanuel Quickley,PG/SG
-Coby White,PG/SG
+Jalen Green,SG/SF
+Matas Buzelis,SF/PF
 RJ Barrett,SG/SF
+Coby White,PG/SG
 Fred VanVleet,PG/SG
 Darryn Peterson,PG/SG
+Jabari Smith Jr.,PF/C
 Brandon Ingram,SF/PF
 Derik Queen,PF/C
 Brandin Podziemski,PG/SG
-Kel'el Ware,C
-Darius Acuff Jr.,PG
 Ryan Rollins,PG/SG
-Jabari Smith Jr.,PF/C
-Andrew Wiggins,SF/PF
-Reed Sheppard,PG/SG
-John Collins,PF/C
+Darius Acuff Jr.,PG
+Kel'el Ware,C
 Zach LaVine,SG/SF
+Andrew Wiggins,SF/PF
+John Collins,PF/C
+Reed Sheppard,PG/SG
 Ayo Dosunmu,PG/SG
 Zach Edey,C
 Andrew Nembhard,PG/SG
 Jaime Jaquez Jr.,SG/SF
 Yaxel Lendeborg,SF/PF
-Nikola Vucevic,C
 Myles Turner,C
+Aaron Gordon,PF
+Nikola Vucevic,C
 Kristaps Porzingis,PF/C
 Tobias Harris,SF/PF
-Aaron Gordon,PF
 Keegan Murray,SF/PF
 Kevin Porter Jr.,PG/SG
 Peyton Watson,SF/PF
@@ -122,22 +122,22 @@ Jakob Poeltl,C
 Nic Claxton,C
 Jeremiah Fears,PG/SG
 Egor Demin,PG/SG
-Cedric Coward,SG/SF
-Jared McCain,PG/SG
 Ace Bailey,SF/PF
+Cedric Coward,SG/SF
 Quentin Grimes,SG/SF
-Isaiah Hartenstein,C
+Yves Missi,C
+Jared McCain,PG/SG
 Kyshawn George,SG/SF
+Isaiah Hartenstein,C
 Collin Gillespie,PG
 Jimmy Butler III,SG/SF
-Yves Missi,C
 Jonathan Kuminga,SF/PF
+Moussa Diabate,PF/C
 Dillon Brooks,SG/SF
 Julian Champagnie,SF/PF
 Devin Vassell,SG/SF
 Collin Sexton,PG/SG
 Draymond Green,PF/C
-Moussa Diabate,PF/C
 Jalen Suggs,PG/SG
 Jrue Holiday,PG/SG
 Daniel Gafford,C
@@ -146,332 +146,331 @@ Neemias Queta,C
 Andre Drummond,C
 Toumani Camara,SF/PF
 Rui Hachimura,SF/PF
-Mitchell Robinson,C
 Anthony Black,PG/SG
-Christian Braun,SG/SF
-Oso Ighodaro,PF
-Scotty Pippen Jr.,PG/SG
-Saddiq Bey,SF/PF
-Day'Ron Sharpe,C
+Mitchell Robinson,C
 Keaton Wagler,PG/SG
+Oso Ighodaro,PF
+Christian Braun,SG/SF
+Scotty Pippen Jr.,PG/SG
+Day'Ron Sharpe,C
 Davion Mitchell,PG
+Saddiq Bey,SF/PF
 Alex Caruso,PG/SG
 Bennedict Mathurin,SG/SF
+Wendell Carter Jr.,C
 Collin Murray-Boyles,PF
-Anfernee Simons,PG/SG
 Malik Monk,PG/SG
-Cameron Johnson,SF/PF
+Anfernee Simons,PG/SG
 Brook Lopez,C
 Jerami Grant,PF
-Wendell Carter Jr.,C
-Jordan Poole,PG/SG
 Deandre Ayton,C
+Jordan Poole,PG/SG
+Cameron Johnson,SF/PF
+Grayson Allen,PG/SG
 Keldon Johnson,SF/PF
 Bobby Portis,PF/C
-Aday Mara,C
-P.J. Washington,SF/PF
-Grayson Allen,PG/SG
 Duncan Robinson,SG/SF
+P.J. Washington,SF/PF
+Aday Mara,C
+Jalen Smith,PF/C
 Klay Thompson,SG/SF
 Ajay Mitchell,PG/SG
 Scoot Henderson,PG/SG
-Jake LaRavia,SF/PF
-T.J. McConnell,PG
-Shaedon Sharpe,SG/SF
-Jalen Smith,PF/C
-Mikel Brown Jr.,PG
 Bilal Coulibaly,SG/SF
+T.J. McConnell,PG
+Jake LaRavia,SF/PF
+Shaedon Sharpe,SG/SF
+Dennis Schroder,PG
+Mikel Brown Jr.,PG
 Mark Williams,C
 Kyle Filipowski,PF/C
 Jusuf Nurkic,C
-Dennis Schroder,PG
 Santi Aldama,SF/PF
-Dereck Lively II,C
 Precious Achiuwa,PF/C
-Tari Eason,SF/PF
-Jaylon Tyson,SG/SF
+Dereck Lively II,C
 Tre Jones,PG
+Tari Eason,SF/PF
 Khaman Maluach,C
+Naji Marshall,SF/PF
+Jaylon Tyson,SG/SF
+Obi Toppin,PF
 Kelly Oubre Jr.,SG/SF
 Tim Hardaway Jr.,SG/SF
 Cam Thomas,SG/SF
 D'Angelo Russell,PG/SG
-Obi Toppin,PF
-Naji Marshall,SF/PF
 Kyle Kuzma,SF/PF
+Kris Dunn,PG/SG
 Morez Johnson Jr.,PF/C
 Sandro Mamukelashvili,PF/C
+Jaxson Hayes,C
 Isaiah Stewart,PF/C
-Kentavious Caldwell-Pope,SG/SF
 Isaiah Collier,PG
+Kentavious Caldwell-Pope,SG/SF
 Brayden Burries,SG
 Bronny James,PG/SG
-Kris Dunn,PG/SG
+Zaccharie Risacher,SF
+Aaron Wiggins,SG/SF
 Danny Wolf,PF/C
-Jaxson Hayes,C
 Aaron Nesmith,SG/SF
 Kingston Flemings,PG/SG
-Zaccharie Risacher,SF
 Isaiah Jackson,PF/C
-De'Andre Hunter,SF/PF
 Bub Carrington,PG/SG
 Gui Santos,SF
+De'Andre Hunter,SF/PF
 Luguentz Dort,SG/SF
 Jamal Shead,PG
 GG Jackson,PF
 Sam Hauser,SF/PF
 Robert Williams III,C
-Aaron Wiggins,SG/SF
+Jaylen Wells,SG/SF
 Jaylin Williams,PF/C
 Donte DiVincenzo,PG/SG
 Max Christie,SG
-Russell Westbrook,PG
 Royce O'Neale,SF/PF
 Tristan da Silva,SF/PF
-Herbert Jones,SF/PF
+Russell Westbrook,PG
 Bradley Beal,SG/SF
-Jaylen Wells,SG/SF
+Herbert Jones,SF/PF
+Keon Ellis,SG/SF
 Gradey Dick,SG/SF
 Tre Johnson,SG
 Ryan Kalkbrenner,C
+Marcus Smart,PG/SG
 Jose Alvarado,PG
 Walter Clayton Jr.,PG/SG
-Ben Simmons,PG
-Marcus Smart,PG/SG
-Brice Sensabaugh,SG/SF
+Kasparas Jakucionis,PG
 Maxime Raynaud,C
-De'Anthony Melton,PG/SG
-Nikola Jovic,PF
-Cam Spencer,PG/SG
+Brice Sensabaugh,SG/SF
+Ben Simmons,PG
 Javonte Green,SF
-Marvin Bagley III,PF/C
+Nikola Jovic,PF
+De'Anthony Melton,PG/SG
+Cam Spencer,PG/SG
+Chris Paul,PG
 Kevin Huerter,SG/SF
 Al Horford,PF/C
-Chris Paul,PG
 Isaiah Joe,SG
-Sam Merrill,SG
-Kasparas Jakucionis,PG
-Keon Ellis,SG/SF
 Pelle Larsson,SG/SF
+Marvin Bagley III,PF/C
 Derrick Jones Jr.,SF/PF
+Sam Merrill,SG
 Paul Reed,PF/C
-Labaron Philon Jr.,PG/SG
 Carter Bryant,SF
-Nique Clifford,SG/SF
 Miles McBride,PG/SG
+Labaron Philon Jr.,PG/SG
+Brandon Williams,PG/SG
+Nique Clifford,SG/SF
 Bones Hyland,PG
 Baylor Scheierman,SG
 Luke Kennard,SG
+Leonard Miller,SF
 Hugo Gonzalez,SF
 Hannes Steinbach,PF
-Brandon Williams,PG/SG
 Luke Kornet,C
 Max Strus,SF
 Meleek Thomas,SG
 Jordan Walsh,SF
+Svi Mykhailiuk,SG
 Nolan Traore,PG
 Cameron Carr,SG/SF
-Leonard Miller,SF
-Cam Whitmore,SF/PF
-Svi Mykhailiuk,SG
-Harrison Barnes,SF/PF
-Trevon Brazile,SF/PF
 Mario Hezonja,SF
+Trevon Brazile,SF/PF
 Ja'Kobe Walter,SG
+Harrison Barnes,SF/PF
+Cam Whitmore,SF/PF
 AJ Green,SG
 Tacko Fall,C
 Joan Beringer,C
-Nate Ament,SF
 Landry Shamet,SG
 Buddy Hield,SG/SF
+Nate Ament,SF
+Ziaire Williams,SG/SF
 Vit Krejci,PG
 Adem Bona,C
 Jordan Clarkson,SG/SF
-Ziaire Williams,SG/SF
 Ronald Holland II,SF/PF
-Tyus Jones,PG
+Jock Landale,C
+Justin Champagnie,SF/PF
+Marcus Sasser,PG
 Khris Middleton,SF/PF
-Jarace Walker,SF/PF
+Allen Graves,SF
 Lonzo Ball,PG/SG
 Terrence Shannon Jr.,SG
-Dean Wade,PF
+Tyus Jones,PG
 Ryan Dunn,SF/PF
+Dean Wade,PF
+Jarace Walker,SF/PF
 Ebuka Okorie,PG/SG
 Matisse Thybulle,SF
+Noah Clowney,PF
 Yang Hansen,C
-Jay Huff,C
 Bogdan Bogdanovic,SG/SF
 Steven Adams,C
-Yanic Konan Niederhauser,C
-Rob Dillingham,PG
-Noah Clowney,PF
-Allen Graves,SF
-Sergio de Larrea,PG
 Seth Curry,PG/SG
+Yanic Konan Niederhauser,C
+Jay Huff,C
+Rob Dillingham,PG
 Jayden Quaintance,PF/C
+Sergio de Larrea,PG
 Clint Capela,C
-Marcus Sasser,PG
-Caris LeVert,SG/SF
 Moses Moody,SG/SF
+Caris LeVert,SG/SF
 Bennett Stirtz,PG
-Jock Landale,C
 Jeremy Sochan,PF
 Koa Peat,PF
 Ryan Conwell,SG
 Terance Mann,SG/SF
-Justin Champagnie,SF/PF
+Dalton Knecht,SG/SF
 Gary Payton II,SG
 Trayce Jackson-Davis,PF
 Tarris Reed Jr.,C
 Mike Conley,PG
 Daniss Jenkins,PG
+Kevon Looney,C
 Chris Cenac Jr.,PF/C
-Cody Williams,SG
 Christian Anderson,PG
 Isaiah Evans,SG
-Dailyn Swain,SF
-Kevon Looney,C
+Cody Williams,SG
 Thanasis Antetokounmpo,SF
+Dailyn Swain,SF
 Moritz Wagner,C
-Dalton Knecht,SG/SF
+Goga Bitadze,C
 Gary Trent Jr.,SG/SF
-Will Riley,SF
 Kyle Anderson,SF/PF
 Dominick Barlow,PF/C
-Goga Bitadze,C
 Karim Lopez,SF
+Will Riley,SF
 Tyler Kolek,PG
+Luka Garza,C
 Bol Bol,PF
 Simone Fontecchio,SF
-Luka Garza,C
+Quenton Jackson,PG/SG
 Corey Kispert,SG/SF
 Jarred Vanderbilt,SF/PF
 Mohamed Diawara,PF
 Kenrich Williams,SF
 Patrick Williams,PF
-Thomas Bryant,C
-Asa Newell,PF
 Noa Essengue,PF
 Mo Bamba,C
 Olivier-Maxence Prosper,PF
-Jaylen Clark,SG
 Zuby Ejiofor,PF
 Trey Lyles,PF
-Nikola Topic,PG
+Asa Newell,PF
 Isaac Okoro,SG/SF
 Dylan Cardwell,C
+Jaylen Clark,SG
+Will Richard,SG/SF
+Thomas Bryant,C
 Ousmane Dieng,SF
 Grant Williams,PF
+Nikola Topic,PG
 Tre Mann,PG/SG
 Jaden Ivey,PG/SG
-Kobe Brown,PF
 Larry Nance Jr.,PF
 Jordan Goodwin,PG/SG
 Johnny Furphy,SG
 Jonas Valanciunas,C
 Yuki Kawamura,PG
 Ben Sheppard,SG/SF
-Jamal Cain,SF
+Kobe Brown,PF
 Julian Strawther,SF
-Will Richard,SG/SF
-Jase Richardson,SG
 Justin Edwards,SF
 Liam McNeeley,SF
-Charles Bassey,C
 Caleb Love,SG
-Quenton Jackson,PG/SG
-Ryan Nembhard,PG/SG
 Pacome Dadiet,SF
+Jamal Cain,SF
 Tristan Vukcevic,PF
 Leaky Black,SF
-Kyle Lowry,PG
+Jase Richardson,SG
+Charles Bassey,C
 James Wiseman,C
+Ryan Nembhard,PG/SG
 Jericho Sims,C
 Jalen Wilson,PF
 Nick Richards,C
+Jamison Battle,SF
 Chris Youngblood,SG
+Braden Smith,PG
 Jaden Hardy,SG
 Mouhamed Gueye,PF
 Kris Murray,PF
-Baba Miller,PF
 Thomas Sorber,C
+Kyle Lowry,PG
 Craig Porter Jr.,PG/SG
 Kevin Love,PF
 Zach Collins,C
 Rayan Rupert,SG
-Braden Smith,PG
+Sion James,SF
 Spencer Dinwiddie,PG/SG
-Bruce Brown,SG/SF
 Joshua Jefferson,SF/PF
 Jabari Walker,PF
 Alex Antetokounmpo,SF
+Baba Miller,PF
 Georges Niang,PF
 Taurean Prince,SF
-Josh Green,SG
 Chris Boucher,PF/C
-Sion James,SF
 Jonathan Mogbo,PF
 Bruce Thornton,PG
+Bruce Brown,SG/SF
+Sidy Cissoko,SG
 Caleb Martin,SG
 Rocco Zikarsky,C
 Taylor Hendricks,PF
 Cole Anthony,PG/SG
+Josh Green,SG
 Pat Spencer,PG/SG
 Jalen Pickett,PG/SG
 Jordan McLaughlin,PG
 Jalen McDaniels,PF
-Ben Saraf,SG
 Dorian Finney-Smith,PF
 Paul Zipser,SF
-Jordan Miller,SF
 Tyrese Proctor,SG
+Jordan Hawkins,SG
 Alex Karaban,SF/PF
 Kobe Sanders,SG
 Vince Williams Jr.,PG/SG
 Ron Harper Jr.,SG
 Jonathan Isaac,PF
-Sidy Cissoko,SG
 Quinten Post,PF/C
+Ben Saraf,SG
 Wang Zhelin,C
 Guerschon Yabusele,PF/C
 Gabe Vincent,PG
 Johni Broome,PF
+Jordan Miller,SF
 Julian Reese,PF
-Jordan Hawkins,SG
 Jevon Carter,PG
 Ja'Kobi Gillespie,PG
-Rasheer Fleming,PF
-Killian Hayes,PG
 Devin Carter,PG
 Koby Brea,SG
-Maliq Brown,SF/PF
 Richie Saunders,SG
 Drake Powell,SG
 Julian Phillips,SF
+Henri Veesaar,C
 Adou Thiero,SF
 Omer Yurtseven,C
 Jett Howard,SF
 Sharife Cooper,PG
+Rasheer Fleming,PF
 Otega Oweh,SG
 Malcolm Brogdon,PG
 Joe Ingles,SF
 Joe Young,PG
+Tidjane Salaun,PF
 Alex Kirk,C
 Jae'Sean Tate,SF
+Killian Hayes,PG
 Dru Smith,PG
+Maliq Brown,SF/PF
 Nigel Hayes-Davis,SF
-Javon Small,PG
 Rade Zagorac,SG
 Ochai Agbaji,SF
-Henri Veesaar,C
-Jamison Battle,SF
 Emanuel Sharp,SG
 Jaylen Nowell,SG
 Patric Young,C
 Terry Rozier,PG
 Spencer Jones,SF/PF
 Ariel Hukporti,C
-Tidjane Salaun,PF
 Jahmir Young,PG
 Gary Harris,SG
 Kelly Olynyk,C
@@ -479,7 +478,7 @@ DeAndre Jordan,C
 Tyler Nickel,SF
 Moses Wright,PF
 Zhou Qi,C
-DaRon Holmes II,PF
+Javon Small,PG
 Pat Connaughton,SG
 Josh Minott,SF
 Isaiah Wong,PG
@@ -489,18 +488,19 @@ Mac McClung,SG
 Udonis Haslem,PF
 McKinley Wright IV,PG
 Boban Marjanovic,C
-Hunter Dickinson,C
 Karlo Matkovic,PF
 Noah Penda,PF
 Nae'Qwan Tomlin,PF
 Christian Wood,PF
 Jaden Bradley,PG
 Dariq Whitehead,SF
+Micah Potter,C
 Boo Buie,PG
 Nicolas Batum,PF
 John Konchar,SG
 Xavier Tillman,PF
 AJ Johnson,SG
+DaRon Holmes II,PF
 Drew Timme,C
 Zeke Nnaji,PF/C
 Taj Gibson,PF
@@ -514,6 +514,7 @@ Anthony Brown,SF
 Bismack Biyombo,C
 Josh Okogie,SF
 Mason Plumlee,C
+Hunter Dickinson,C
 Andre Jackson Jr.,SG
 Brooks Barnhizer,SF
 Dillon Mitchell,SF
@@ -529,26 +530,27 @@ Duop Reath,C
 Oscar Tshiebwe,C
 Daeqwon Plowden,SG
 Moussa Cisse,C
-Micah Potter,C
 Jeff Green,PF
+Ian Clark,SG
 Shake Milton,SG
 Torrey Craig,PF
-Michael Cobbins,PF
 John Tonje,SF
+Willie Reed,C
 Garrison Mathews,SG
 Sim Bhullar,C
 Cat Barber,PG
 Malik Williams,C
 Harrison Ingram,SF
 Caleb Houstan,SF
-Georgios Papagiannis,C
 Shabazz Muhammad,SF
 Kevin McCullar Jr.,SF
 Vasilije Micic,PG
 Dante Exum,SG
 Tarik Biberovic,PF
+Tristan Enaruna,SF
 Ron Baker,SG
 Ugonna Onyenso,C
+Kevin Knox II,SF
 Trendon Watford,SF/PF
 Tyler Bilodeau,PF
 Dillon Jones,SF
@@ -591,7 +593,6 @@ Anthony Gill,PF
 Nate Wolters,PG
 Nate Williams,SG
 Monta Ellis,SG
-Kennedy Chandler,PG
 Johnathan Williams,C
 Chaz Lanier,SG
 Bryce Hopkins,SF
@@ -608,7 +609,6 @@ C.J. Williams,SF
 J.J. Barea,PG
 Isaiah Mobley,PF
 Jalen Slawson,SF
-Dee Bost,PG
 Jalen Bridges,SF
 Antonio Reeves,SG
 Shaquille Harrison,SG
@@ -624,7 +624,8 @@ Matthew Dellavedova,PG
 Eric Gordon,SG
 Ryan Broekhoff,SG
 Markelle Fultz,PG
-Ian Clark,SG
+Michael Cobbins,PF
+Colby Jones,SG
 Eric Mika,C
 Kevin Pangos,PG
 Keifer Sykes,SG
@@ -639,7 +640,7 @@ David Roddy,PF
 DaQuan Jeffries,SG
 Marko Guduric,SG
 Vlatko Cancar,SF
-Willie Reed,C
+Taze Moore,SG
 DeJon Jarreau,PG
 Anthony Lamb,SF
 Jeff Dowtin Jr.,PG
@@ -682,6 +683,7 @@ Curtis Jones,SG
 Jarnell Stokes,PF
 Emoni Bates,SF
 Ognjen Jaramaz,PG
+Georgios Papagiannis,C
 Vince Shamar Hunter,PF
 Nikola Milutinov,C
 Alex Toohey,PF
@@ -705,23 +707,19 @@ Damien Inglis,SF
 Antonio Blakeney,SG
 Brandon Sampson,SG
 Yves Pons,SG
-Lester Quinones,SG
 Keith Appling,PG
-Tristan Enaruna,SF
 Alpha Kaba,PF
 Malik Newman,SG
 Pierre Deshawn Jackson,PG
 Adreian Payne,PF
-Arturas Gudaitis,C
 Oshae Brissett,PF
 Olivier Sarr,C
 Chaundee Brown Jr.,SG
+Chuma Okeke,PF
 Max Shulga,PG
 Cam Christie,SG
 Darrun Hilliard,SF
-Kevin Knox II,SF
 Scotty Hopson,SG
-Tyler Harvey,SG
 Keion Brooks Jr.,SF
 Allonzo Trier,SG
 Devon Dotson,PG
@@ -751,6 +749,8 @@ Jalen Hood-Schifino,SG
 Kenneth Lofton Jr.,PF
 Josh Huestis,SF
 Riley Minix,SF
+Louis King,PF
+KJ Simpson,PG
 Moses Brown,C
 RayJ Dennis,PG
 Jalen Lecque,PG
@@ -763,6 +763,7 @@ Isaiah Stevens,PG
 Miles Kelly,PG
 Cliff Alexander,PF
 Gian Clavell,SG
+Jemerrio Jones,SF
 Juan Toscano-Anderson,SF
 Ish Smith,PG
 Cody Demps,PG
@@ -777,6 +778,7 @@ Duane Washington Jr.,PG
 Jack Kayil,PG/SG
 Jack McVeigh,PF
 Cameron Oliver,PF
+Quincy Olivari,PG
 Josh Oduro,C
 Narcisse Ngoy,C
 Jabari Brown,SG
@@ -803,7 +805,8 @@ Marques Bolden,C
 Damion Lee,SF
 Javin DeLaurier,C
 Jamorko Pickett,PF
-Sergey Karasev,SG
+Jaden Springer,SG
+Liam Robbins,C
 Dwight Buycks,PG
 Josh Christopher,SG
 Ky Bowman,PG
@@ -832,6 +835,7 @@ Jae Crowder,PF
 Chasson Randle,PG
 Carlik Jones,PG
 Treveon Graham,SF
+Maxwell Lewis,SF
 Briante Weber,PG
 Ismael Kamagate,C
 Rodney McGruder,SG
@@ -860,11 +864,12 @@ Tim Frazier,PG
 Cody Martin,SG
 Malique Lewis,SF
 Axel Toupane,SG
+Onuralp Bitim,SF
 Joel Berry II,PG
 Gary Clark,PF
+Armel Traore,SF
 Quinn Cook,PG
 KJ McDaniels,SF
-Theo Pinson,SG
 Jahmyl Telfort,PF
 Marshall Plumlee,C
 Michael Gbinije,SG
@@ -882,8 +887,8 @@ Derrick Walton Jr.,PG
 Bonzie Colson,PF
 Mamadi Diakite,PF
 Chris Manon,SG
+Kennedy Chandler,PG
 Trevor Keels,SG
-Karim Mane,SG
 Trey Kaufman-Renn,PF
 Jordan Loyd,PG
 Matt Ryan,SF
@@ -892,6 +897,7 @@ Jared Butler,SG
 DeVaughn Akoon-Purcell,SG
 Isaiah Hicks,PF
 Malcolm Delaney,PG
+Ashton Hagans,PG
 AJ Griffin,SF
 Keaton Wallace,PG
 Jacob Toppin,SF
@@ -908,6 +914,7 @@ Salah Mejri,C
 Alan Williams,PF
 Andrew White III,SG
 Jordan Sibert,SG
+Lawson Lovering,C
 Tolu Smith,PF
 Branden Carlson,C
 Jarrod Uthoff,PF
@@ -966,6 +973,7 @@ J.J. O'Brien,SF
 Kay Felder,PG
 PJ Hall,PF
 Cleanthony Early,SF
+Dee Bost,PG
 Ricky Council IV,SG
 Eugene Omoruyi,SF
 DJ Steward,PG
@@ -991,11 +999,3 @@ Josh Hall,SF
 Matt Costello,PF
 Vsevolod Ishchenko,SG
 Matt Mooney,SG
-Gabriel Deck,SF
-Nicolas Brussino,SG
-Alec Brown,C
-Rayjon Tucker,SF
-Taelon Peter,SG
-David Stockton,PG
-Patrick Baldwin Jr.,SF
-Chris Silva,PF
